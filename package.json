@@ -1,5 +1,5 @@
 {
-  "name": "@mr_hugo/boreDOM",
+  "name": "@mr_hugo/boredom",
   "version": "0.25.1",
   "description": "Another boring JavaScript framework.",
   "main": "src/index.ts",
