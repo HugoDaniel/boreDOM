@@ -1,6 +1,6 @@
 {
   "name": "boreDOM",
-  "version": "0.bored.1",
+  "version": "0.25.1",
   "description": "Another boring JavaScript framework.",
   "main": "src/index.ts",
   "files": ["dist/*"],
