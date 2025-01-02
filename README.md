@@ -2,7 +2,7 @@
 
 ## Install
 
-`pnpm install @mr_hugo/boreDOM`
+`pnpm install @mr_hugo/boredom`
 
 ## Description
 
