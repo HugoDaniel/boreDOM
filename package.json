@@ -1,0 +1,29 @@
+{
+  "name": "boreDOM",
+  "version": "0.bored.1",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "build_decls": "dts-bundle-generator -o dist/boreDOM.d.ts src/index.ts",
+    "build_module": "esbuild src/index.ts --bundle --outfile=dist/boreDOM.min.js --target=es2022 --minify --platform=neutral",
+    "build": "pnpm run build_decls && pnpm run build_module",
+    "dev": "esbuild src/boreDOM.ts --bundle --outdir=www/js --watch --servedir=www --platform=neutral",
+    "test": "esbuild tests/runner.ts --bundle --outdir=tests/js --watch --servedir=tests --platform=browser"
+  },
+  "keywords": [],
+  "author": "Hugo Daniel",
+  "license": "CC0",
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@types/chai": "^5.0.1",
+    "@types/mocha": "^10.0.10",
+    "@webgpu/types": "^0.1.52",
+    "chai": "^5.1.2",
+    "dts-bundle-generator": "^9.5.1",
+    "esbuild": "0.23.1",
+    "mocha": "^10.8.2",
+    "nyc": "^17.1.0",
+    "typedoc": "0.26.7",
+    "typescript": "^5.7.2"
+  }
+}
