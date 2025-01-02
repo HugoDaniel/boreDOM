@@ -1,7 +1,7 @@
 {
   "name": "boreDOM",
   "version": "0.bored.1",
-  "description": "",
+  "description": "Another boring JavaScript framework.",
   "main": "src/index.ts",
   "scripts": {
     "build_decls": "dts-bundle-generator -o dist/boreDOM.d.ts src/index.ts",
@@ -10,9 +10,10 @@
     "dev": "esbuild src/boreDOM.ts --bundle --outdir=www/js --watch --servedir=www --platform=neutral",
     "test": "esbuild tests/runner.ts --bundle --outdir=tests/js --watch --servedir=tests --platform=browser"
   },
-  "keywords": [],
+  "keywords": ["dom", "framework"],
   "author": "Hugo Daniel",
   "license": "CC0",
+  "repository": "github:HugoDaniel/boreDOM",
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
     "@types/chai": "^5.0.1",
