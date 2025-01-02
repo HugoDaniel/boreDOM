@@ -3,6 +3,7 @@
   "version": "0.bored.1",
   "description": "Another boring JavaScript framework.",
   "main": "src/index.ts",
+  "files": ["dist/*"],
   "scripts": {
     "build_decls": "dts-bundle-generator -o dist/boreDOM.d.ts src/index.ts",
     "build_module": "esbuild src/index.ts --bundle --outfile=dist/boreDOM.min.js --target=es2022 --minify --platform=neutral",
@@ -14,6 +15,7 @@
   "author": "Hugo Daniel",
   "license": "CC0",
   "repository": "github:HugoDaniel/boreDOM",
+  "homespage": "https://hugodaniel.com/pages/boredom/",
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
     "@types/chai": "^5.0.1",
