@@ -392,8 +392,8 @@ export default function () {
       it(
         "should be able to update the state and automatically render in the provided 'on' function",
         async () => {
-            // The following code is accompanied by the `stateful-component5.js` file.
-            const container = await renderHTMLFrame(`
+          // The following code is accompanied by the `stateful-component5.js` file.
+          const container = await renderHTMLFrame(`
           <on-event-component2></on-event-component2>
 
           <template data-component="on-event-component2">
@@ -403,32 +403,32 @@ export default function () {
           <script src="/on-event-component2.js"></script>
         `);
 
-            const state = { value: 0 };
+          const state = { value: 0 };
 
-            await inflictBoreDOM(state);
+          await inflictBoreDOM(state);
 
-            // Label should be "0", because the "value" attribute is being set on render:
-            const labelElem = getByText(
-              container,
-              "0",
-            );
+          // Label should be "0", because the "value" attribute is being set on render:
+          const labelElem = getByText(
+            container,
+            "0",
+          );
 
-            const btn = getByText(
-              container,
-              "Increment",
-            );
+          const btn = getByText(
+            container,
+            "Increment",
+          );
 
-            // One click, should trigger the custom event, and call the registered callbackes
-            // provided to the 'on' function (see 'on-event-component1.js')
-            fireEvent.click(btn);
+          // One click, should trigger the custom event, and call the registered callbackes
+          // provided to the 'on' function (see 'on-event-component1.js')
+          fireEvent.click(btn);
 
-            await frame();
+          await frame();
 
-            const newLabelElem = getByText(
-              container,
-              "1"
-            )
-            expect(newLabelElem.innerText).to.be.string("1");
+          const newLabelElem = getByText(
+            container,
+            "1",
+          );
+          expect(newLabelElem.innerText).to.be.string("1");
         },
       );
     });
@@ -481,6 +481,38 @@ export default function () {
           "This is new content",
         );
         expect(elem).to.be.an.instanceof(HTMLSpanElement);
+      });
+    });
+
+    describe("Lists of components in <script> code", () => {
+      it.skip("should be able to dynamically create a component with a detail object", async () => {
+        // The following code is accompanied by the `list-component1.js` file.
+        const container = await renderHTMLFrame(`
+
+          <template data-component="list-item1">
+            <li>Something</li>
+          </template>
+          <script src="/list-item1.js"></script>
+
+          <template data-component="list-component1">
+            <p>Below will be added a dynamic component</p>
+            <ol>
+            </ol>
+          </template>
+          <script src="/list-component1.js"></script>
+
+          <list-component1></list-component1>
+        `);
+
+        await frame();
+
+        await inflictBoreDOM({ content: { items: ["some item"] } }); // Runs the code in `list-component1.js`
+
+        const elem = getByText(
+          container,
+          "some item",
+        );
+        expect(elem).to.be.an.instanceof(HTMLLIElement);
       });
     });
   });

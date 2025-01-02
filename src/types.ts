@@ -4,11 +4,13 @@ import type { webComponent } from "./index";
 export type WebComponentDetail = {
   index: number;
   name: string;
+  data?: any;
 };
 export type WebComponentInitParams<S> = {
   detail: WebComponentDetail;
   state: S;
   refs: Refs;
+  self: Bored;
   on: (eventName: string, eventHandler: () => void) => void;
 };
 
@@ -17,6 +19,11 @@ export type WebComponentRenderParams<S> = {
   state: S;
   refs: Refs;
   slots: Slots;
+  self: Bored;
+  makeComponent: (
+    tag: string,
+    options?: { detail?: WebComponentDetail },
+  ) => Bored;
 };
 
 // A boreDOM component life is made of these functions:
@@ -29,7 +36,6 @@ export type InitFunction<S> = (
 /** The function used to render function and update it visually */
 export type RenderFunction<S> = (
   renderOpts: WebComponentRenderParams<S>,
-  c?: Bored,
 ) => void;
 
 export type AppState<S> = {

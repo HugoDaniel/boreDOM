@@ -1,14 +1,14 @@
 /**
  * Mostly state management things
  */
+import { Bored, create, createComponent, queryComponent } from "./dom";
 import {
-  Bored,
-  create,
-  createComponent as createBoredComponent,
-  dispatch,
-  queryComponent,
-} from "./dom";
-import { AppState, ReadonlyProxy, Refs, Slots } from "./types";
+  AppState,
+  ReadonlyProxy,
+  Refs,
+  Slots,
+  WebComponentDetail,
+} from "./types";
 import { access } from "./utils/access";
 import { flatten } from "./utils/flatten";
 import { isPOJO } from "./utils/isPojo";
@@ -214,7 +214,8 @@ function createSubscribersDispatcher<S>(state: AppState<S>) {
     // Call the subscribers for each path that was updated
     for (let i = 0; i < updates.path.length; i++) {
       const path = updates.path[i];
-      const functions = updates.subscribers.get(path.slice(path.indexOf(".") + 1)) ?? [];
+      const functions =
+        updates.subscribers.get(path.slice(path.indexOf(".") + 1)) ?? [];
       for (let j = 0; j < functions.length; j++) {
         functions[j](state.app);
       }
@@ -287,9 +288,12 @@ export function proxify<S extends object>(boredom: AppState<S>) {
 
 export function runComponentsInitializer<S>(state: AppState<S>) {
   const components = state.internal.components;
+  console.log("INITING Components:", [...components.keys()]);
   for (const [tagName, code] of components.entries()) {
     if (code === null) continue;
+
     const componentClass = queryComponent(tagName);
+
     if (!componentClass) {
       console.log(
         `<${tagName}> is not yet in the DOM. The associated JS script will be called when the component is connected.`,
@@ -304,20 +308,26 @@ export function runComponentsInitializer<S>(state: AppState<S>) {
 /**
  * Creates a web component and runs the associated script if it has one defined.
  *
- * @param name
- * @param state
+ * @param name the tagname of the component to create
+ * @param state the
  * @param [detail]
-export function create<S extends object>(name: string, state: S, detail?: { index: number; name: string; data: any }) {
+ */
+export function createAndRunCode<S extends object>(
+  name: string,
+  state: AppState<S>,
+  detail?: WebComponentDetail,
+) {
+  console.log("Creating ", name);
   // "code" is the function returned by the `webComponent()` above, it
   // creates the state reactive proxy and calls the initialization from
   // the corresponding template .js file
-  const code = state.runtime.dom.components.get(name);
+  const code = state.internal.components.get(name);
   if (code) {
+    console.log("with code");
     const info = { ...detail, tagName: name };
-    return createDominoComponent(name, code(state, info));
+    return createComponent(name, code(state as any, info));
   }
+  console.log("without code");
 
-  return createDominoComponent(name);
+  return createComponent(name);
 }
-
- */

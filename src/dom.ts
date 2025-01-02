@@ -6,7 +6,7 @@ import type { LoadedFunction } from "./types";
  *
  * @param names - The list of names to try to dynamically load. It appends .js to them.
  *
- * @returns A Map of the registered web-components tag names, and their corresponding 
+ * @returns A Map of the registered web-components tag names, and their corresponding
  * dynamically loaded .js file exported function (or null if there is no .js file).
  */
 export const dynamicImportScripts = async (names: string[]) => {
@@ -34,7 +34,7 @@ export const dynamicImportScripts = async (names: string[]) => {
   }
 
   return result;
-}
+};
 
 /**
  * Set of helper functions to handle the DOM.
@@ -64,7 +64,10 @@ export const searchForComponents = () => {
         } else {
           // Attribute is not "component", pass it as is but
           // assume a value of true (""):
-          result.attributes.push([decamelize(attribute), t.dataset[attribute] ?? ""]);
+          result.attributes.push([
+            decamelize(attribute),
+            t.dataset[attribute] ?? "",
+          ]);
         }
       }
       if (result.name === "") {
@@ -87,11 +90,12 @@ export const searchForComponents = () => {
 export const createComponent = (
   name: string,
   update?: (c: Bored) => void,
-): Bored  => {
+): Bored => {
   const element = create(name);
+  console.log("Created", element, element instanceof Bored);
   if (!(element instanceof Bored)) {
     const error = `The tag name "${name}" is not a BoreDOM  component.
-      \n"createComponent" only accepts tag-names with matching <template> tags that have a data-component attribute in them.`
+      \n"createComponent" only accepts tag-names with matching <template> tags that have a data-component attribute in them.`;
 
     console.error(error);
     throw new Error(error);
@@ -107,7 +111,7 @@ export const createComponent = (
 /**
  * Queries for the component tag name in the DOM. Throws error if not found.
  */
-export const queryComponent = (q: string): Bored | undefined  => {
+export const queryComponent = (q: string): Bored | undefined => {
   const elem = query(q);
 
   if (!(elem instanceof Bored)) {
@@ -169,7 +173,9 @@ const camelize = (str: string) => {
     .join("");
 };
 const decamelize = (str: string): string => {
-  if (str === "" || !str.split("").some(char => char !== char.toLowerCase())) {
+  if (
+    str === "" || !str.split("").some((char) => char !== char.toLowerCase())
+  ) {
     return str;
   }
 
@@ -237,6 +243,7 @@ const component = <T>(tag: string, props: {
   // Don't register two components with the same custom tag:
   if (customElements.get(tag)) return;
 
+  console.log("Defining", tag);
   customElements.define(
     tag,
     class extends Bored {
@@ -282,7 +289,10 @@ const component = <T>(tag: string, props: {
        * @returns an array of strings
        */
       #parseCustomEventNames(str: string) {
-        return str.split("'").filter(s => s.length > 2 && !(s.includes("(") || s.includes(",") || s.includes(")")))
+        return str.split("'").filter((s) =>
+          s.length > 2 &&
+          !(s.includes("(") || s.includes(",") || s.includes(")"))
+        );
       }
       #createDispatchers() {
         let host: HTMLElement;
@@ -482,6 +492,7 @@ const component = <T>(tag: string, props: {
       }
 
       adoptedCallback() {
+        console.log("adopted " + this.tagName);
         props.adoptedCallback?.(this);
       }
 

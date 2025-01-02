@@ -1,4 +1,5 @@
 import {
+  createAndRunCode,
   createEventsHandler,
   createRefsAccessor,
   createSlotsAccessor,
@@ -6,8 +7,13 @@ import {
   proxify,
   runComponentsInitializer,
 } from "./bore";
-import { Bored, dynamicImportScripts, searchForComponents } from "./dom";
-import type { AppState, InitFunction, Refs, Slots } from "./types";
+import {
+  Bored,
+  createComponent,
+  dynamicImportScripts,
+  searchForComponents,
+} from "./dom";
+import type { AppState, InitFunction } from "./types";
 
 /**
  * Initializer function, it queries all `<template>` elements that
@@ -54,7 +60,8 @@ export function webComponent<S>(
   let isInitialized: null | Bored = null;
 
   let renderFunction: (state?: S) => void;
-  return ({ internal, app }: AppState<S>, detail: any) => (c: Bored) => {
+  return (appState: AppState<S>, detail: any) => (c: Bored) => {
+    const { internal, app } = appState;
     let log: string[] | string = [];
     const state = createStateAccessor(app, log);
     const refs = createRefsAccessor(c);
@@ -87,10 +94,25 @@ export function webComponent<S>(
         }
       };
 
-      const userDefinedRenderer = initFunction({ detail, state, refs, on });
+      const userDefinedRenderer = initFunction({
+        detail,
+        state,
+        refs,
+        on,
+        self: c,
+      });
       // The render function is updated to ensure the `updatedSubscribers `
       renderFunction = (state) => {
-        userDefinedRenderer({ state, refs, slots, detail }, c);
+        userDefinedRenderer({
+          state,
+          refs,
+          slots,
+          self: c,
+          detail,
+          makeComponent: (tag, opts) => {
+            return createAndRunCode(tag, appState as any, opts?.detail);
+          },
+        });
         updateSubscribers();
       };
     }
