@@ -41,6 +41,7 @@ export async function inflictBoreDOM<S extends object>(state?: S) {
   // Proxifies the `initialState.app`:
   const proxifiedState = proxify(initialState);
   // Call the code from the corresponding .js file of each component:
+  console.log('inflictBoreDOM()', state);
   runComponentsInitializer(proxifiedState);
 
   return proxifiedState.app;
@@ -51,7 +52,6 @@ export async function inflictBoreDOM<S extends object>(state?: S) {
  *
  * @param initFunction Initialization function that returns the render function
  * @return A curried function to use as callback for component initialization
- * (useful to pass as the 2nd param of `createComponent()`)
  */
 export function webComponent<S>(
   initFunction: InitFunction<S | undefined>,

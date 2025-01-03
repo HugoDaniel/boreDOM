@@ -92,8 +92,7 @@ export const createComponent = (
   update?: (c: Bored) => void,
 ): Bored => {
   const element = create(name);
-  console.log("Created", element, element instanceof Bored);
-  if (!(element instanceof Bored)) {
+  if (!isBored(element)) {
     const error = `The tag name "${name}" is not a BoreDOM  component.
       \n"createComponent" only accepts tag-names with matching <template> tags that have a data-component attribute in them.`;
 
@@ -114,7 +113,7 @@ export const createComponent = (
 export const queryComponent = (q: string): Bored | undefined => {
   const elem = query(q);
 
-  if (!(elem instanceof Bored)) {
+  if (!(isBored(elem))) {
     return undefined;
   }
 
@@ -163,6 +162,7 @@ export const isTemplate = (e: HTMLElement): e is HTMLTemplateElement =>
   e instanceof HTMLTemplateElement;
 const isObject = (t: any): t is object => typeof t === "object";
 const isFunction = (t: any): t is Function => typeof t === "function";
+const isBored = (t: any): t is Bored => "isBored" in t && t.isBored;
 const camelize = (str: string) => {
   return str.split("-")
     .map((item, index) =>
@@ -243,7 +243,6 @@ const component = <T>(tag: string, props: {
   // Don't register two components with the same custom tag:
   if (customElements.get(tag)) return;
 
-  console.log("Defining", tag);
   customElements.define(
     tag,
     class extends Bored {
@@ -260,6 +259,12 @@ const component = <T>(tag: string, props: {
       constructor() {
         super();
       }
+
+      /**
+       * Useful to know if a given HTMLElement is a Bored component.
+       * @see `isBored()` typeguard
+       */
+      isBored = true;
 
       traverse(
         f: (elem: HTMLElement, i: number, all: HTMLElement[]) => void,
@@ -331,7 +336,7 @@ const component = <T>(tag: string, props: {
         }, { traverseShadowRoot: true });
       }
 
-      #isInitDone: boolean = false;
+      isInitialized: boolean = false;
       #init() {
         let template: HTMLTemplateElement =
           query(`[data-component="${tag}"]`) as any ??
@@ -411,12 +416,12 @@ const component = <T>(tag: string, props: {
 
         this.#createDispatchers();
         // this.#createSlots();
-        this.#isInitDone = true;
+        this.isInitialized = true;
       }
 
       renderCallback = (_: Bored) => {};
       connectedCallback() {
-        if (!this.#isInitDone) this.#init();
+        if (!this.isInitialized) this.#init();
         // else this.#createSlots();
 
         this.renderCallback(this);

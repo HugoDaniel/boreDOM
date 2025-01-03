@@ -288,11 +288,18 @@ export function proxify<S extends object>(boredom: AppState<S>) {
 
 export function runComponentsInitializer<S>(state: AppState<S>) {
   const components = state.internal.components;
-  console.log("INITING Components:", [...components.keys()]);
+  console.log('Components: ', [...components.keys()]);
   for (const [tagName, code] of components.entries()) {
     if (code === null) continue;
 
+    // Fazer um map aqui, apenas chamar o `code` dos components the forem encontrados.
+    // 1. encontrar primeiro os components na DOM, e depois chamar o code para cada um deles:
+    // 2. desta forma, o `code()` não é chamado duas vezes caso um component crie componentes dinamicament
+    // que ainda não existam na DOM, e depois são inicializados dinamicamente, e quando chegar aqui
+    // já estão na DOM e este código corre o init novamente (e possivelmente com o detail errado se for caso disso)
+    // 
     const componentClass = queryComponent(tagName);
+    console.log('Component for ', tagName, componentClass);
 
     if (!componentClass) {
       console.log(
@@ -301,8 +308,12 @@ export function runComponentsInitializer<S>(state: AppState<S>) {
       return;
     }
 
-    code(state as any)(componentClass);
+    console.log('runComponentsInitializer()', tagName);
+    code(state as any, { index: 0, name: tagName, data: undefined })(componentClass);
   }
+
+  console.log('runComponentsInitializer() DONE');
+  return;
 }
 
 /**
@@ -317,17 +328,14 @@ export function createAndRunCode<S extends object>(
   state: AppState<S>,
   detail?: WebComponentDetail,
 ) {
-  console.log("Creating ", name);
   // "code" is the function returned by the `webComponent()` above, it
   // creates the state reactive proxy and calls the initialization from
   // the corresponding template .js file
   const code = state.internal.components.get(name);
   if (code) {
-    console.log("with code");
     const info = { ...detail, tagName: name };
     return createComponent(name, code(state as any, info));
   }
-  console.log("without code");
 
   return createComponent(name);
 }

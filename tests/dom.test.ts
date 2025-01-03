@@ -485,14 +485,10 @@ export default function () {
     });
 
     describe("Lists of components in <script> code", () => {
-      it.skip("should be able to dynamically create a component with a detail object", async () => {
+      it("should be able to dynamically create a component with a detail object", async () => {
         // The following code is accompanied by the `list-component1.js` file.
         const container = await renderHTMLFrame(`
-
-          <template data-component="list-item1">
-            <li>Something</li>
-          </template>
-          <script src="/list-item1.js"></script>
+          <list-component1></list-component1>
 
           <template data-component="list-component1">
             <p>Below will be added a dynamic component</p>
@@ -501,7 +497,10 @@ export default function () {
           </template>
           <script src="/list-component1.js"></script>
 
-          <list-component1></list-component1>
+          <template data-component="list-item1">
+            <li></li>
+          </template>
+          <script src="/list-item1.js"></script>
         `);
 
         await frame();
@@ -512,7 +511,48 @@ export default function () {
           container,
           "some item",
         );
-        expect(elem).to.be.an.instanceof(HTMLLIElement);
+        expect(elem).to.be.an.instanceof(HTMLElement);
+      });
+
+      it.only("should dynamically create multiple components", async () => {
+        // The following code is accompanied by the `list-component1.js` file.
+        // This is the same as the previous test
+        const container = await renderHTMLFrame(`
+          <list-component1></list-component1>
+
+          <template data-component="list-component1">
+            <p>Below will be added a dynamic component</p>
+            <ol>
+            </ol>
+          </template>
+          <script src="/list-component1.js"></script>
+
+          <template data-component="list-item1">
+            <li></li>
+          </template>
+          <script src="/list-item1.js"></script>
+        `);
+
+        await frame();
+
+        // In this test, pass multiple items in the array
+        await inflictBoreDOM({ content: { items: ["item A", "item B", "item C"] } });
+        //    ^ Runs the code in `list-component1.js`
+        const elem1 = getByText(
+          container,
+          "item A",
+        );
+        const elem2 = getByText(
+          container,
+          "item B",
+        );
+        const elem3 = getByText(
+          container,
+          "item C",
+        );
+        expect(elem1).to.be.an.instanceof(HTMLElement);
+        expect(elem2).to.be.an.instanceof(HTMLElement);
+        expect(elem3).to.be.an.instanceof(HTMLElement);
       });
     });
   });

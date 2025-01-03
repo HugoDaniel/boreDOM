@@ -8,6 +8,9 @@ dist/boreDOM.min.js:
 dist/boreDOM.d.ts:
 	pnpm run build_decls
 
+tests/dist/boreDOM.min.js: dist/boreDOM.min.js
+	cd tests && ln -fs ../dist .
+
 build: node_modules dist/boreDOM.min.js dist/boreDOM.d.ts 
 
 place: dist/boreDOM.min.js dist/boreDOM.d.ts
@@ -19,7 +22,7 @@ dev: node_modules
 	pnpm run dev
 
 # Run the development server
-test: node_modules
+test: node_modules tests/dist/boreDOM.min.js
 	find src/ | entr -s 'make clean && make build && pnpm run test'
 
 clean:
