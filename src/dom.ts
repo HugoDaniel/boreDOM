@@ -113,7 +113,7 @@ export const createComponent = (
 export const queryComponent = (q: string): Bored | undefined => {
   const elem = query(q);
 
-  if (!(isBored(elem))) {
+  if (elem === null || !(isBored(elem))) {
     return undefined;
   }
 
@@ -162,7 +162,7 @@ export const isTemplate = (e: HTMLElement): e is HTMLTemplateElement =>
   e instanceof HTMLTemplateElement;
 const isObject = (t: any): t is object => typeof t === "object";
 const isFunction = (t: any): t is Function => typeof t === "function";
-const isBored = (t: any): t is Bored => "isBored" in t && t.isBored;
+const isBored = (t: unknown): t is Bored => isObject(t) && "isBored" in t && Boolean(t.isBored);
 const camelize = (str: string) => {
   return str.split("-")
     .map((item, index) =>

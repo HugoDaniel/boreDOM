@@ -286,20 +286,22 @@ export function proxify<S extends object>(boredom: AppState<S>) {
   return boredom;
 }
 
+/**
+ * Runs the init function of every webComponent tag that exists in the DOM
+ */
 export function runComponentsInitializer<S>(state: AppState<S>) {
-  const components = state.internal.components;
-  console.log('Components: ', [...components.keys()]);
-  for (const [tagName, code] of components.entries()) {
-    if (code === null) continue;
+  // Start by finding all bored web component tags that are in the dom:
+  const tagsInDom = state.internal.customTags.filter(tag => queryComponent(tag) !== undefined);
 
-    // Fazer um map aqui, apenas chamar o `code` dos components the forem encontrados.
-    // 1. encontrar primeiro os components na DOM, e depois chamar o code para cada um deles:
-    // 2. desta forma, o `code()` não é chamado duas vezes caso um component crie componentes dinamicament
-    // que ainda não existam na DOM, e depois são inicializados dinamicamente, e quando chegar aqui
-    // já estão na DOM e este código corre o init novamente (e possivelmente com o detail errado se for caso disso)
-    // 
+  const components = state.internal.components;
+  for (const [tagName, code] of components.entries()) {
+    // Only proceed if there is a registered init function and if the tag is in the DOM
+    if (code === null || !tagsInDom.includes(tagName)) continue;
+    // From this point forward, the `code` will be run for tags that are in the dom, this
+    // way, it prevents the `code` function from being run more than once if a given component
+    // `code` dynamically creates another component that is not yet in the DOM by now.
+
     const componentClass = queryComponent(tagName);
-    console.log('Component for ', tagName, componentClass);
 
     if (!componentClass) {
       console.log(
@@ -308,11 +310,9 @@ export function runComponentsInitializer<S>(state: AppState<S>) {
       return;
     }
 
-    console.log('runComponentsInitializer()', tagName);
     code(state as any, { index: 0, name: tagName, data: undefined })(componentClass);
   }
 
-  console.log('runComponentsInitializer() DONE');
   return;
 }
 

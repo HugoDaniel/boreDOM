@@ -514,7 +514,7 @@ export default function () {
         expect(elem).to.be.an.instanceof(HTMLElement);
       });
 
-      it.only("should dynamically create multiple components", async () => {
+      it("should dynamically create multiple components", async () => {
         // The following code is accompanied by the `list-component1.js` file.
         // This is the same as the previous test
         const container = await renderHTMLFrame(`
