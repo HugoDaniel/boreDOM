@@ -119,6 +119,31 @@ export default function () {
         expect(elem.tagName).to.equal("SIMPLE-COMPONENT5");
         expect(elem.firstChild).to.be.an.instanceof(HTMLParagraphElement);
       });
+
+      it("should allow the slots default behaviour", async () => {
+        const container = await renderHTMLFrame(`
+          <slotted-component1>
+            <span slot="my-text">Let's have some different text!</span>
+          </slotted-component1>
+
+          <template data-component="slotted-component1" shadowrootmode="open">
+            <p><slot name="my-text">My default text</slot></p>
+          </template>
+        `);
+
+        await inflictBoreDOM(); // replacing slots requires "shadowrootmode" to be set
+        const elem = getByText(
+          container,
+          "Let's have some different text!",
+        );
+        expect(elem).to.be.an.instanceof(HTMLElement);
+
+        const shouldNotExist = queryByText(
+          container,
+          "My default text",
+        );
+        expect(shouldNotExist).to.be.null;
+      });
     });
     describe("Simple component events", () => {
       it("should set a data-event-dispatches on the web component once the custom event is registered", () => {
@@ -468,11 +493,37 @@ export default function () {
         `);
 
         const state = { content: { value: "Initial state" } };
-        const proxifiedState = await inflictBoreDOM(state); // Runs the code in `stateful-component6.js`
+        await inflictBoreDOM(state); // Runs the code in `stateful-component6.js`
 
         // Update the state:
-        console.log("Got proxified state:", proxifiedState);
         state.content.value = "This is new content";
+
+        await frame();
+
+        const elem = getByText(
+          container,
+          "This is new content",
+        );
+        expect(elem).to.be.an.instanceof(HTMLSpanElement);
+      });
+
+      it("should re-render when an array changed in the provided state", async () => {
+        // The following code is accompanied by the `stateful-component6.js` file.
+        const container = await renderHTMLFrame(`
+          <stateful-component7></stateful-component7>
+
+          <template data-component="stateful-component7">
+            <p>Initial state is: <span data-ref="container"></span></p>
+          </template>
+
+          <script src="/stateful-component7.js"></script>
+        `);
+
+        const state = { content: { value: ["Initial state"] } };
+        await inflictBoreDOM(state); // Runs the code in `stateful-component7.js`
+
+        // Update the state:
+        state.content.value[0] = "This is new content";
 
         await frame();
 
@@ -536,7 +587,9 @@ export default function () {
         await frame();
 
         // In this test, pass multiple items in the array
-        await inflictBoreDOM({ content: { items: ["item A", "item B", "item C"] } });
+        await inflictBoreDOM({
+          content: { items: ["item A", "item B", "item C"] },
+        });
         //    ^ Runs the code in `list-component1.js`
         const elem1 = getByText(
           container,

@@ -16,9 +16,15 @@ import {
 import type { AppState, InitFunction } from "./types";
 
 /**
- * Initializer function, it queries all `<template>` elements that
+ * Queries all `<template>` elements that
  * have a `data-component` attribute defined and creates web components
  * with the tag name in that attribute.
+ *
+ * @param state An optional initial app state object. When provided this will
+ * be proxified to allow for automatic updates of the dom whenever it
+ * changes.
+ *
+ * @returns The app initial state.
  */
 export async function inflictBoreDOM<S extends object>(state?: S) {
   const registeredNames = searchForComponents();
@@ -41,7 +47,7 @@ export async function inflictBoreDOM<S extends object>(state?: S) {
   // Proxifies the `initialState.app`:
   const proxifiedState = proxify(initialState);
   // Call the code from the corresponding .js file of each component:
-  console.log('inflictBoreDOM()', state);
+  console.log("inflictBoreDOM()", state);
   runComponentsInitializer(proxifiedState);
 
   return proxifiedState.app;

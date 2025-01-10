@@ -76,7 +76,7 @@ export function createEventsHandler<S>(c: Bored, app: S) {
 /** */
 export function createRefsAccessor(c: Bored): ReadonlyProxy<Refs> {
   return new Proxy({}, {
-    get(target, prop, reciever) {
+    get(target, prop, receiver) {
       const error = new Error(
         `Ref "${String(prop)}" not found in <${c.tagName}>`,
       );
@@ -246,7 +246,8 @@ export function proxify<S extends object>(boredom: AppState<S>) {
 
   // Traverse through all the properties in state
   flatten(boredom, ["internal"]).forEach(({ path, value }) => {
-    const needsProxy = isPOJO(value) && !objectsWithProxies.has(value);
+    const needsProxy = Array.isArray(value) ||
+      (isPOJO(value) && !objectsWithProxies.has(value));
     if (needsProxy) {
       const dottedPath = path.join(".");
       const parent = access(path.slice(0, -1), state);
@@ -291,7 +292,9 @@ export function proxify<S extends object>(boredom: AppState<S>) {
  */
 export function runComponentsInitializer<S>(state: AppState<S>) {
   // Start by finding all bored web component tags that are in the dom:
-  const tagsInDom = state.internal.customTags.filter(tag => queryComponent(tag) !== undefined);
+  const tagsInDom = state.internal.customTags.filter((tag) =>
+    queryComponent(tag) !== undefined
+  );
 
   const components = state.internal.components;
   for (const [tagName, code] of components.entries()) {
@@ -310,7 +313,9 @@ export function runComponentsInitializer<S>(state: AppState<S>) {
       return;
     }
 
-    code(state as any, { index: 0, name: tagName, data: undefined })(componentClass);
+    code(state as any, { index: 0, name: tagName, data: undefined })(
+      componentClass,
+    );
   }
 
   return;
