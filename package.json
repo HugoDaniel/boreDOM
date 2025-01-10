@@ -2,7 +2,7 @@
   "name": "@mr_hugo/boredom",
   "version": "0.25.2",
   "description": "Another boring JavaScript framework.",
-  "main": "src/index.ts",
+  "main": "dist/boreDOM.min.js",
   "files": ["dist/*"],
   "scripts": {
     "build_decls": "dts-bundle-generator -o dist/boreDOM.d.ts src/index.ts",
