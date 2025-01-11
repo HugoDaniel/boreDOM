@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boreDOM Tic Tac Toe</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="game-board.css">
+  <link rel="stylesheet" href="game-button.css">
+  <script src="main.js" type="module"></script>
+</head>
+
+<body>
+  <h1>Tic Tac Toe</h1>
+
+  <game-turn></game-turn>
+  <game-board>
+  </game-board>
+
+  <template data-component="game-button">
+    <button onclick="dispatch('play')">
+      <slot name="valuePlayed"></slot>
+    </button>
+  </template>
+
+  
+  <template data-component="game-board">
+    <!-- First row -->
+    <game-button></game-button>
+    <game-button></game-button>
+    <game-button></game-button>
+    <!-- Second row -->
+    <game-button></game-button>
+    <game-button></game-button>
+    <game-button></game-button>
+    <!-- Third row -->
+    <game-button></game-button>
+    <game-button></game-button>
+    <game-button></game-button>
+  </template>
+  <script src="./game-board.js" type="module"></script>
+
+  
+  <template data-component="game-turn">
+    <p><slot name="playerTurn"></slot></p>
+  </template>
+  <script src="./game-turn.js" type="module"></script>
+
+</body>
+
+</html>

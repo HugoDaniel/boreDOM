@@ -1,3 +1,4 @@
+import { createSlotsAccessor } from "./bore";
 import type { LoadedFunction } from "./types";
 
 /**
@@ -162,7 +163,8 @@ export const isTemplate = (e: HTMLElement): e is HTMLTemplateElement =>
   e instanceof HTMLTemplateElement;
 const isObject = (t: any): t is object => typeof t === "object";
 const isFunction = (t: any): t is Function => typeof t === "function";
-const isBored = (t: unknown): t is Bored => isObject(t) && "isBored" in t && Boolean(t.isBored);
+const isBored = (t: unknown): t is Bored =>
+  isObject(t) && "isBored" in t && Boolean(t.isBored);
 const camelize = (str: string) => {
   return str.split("-")
     .map((item, index) =>
@@ -428,6 +430,8 @@ const component = <T>(tag: string, props: {
 
         props.connectedCallback?.(this);
       }
+
+      slots = createSlotsAccessor(this);
 
       /*
       #createSlots() {

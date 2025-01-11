@@ -187,7 +187,7 @@ export function createStateAccessor<S>(
       }
 
       // Go recursive when the value is a nested object:
-      if (isProto || isPOJO(value)) {
+      if (isProto || Array.isArray(value) || isPOJO(value)) {
         return createStateAccessor(value, log, current);
       }
 

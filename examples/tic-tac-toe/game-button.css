@@ -1,0 +1,9 @@
+:where(game-button button) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: auto;
+  width: 100%;
+  height: 10rem;
+  font-size: 5rem;
+}
