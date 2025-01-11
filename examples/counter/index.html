@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boreDOM Counter</title>
+  <script src="main.js" type="module"></script>
+</head>
+
+<body>
+  <h1>Simple counter</h1>
+
+  <simple-counter></simple-counter>
+
+  <template data-component="simple-counter">
+    <slot name="counter">Some value</slot>
+
+    <button onclick="dispatch('increase')">
+      Increase
+    </button>
+
+    <button onclick="dispatch('decrease')">
+      Decrease
+    </button>
+  </template>
+  <script src="./simple-counter.js" type="module"></script>
+
+</body>
+
+</html>
