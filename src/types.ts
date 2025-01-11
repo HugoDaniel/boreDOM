@@ -11,7 +11,13 @@ export type WebComponentInitParams<S> = {
   state: S;
   refs: Refs;
   self: Bored;
-  on: (eventName: string, eventHandler: () => void) => void;
+  on: (
+    eventName: string,
+    eventHandler: (
+      state: S | undefined,
+      detail: CustomEvent["detail"],
+    ) => void,
+  ) => void;
 };
 
 export type WebComponentRenderParams<S> = {
