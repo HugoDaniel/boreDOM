@@ -48,10 +48,20 @@ const listener = (name, state, h) => {
 */
 
 /** */
-export function createEventsHandler<S>(c: Bored, app: S) {
+export function createEventsHandler<S>(
+  c: Bored,
+  app: S,
+  detail: WebComponentDetail,
+) {
   return (
     eventName: string,
-    handler: (state: S | undefined, e: CustomEvent) => void,
+    handler: (
+      options: {
+        state: S | undefined;
+        e: CustomEvent;
+        detail: WebComponentDetail;
+      },
+    ) => void,
   ) => {
     addEventListener(eventName as any, (e) => {
       let target: HTMLElement | undefined | null = e?.detail?.event
@@ -60,7 +70,7 @@ export function createEventsHandler<S>(c: Bored, app: S) {
       // Only dispatch if the component 'c' is found in the hierarchy:
       while (target) {
         if (target === c) {
-          handler(app, e.detail);
+          handler({ state: app, e: e.detail, detail });
           return;
         }
 
@@ -195,7 +205,12 @@ export function createStateAccessor<S>(
       // with the prop being accesed:
       let path = current.targets.get(target) ?? "";
       if (typeof path === "string" && typeof prop === "string") {
-        path += path !== "" ? `.${prop}` : prop;
+        if (Array.isArray(target)) {
+          // For now the path is kept as is, and all the array is triggered as updated
+          path;
+        } else {
+          path += path !== "" ? `.${prop}` : prop;
+        }
         if (log.indexOf(path) === -1) {
           // Only log the path if it is not already logged:
           log.push(path);
@@ -268,7 +283,11 @@ export function proxify<S extends object>(boredom: AppState<S>) {
           // since most of the listeners are DOM transformation templates.
           Reflect.set(target, prop, newValue);
           if (typeof prop !== "string") return true;
-          runtime.updates.path.push(`${dottedPath}.${prop}`);
+          if (Array.isArray(value)) {
+            runtime.updates.path.push(`${dottedPath}`);
+          } else {
+            runtime.updates.path.push(`${dottedPath}.${prop}`);
+          }
           runtime.updates.value.push(target);
           if (!runtime.updates.raf) {
             runtime.updates.raf = requestAnimationFrame(

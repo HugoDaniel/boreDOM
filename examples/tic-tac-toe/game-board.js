@@ -1,7 +1,7 @@
 import { webComponent } from "./boreDOM.min.js";
 
 export const GameBoard = webComponent(({ on, self }) => {
-  on("play", (mutableState, { event }) => {
+  on("play", ({ state: mutableState, e: { event } }) => {
     const index = Array.from(self.children).indexOf(
       event.currentTarget.parentNode,
     );

@@ -86,7 +86,7 @@ export function webComponent<S>(
     const state = createStateAccessor(app, log);
     const refs = createRefsAccessor(c);
     const slots = createSlotsAccessor(c);
-    const on = createEventsHandler(c, app);
+    const on = createEventsHandler(c, app, detail);
 
     if (isInitialized !== c) {
       // `updateSubscribers` is called right after the user defined renderer is called,

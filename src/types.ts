@@ -13,10 +13,11 @@ export type WebComponentInitParams<S> = {
   self: Bored;
   on: (
     eventName: string,
-    eventHandler: (
-      state: S | undefined,
-      detail: CustomEvent["detail"],
-    ) => void,
+    eventHandler: (options: {
+      state: S | undefined;
+      e: CustomEvent["detail"];
+      detail: WebComponentDetail;
+    }) => void,
   ) => void;
 };
 

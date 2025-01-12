@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boreDOM TODO List</title>
+  <style>
+body {
+  font-family: sans-serif;
+}
+todo-list {
+  list-style: none;
+  padding: 0;
+}
+todo-list li {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+todo-list .completed {
+  text-decoration: line-through;
+  color: #aaa;
+}
+  </style>
+</head>
+<body>
+
+<h1>To-Do List</h1>
+
+<todo-list></todo-list>
+
+<template data-component="todo-list">
+  <!-- Include a data-ref so that this can easily be accessed in JS: -->
+  <input onkeyup="dispatch('edit')" type="text" placeholder="Add new task" data-ref="itemInput">
+  <button onclick="dispatch('addTask')" data-ref="createButton">Add</button>
+
+  <ul data-ref="list">
+  </ul>
+</template>
+
+<template data-component="todo-list-item">
+  <li onclick="dispatch('complete')">
+    <slot name="content"></slot>
+  </li>
+</template>
+
+
+<script type="module">
+import { inflictBoreDOM, webComponent } from "./boreDOM.min.js";
+
+inflictBoreDOM({
+  items: [{
+    value: "Something to be done", isCompleted: false,
+  }]
+}, {
+  "todo-list": webComponent(({ state, on, refs }) => {
+
+    on("addTask", ({ state: mutableState }) => {
+      const taskText = refs.itemInput.value.trim();
+
+      if (taskText !== "") {
+        console.log('Created ', taskText)
+        mutableState.items.push({ value: taskText, isCompleted: false });
+      }
+    });
+
+    on("edit", ({ e: { event }}) => {
+      if (event.keyCode === 13) {
+        event.preventDefault();
+        refs.createButton.click();
+      }
+    })
+
+    return ({ self, makeComponent }) => {
+      refs.list.innerHTML = "";
+      console.log('Rendering', state.items)
+      for (let i = 0; i < state.items.length; ++i) {
+        const data = state.items[i];
+        refs.list.appendChild(makeComponent("todo-list-item", { detail: { index: i, data }})); 
+      }
+    };
+  }),
+
+  "todo-list-item": webComponent(({ on }) => {
+    on("complete", ({ state: mutableState, detail }) => {
+      const isCompleted = mutableState.items[detail.index].isCompleted;
+      mutableState.items[detail.index].isCompleted = !isCompleted;
+    });
+
+    return ({ state, slots, detail, self }) => {
+      const item = state.items[detail.index];
+
+      slots.content = item.value;
+
+      if (item.isCompleted) {
+        self.classList.add("completed");
+      } else {
+        self.classList.remove("completed");
+      }
+    }
+  })
+})
+
+</script>
+
+</body>
+</html>
