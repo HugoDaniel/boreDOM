@@ -10,7 +10,7 @@ export type WebComponentInitParams<S> = {
 	state: S;
 	refs: Refs;
 	self: Bored;
-	on: (eventName: string, eventHandler: () => void) => void;
+	on: (eventName: string, eventHandler: (state: S | undefined, detail: CustomEvent["detail"]) => void) => void;
 };
 export type WebComponentRenderParams<S> = {
 	detail: WebComponentDetail;
@@ -60,9 +60,17 @@ declare abstract class Bored extends HTMLElement {
  * be proxified to allow for automatic updates of the dom whenever it
  * changes.
  *
+ * @param componentsLogic An optional object that allows you to specify the
+ * web components script code without having to place it in a separate file.
+ * Its keys are the tag names and its value is the return type of
+ * the `webComponent()` function. This overrides any external file
+ * associated with the component.
+ *
  * @returns The app initial state.
  */
-export declare function inflictBoreDOM<S extends object>(state?: S): Promise<S | undefined>;
+export declare function inflictBoreDOM<S extends object>(state?: S, componentsLogic?: {
+	[key: string]: ReturnType<typeof webComponent>;
+}): Promise<S | undefined>;
 /**
  * Creates a Web Component render updater
  *

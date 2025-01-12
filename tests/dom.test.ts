@@ -10,7 +10,7 @@ import {
   queryByText,
 } from "@testing-library/dom";
 import "mocha/mocha.js";
-import { inflictBoreDOM } from "../src/index";
+import { inflictBoreDOM, webComponent } from "../src/index";
 
 function renderHTML(html: string) {
   const main = document.querySelector("main");
@@ -380,6 +380,31 @@ export default function () {
           "some-slot",
           "Should have a `data-slot='slot-name' attribute`",
         );
+      });
+
+      it("should allow script code to be defined in the `inflictBoreDOM()` function", async () => {
+        const container = renderHTML(`
+          <inline-component1></inline-component1>
+
+          <template data-component="inline-component1">
+            <p>Stateful inline component 1</p>
+          </template>
+
+          <!-- code will be set in inflictBoreDOM -->
+        `);
+
+        await inflictBoreDOM(undefined, {
+          "inline-component1": webComponent(() => ({ self }) => {
+            self.innerHTML = "Inline code run";
+          }),
+        });
+
+        const elem = getByText(
+          container,
+          "Inline code run",
+        );
+        expect(elem).to.be.an.instanceof(HTMLElement);
+        expect(elem.tagName).to.be.equals("INLINE-COMPONENT1");
       });
     });
 

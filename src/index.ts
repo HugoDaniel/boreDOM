@@ -24,11 +24,26 @@ import type { AppState, InitFunction } from "./types";
  * be proxified to allow for automatic updates of the dom whenever it
  * changes.
  *
+ * @param componentsLogic An optional object that allows you to specify the
+ * web components script code without having to place it in a separate file.
+ * Its keys are the tag names and its value is the return type of
+ * the `webComponent()` function. This overrides any external file
+ * associated with the component.
+ *
  * @returns The app initial state.
  */
-export async function inflictBoreDOM<S extends object>(state?: S) {
+export async function inflictBoreDOM<S extends object>(
+  state?: S,
+  componentsLogic?: { [key: string]: ReturnType<typeof webComponent> },
+) {
   const registeredNames = searchForComponents();
   const componentsCode = await dynamicImportScripts(registeredNames);
+
+  if (componentsLogic) {
+    for (const tagName of Object.keys(componentsLogic)) {
+      componentsCode.set(tagName, componentsLogic[tagName]);
+    }
+  }
 
   // Initial state for boreDOM:
   const initialState: AppState<S> = {
@@ -47,7 +62,6 @@ export async function inflictBoreDOM<S extends object>(state?: S) {
   // Proxifies the `initialState.app`:
   const proxifiedState = proxify(initialState);
   // Call the code from the corresponding .js file of each component:
-  console.log("inflictBoreDOM()", state);
   runComponentsInitializer(proxifiedState);
 
   return proxifiedState.app;
