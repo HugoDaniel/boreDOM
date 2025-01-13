@@ -1,0 +1,21 @@
+{
+  "name": "boreDOMCLI",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "boredom": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^13.0.0",
+    "jsdom": "^26.0.0",
+    "jsom": "^1.0.0",
+    "pretty": "^2.0.0"
+  }
+}
