@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 const fs = require('fs-extra');
 const path = require('path');
 const glob = require('glob');
@@ -10,8 +9,10 @@ const serveStatic = require('serve-static');
 const beautify = require('js-beautify').html;
 const chokidar = require('chokidar');
 
+
 const BUILD_DIR = 'build';
 let serverStarted = false;
+let numberOfRefreshes = 0;
 
 program
   .option('--index <file>', 'Index file to serve', 'index.html')
@@ -26,6 +27,10 @@ async function copyStatic() {
     await fs.copy(staticDir, path.join(BUILD_DIR, 'static'));
     console.log('Static folder copied.');
   }
+}
+
+async function copyBoreDOM() {
+  return fs.writeFile(path.join(BUILD_DIR, 'boreDOM.js'), atob(boredom));
 }
 
 async function processComponents() {
@@ -135,6 +140,7 @@ async function build() {
 
   // Run build steps
   await copyStatic();
+  await copyBoreDOM();
   const components = await processComponents();
   await updateIndex(components);
   console.log("Build process complete.");
@@ -167,7 +173,7 @@ async function watchFiles() {
     // Debounce rebuilds in case multiple file events fire together
     rebuildTimeout = setTimeout(() => {
       build().then(() => {
-        console.log("Build refreshed.");
+        console.log(`#${++numberOfRefreshes} - ${(new Date()).toISOString()} - Build refreshed.`);
       }).catch(err => console.error("Error during rebuild:", err));
     }, 100);
   });
@@ -183,3 +189,4 @@ main().catch(err => {
   console.error(err);
   process.exit(1);
 });
+
