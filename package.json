@@ -1,17 +1,14 @@
 {
   "name": "@mr_hugo/boredom",
-  "version": "0.25.2",
+  "version": "0.25.3",
   "description": "Another boring JavaScript framework.",
   "main": "dist/boreDOM.min.js",
-  "files": [
-    "dist/*"
-  ],
   "scripts": {
     "build_decls": "dts-bundle-generator -o dist/boreDOM.d.ts src/index.ts",
     "build_module": "esbuild src/index.ts --bundle --outfile=dist/boreDOM.min.js --target=es2022 --minify --platform=neutral",
     "build_full_module": "esbuild src/index.ts --bundle --outfile=dist/boreDOM.js --target=es2022 --platform=neutral",
     "build": "pnpm run build_decls && pnpm run build_module",
-    "build_cli": "pnpm run build_full_module && pnpm run build_decls && echo '#!/usr/bin/env node\nconst boredom=`' > dist/boreDOM && cat dist/boreDOM.js | base64 >> dist/boreDOM && echo '`;' >> dist/boreDOM && cat boreDOMCLI/cli.js >> dist/boreDOM && chmod +x dist/boreDOM",
+    "build_cli": "pnpm run build_full_module && pnpm run build_decls && echo '#!/usr/bin/env node\nconst boredom=`' > dist/boreDOM.js && cat dist/boreDOM.js | base64 >> dist/boreDOM.js && echo '`;' >> dist/boreDOM.js && cat boreDOMCLI/cli.js >> dist/boreDOM.js && chmod +x dist/boreDOM.js && cp dist/boreDOM.js boreDOMCLI/index.js",
     "dev": "esbuild src/boreDOM.ts --bundle --outdir=www/js --watch --servedir=www --platform=neutral",
     "test": "esbuild tests/runner.ts --bundle --outdir=tests/js --watch --servedir=tests --platform=browser"
   },

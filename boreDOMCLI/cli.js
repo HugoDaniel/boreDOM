@@ -86,6 +86,7 @@ async function updateIndex(components) {
   const indexPath = path.resolve(options.index);
   let indexContent = await fs.readFile(indexPath, 'utf-8');
   const $ = cheerio.load(indexContent, { decodeEntities: false });
+  $('body').append(`\n  <script src="boreDOM.js" type="module"></script>`);
 
   // For each component, add references to its JS/CSS files and inject its full <template> tag
   Object.keys(components).forEach(component => {
