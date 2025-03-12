@@ -52,6 +52,10 @@ export type Refs = {
 export type Slots = {
 	[key: `${Letter}${string}`]: HTMLElement;
 };
+/**
+ * Queries for the component tag name in the DOM. Throws error if not found.
+ */
+export declare const queryComponent: (q: string) => Bored | undefined;
 declare abstract class Bored extends HTMLElement {
 	abstract renderCallback: (elem: Bored) => void;
 }

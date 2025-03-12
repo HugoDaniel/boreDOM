@@ -14,6 +14,7 @@ import {
   searchForComponents,
 } from "./dom";
 import type { AppState, InitFunction } from "./types";
+export { queryComponent } from "./dom";
 
 /**
  * Queries all `<template>` elements that
