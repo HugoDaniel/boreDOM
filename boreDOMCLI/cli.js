@@ -14,9 +14,13 @@ const BUILD_DIR = 'build';
 let serverStarted = false;
 let numberOfRefreshes = 0;
 
+console.log("## boreDOM CLI options")
+console.log("## ", '--index <file>', 'Index file to serve', 'defaults to index.html')
+console.log("## ", '--html <folder>', 'Folder containing HTML component files', 'defaults to "components"')
+
 program
   .option('--index <file>', 'Index file to serve', 'index.html')
-  .option('--html <folder>', 'Folder containing HTML component files')
+  .option('--html <folder>', 'Folder containing HTML component files', 'components')
   .parse(process.argv);
 
 const options = program.opts();
@@ -62,12 +66,14 @@ async function processComponents() {
         const jsMatch = glob.sync(`**/${componentName}.js`, { cwd: componentDir });
         const cssMatch = glob.sync(`**/${componentName}.css`, { cwd: componentDir });
 
+        const hasJS = jsMatch.length > 0;
         if (jsMatch.length > 0) {
           const jsSrc = path.join(componentDir, jsMatch[0]);
           const destJsPath = path.join(componentBuildDir, `${componentName}.js`);
           await fs.copy(jsSrc, destJsPath);
           console.log(`Copied ${componentName}.js to ${componentBuildDir}`);
         }
+        const hasCSS = cssMatch.length > 0;
         if (cssMatch.length > 0) {
           const cssSrc = path.join(componentDir, cssMatch[0]);
           const destCssPath = path.join(componentBuildDir, `${componentName}.css`);
@@ -75,7 +81,7 @@ async function processComponents() {
           console.log(`Copied ${componentName}.css to ${componentBuildDir}`);
         }
 
-        components[componentName] = { templateTag: fullTemplate };
+        components[componentName] = { templateTag: fullTemplate, hasJS, hasCSS };
       }
     }
   }
@@ -83,6 +89,7 @@ async function processComponents() {
 }
 
 async function updateIndex(components) {
+  console.log('UPDATING WITH COMPONENTS:\n\n', JSON.stringify(components, null, 2));
   const indexPath = path.resolve(options.index);
   let indexContent = await fs.readFile(indexPath, 'utf-8');
   const $ = cheerio.load(indexContent, { decodeEntities: false });
@@ -90,11 +97,11 @@ async function updateIndex(components) {
 
   // For each component, add references to its JS/CSS files and inject its full <template> tag
   Object.keys(components).forEach(component => {
-    if ($(`script[src="components/${component}/${component}.js"]`).length === 0) {
+    if (components[component].hasJS && $(`script[src="components/${component}/${component}.js"]`).length === 0) {
       $('body').append(`\n  <script src="components/${component}/${component}.js" type="module"></script>`);
       console.log(`Added script reference for ${component}`);
     }
-    if ($(`link[href="components/${component}/${component}.css"]`).length === 0) {
+    if (components[component].hasCSS && $(`link[href="components/${component}/${component}.css"]`).length === 0) {
       $('head').append(`\n  <link rel="stylesheet" href="components/${component}/${component}.css">`);
       console.log(`Added stylesheet reference for ${component}`);
     }
