@@ -23,6 +23,6 @@
     "jsdom": "^26.0.0",
     "jsom": "^1.0.0",
     "pretty": "^2.0.0",
-    "serve-static": "^1.16.2"
+    "serve-handler": "^6.1.6"
   }
 }
