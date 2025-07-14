@@ -4,9 +4,6 @@ all: dist/boreDOM.min.js dist/boreDOM.d.ts dist/boreDOM.js
 node_modules:
 	pnpm install
 
-boreDOMCLI/node_modules:
-	cd boreDOMCLI && pnpm install && cd ..
-
 dist/boreDOM.min.js: node_modules 
 	pnpm run build_module
 
@@ -16,16 +13,11 @@ dist/boreDOM.full.js: node_modules
 dist/boreDOM.d.ts: node_modules  
 	pnpm run build_decls
 
-dist/boreDOM.js: node_modules boreDOMCLI/boreDOM.js
-	cp boreDOMCLI/boreDOM.js dist/
+dist/boreDOM.js: node_modules 
+	pnpm run bundle_cli
 
 boreDOMCLI/generated_cli.js: node_modules dist/boreDOM.full.js
 	pnpm run build_cli
-
-boreDOMCLI/boreDOM.js: boreDOMCLI/node_modules  boreDOMCLI/generated_cli.js
-	cd boreDOMCLI
-	pnpm run build
-	cd ..
 
 tests/dist/boreDOM.min.js: dist/boreDOM.min.js
 	cd tests && ln -fs ../dist .
@@ -38,7 +30,12 @@ dev: node_modules
 test: node_modules tests/dist/boreDOM.min.js
 	find src/ | entr -s 'make clean && make all && pnpm run test'
 
-clean:
+clean_cli:
+	rm dist/boreDOM.js
+	rm boreDOMCLI/generated_cli.js
+	rm boreDOMCLI/boreDOM.js
+
+clean: clean_cli
 	rm dist/*
 	rm -rf node_modules 
 	rm -rf boreDOMCLI/node_modules 

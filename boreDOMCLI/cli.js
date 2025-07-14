@@ -8,6 +8,7 @@ import finalhandler from "finalhandler";
 import jsBeautify from "js-beautify";
 import chokidar from "chokidar";
 import handler from "serve-handler";
+import net from "net";
 // import * as esbuild from "esbuild";
 
 const beautify = jsBeautify.html;
@@ -19,15 +20,21 @@ let numberOfRefreshes = 0;
 console.log("## boreDOM CLI options");
 console.log(
   "## ",
-  "--index <file>",
-  "Index file to serve",
-  "defaults to index.html",
+  "--index <path to default html>",
+  "The base HTML file to serve",
+  "defaults to ./index.html",
 );
 console.log(
   "## ",
   "--html <folder>",
   "Folder containing HTML component files",
-  'defaults to "components"',
+  'defaults to "./components"',
+);
+console.log(
+  "## ",
+  "--static <folder>",
+  "Static files folder, all files in here are copied verbatim",
+  'defaults to "./static"',
 );
 // console.log(
 //   "## ",
@@ -37,23 +44,28 @@ console.log(
 // );
 
 program
-  .option("--index <file>", "Index file to serve", "index.html")
+  .option("--index <path to file>", "Index file to serve", "index.html")
   .option(
     "--html <folder>",
     "Folder containing HTML component files",
     "components",
   )
+  .option(
+    "--static <folder>",
+    "Folder containing static files to be copied as is",
+    "static",
+  )
   // .option(
   //   "--bundle <folder>",
   //   "Folder containing files to be bundled",
-  //   "components",
+  //   "components", 0; //
   // )
   .parse(process.argv);
 
 const options = program.opts();
 
 async function copyStatic() {
-  const staticDir = path.join(process.cwd(), "static");
+  const staticDir = path.resolve(options.static);
   if (await fs.pathExists(staticDir)) {
     await fs.copy(staticDir, path.join(BUILD_DIR, "static"));
     console.log("Static folder copied.");
@@ -138,7 +150,7 @@ async function processComponents() {
 
 async function updateIndex(components) {
   console.log(
-    "UPDATING WITH COMPONENTS:\n\n",
+    "Updated index.html with components:\n\n",
     JSON.stringify(components, null, 2),
   );
   const indexPath = path.resolve(options.index);
@@ -191,17 +203,34 @@ async function updateIndex(components) {
   console.log("Index updated with pretty printed HTML.");
 }
 
-function startServer() {
+async function startServer() {
   if (serverStarted) return;
+
   const server = http.createServer((req, res) => {
     return handler(req, res, {
       cleanUrls: true,
       public: path.resolve(BUILD_DIR),
     });
   });
-  const port = process.env.PORT || 8080;
-  server.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+
+  let port = process.env.PORT || 8080;
+
+  const serverHandler = () => {
+    const { port: actualPort } = server.address();
+    console.log(`Server running at http://localhost:${actualPort}`);
+  };
+  server.listen(port, serverHandler);
+  server.on("error", (e) => {
+    if (e.code === "EADDRINUSE") {
+      console.log(
+        "\x1b[33m%s\x1b[0m",
+        `⚠️ Warning: Port ${port} in use, starting with a OS assigned port.`,
+      );
+      setTimeout(() => {
+        server.close();
+        server.listen(0);
+      }, 1000);
+    }
   });
   serverStarted = true;
 }
@@ -262,6 +291,20 @@ async function watchFiles() {
 }
 
 async function main() {
+  console.log("The file used as the base for HTML is:", options.index);
+
+  const indexPath = path.join(process.cwd(), options.index);
+  fs.ensureFile(indexPath, (err) => {
+    if (err) {
+      // This should not happen. ensureFile creates the file.
+      console.log(
+        "\x1b[31m%s\x1b[0m",
+        `❌ Error: The file "${indexPath}" was not found.\nPlease specify a location for it with "--index"`,
+      );
+      process.exit(1);
+    }
+  });
+
   await build();
   startServer();
   await watchFiles();
