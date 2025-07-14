@@ -1,20 +1,28 @@
 {
   "name": "@mr_hugo/boredom",
-  "version": "0.25.3",
+  "version": "0.25.4",
   "description": "Another boring JavaScript framework.",
   "main": "dist/boreDOM.min.js",
+  "bin": {
+    "boreDOM": "./dist/boreDOM.js"
+  },
   "scripts": {
     "build_decls": "dts-bundle-generator -o dist/boreDOM.d.ts src/index.ts",
     "build_module": "esbuild src/index.ts --bundle --outfile=dist/boreDOM.min.js --target=es2022 --minify --platform=neutral",
     "build_full_module": "esbuild src/index.ts --bundle --outfile=dist/boreDOM.full.js --target=es2022 --platform=neutral",
     "build": "pnpm run build_decls && pnpm run build_module",
-    "build_cli": "pnpm run build_full_module && pnpm run build_decls && echo '#!/usr/bin/env node\nconst boredom=`' > dist/boreDOM.js && cat dist/boreDOM.full.js | base64 >> dist/boreDOM.js && echo '`;' >> dist/boreDOM.js && cat boreDOMCLI/cli.js >> dist/boreDOM.js && chmod +x dist/boreDOM.js && cp dist/boreDOM.js boreDOMCLI/index.js",
+    "build_cli": "pnpm run build_full_module && pnpm run build_decls && echo '#!/usr/bin/env node\nconst boredom=`' > dist/boreDOM.js && cat dist/boreDOM.full.js | base64 >> dist/boreDOM.js && echo '`;' >> dist/boreDOM.js && cat boreDOMCLI/cli.js >> dist/boreDOM.js && chmod +x dist/boreDOM.js && cp dist/boreDOM.js boreDOMCLI/generated_cli.js",
     "dev": "esbuild src/boreDOM.ts --bundle --outdir=www/js --watch --servedir=www --platform=neutral",
     "test": "esbuild tests/runner.ts --bundle --outdir=tests/js --watch --servedir=tests --platform=browser"
   },
   "keywords": [
     "dom",
-    "framework"
+    "framework",
+    "frontend",
+    "hmr",
+    "dev-server",
+    "build-tool",
+    "boredom"
   ],
   "author": "Hugo Daniel",
   "license": "CC0",
@@ -22,15 +30,15 @@
   "homespage": "https://hugodaniel.com/pages/boredom/",
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
-    "@types/chai": "^5.0.1",
+    "@types/chai": "^5.2.2",
     "@types/mocha": "^10.0.10",
-    "@webgpu/types": "^0.1.52",
-    "chai": "^5.1.2",
+    "@webgpu/types": "^0.1.64",
+    "chai": "^5.2.1",
     "dts-bundle-generator": "^9.5.1",
     "esbuild": "0.23.1",
     "mocha": "^10.8.2",
     "nyc": "^17.1.0",
     "typedoc": "0.26.7",
-    "typescript": "^5.7.2"
+    "typescript": "^5.8.3"
   }
 }

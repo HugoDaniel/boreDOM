@@ -2,27 +2,38 @@
   "name": "boreDOM",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "private": true,
+  "type": "module",
   "bin": {
-    "boreDOM": "./index.js"
+    "boreDOM": "./boreDOM.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "esbuild generated_cli.js --bundle --outfile=boreDOM.js --platform=node --target=node24.4"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "frontend",
+    "framework",
+    "hmr",
+    "dev-server",
+    "build-tool",
+    "boredom"
+  ],
+  "author": "HugoDaniel",
   "license": "CC0",
   "dependencies": {
-    "cheerio": "^1.0.0",
+    "cheerio": "^1.1.0",
     "chokidar": "^4.0.3",
-    "commander": "^13.0.0",
+    "commander": "^13.1.0",
     "finalhandler": "^2.1.0",
     "fs-extra": "^11.3.0",
-    "glob": "^11.0.1",
+    "glob": "^11.0.3",
     "js-beautify": "^1.15.4",
-    "jsdom": "^26.0.0",
+    "jsdom": "^26.1.0",
     "jsom": "^1.0.0",
     "pretty": "^2.0.0",
     "serve-handler": "^6.1.6"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.6"
   }
 }

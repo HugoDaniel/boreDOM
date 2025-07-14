@@ -1,13 +1,16 @@
-const fs = require("fs-extra");
-const path = require("path");
-const glob = require("glob");
-const cheerio = require("cheerio");
-const { program } = require("commander");
-const http = require("http");
-const finalhandler = require("finalhandler");
-const beautify = require("js-beautify").html;
-const chokidar = require("chokidar");
-const handler = require("serve-handler");
+import fs from "fs-extra";
+import path from "path";
+import * as glob from "glob";
+import * as cheerio from "cheerio";
+import { program } from "commander";
+import http from "http";
+import finalhandler from "finalhandler";
+import jsBeautify from "js-beautify";
+import chokidar from "chokidar";
+import handler from "serve-handler";
+// import * as esbuild from "esbuild";
+
+const beautify = jsBeautify.html;
 
 const BUILD_DIR = "build";
 let serverStarted = false;
@@ -26,6 +29,12 @@ console.log(
   "Folder containing HTML component files",
   'defaults to "components"',
 );
+// console.log(
+//   "## ",
+//   "--bundle <folder>",
+//   "Folder containing JS/TS files to be bundled (using esbuild)",
+//   'defaults to "src"',
+// );
 
 program
   .option("--index <file>", "Index file to serve", "index.html")
@@ -34,6 +43,11 @@ program
     "Folder containing HTML component files",
     "components",
   )
+  // .option(
+  //   "--bundle <folder>",
+  //   "Folder containing files to be bundled",
+  //   "components",
+  // )
   .parse(process.argv);
 
 const options = program.opts();
@@ -222,6 +236,10 @@ async function watchFiles() {
   if (await fs.pathExists(staticDir)) {
     pathsToWatch.push(staticDir);
   }
+  // Watch the bundle folder
+  // if (options.bundle) {
+  //   pathsToWatch.push(path.resolve(options.bundle));
+  // }
 
   console.log("Watching for file changes in:", pathsToWatch);
   // chokidar will recursively watch all files in the specified paths
