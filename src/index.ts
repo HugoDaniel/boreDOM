@@ -33,10 +33,10 @@ export { queryComponent } from "./dom";
  *
  * @returns The app initial state.
  */
-export async function inflictBoreDOM<S extends object>(
+export async function inflictBoreDOM<S>(
   state?: S,
   componentsLogic?: { [key: string]: ReturnType<typeof webComponent> },
-) {
+): Promise<AppState<S>["app"]> {
   const registeredNames = searchForComponents();
   const componentsCode = await dynamicImportScripts(registeredNames);
 
@@ -64,6 +64,8 @@ export async function inflictBoreDOM<S extends object>(
   const proxifiedState = proxify(initialState);
   // Call the code from the corresponding .js file of each component:
   runComponentsInitializer(proxifiedState);
+
+  if (!proxifiedState.app) throw new Error("Unable to proxify state object.");
 
   return proxifiedState.app;
 }

@@ -163,8 +163,10 @@ export const isTemplate = (e: HTMLElement): e is HTMLTemplateElement =>
   e instanceof HTMLTemplateElement;
 const isObject = (t: any): t is object => typeof t === "object";
 const isFunction = (t: any): t is Function => typeof t === "function";
-const isBored = (t: unknown): t is Bored =>
+export const isBored = (t: unknown): t is Bored =>
   isObject(t) && "isBored" in t && Boolean(t.isBored);
+export const emitsEvent = (eventName: string, elem: HTMLElement) => {
+};
 const camelize = (str: string) => {
   return str.split("-")
     .map((item, index) =>
@@ -321,7 +323,17 @@ const component = <T>(tag: string, props: {
                   eventNames.forEach((customEventName) => {
                     node.addEventListener(
                       getEventName(attribute.name as any),
-                      (e) => dispatch(customEventName, { event: e }),
+                      (e) =>
+                        dispatch(customEventName, {
+                          event: e,
+                          dispatcher: node,
+                          component: this,
+                          index: this.parentElement
+                            ? Array.from(this.parentElement.children).indexOf(
+                              this,
+                            )
+                            : -1,
+                        }),
                     );
                   });
                 }

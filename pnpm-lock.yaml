@@ -35,6 +35,9 @@ importers:
       jsom:
         specifier: ^1.0.0
         version: 1.0.0
+      mime-types:
+        specifier: ^3.0.1
+        version: 3.0.1
       pretty:
         specifier: ^2.0.0
         version: 2.0.0
@@ -1146,8 +1149,16 @@ packages:
     resolution: {integrity: sha512-BHJ/EKruNIqJf/QahvxwQZXKygOQ256myeN/Ew+THcAa5q+PjyTTMMeNQC4DZw5AwfvelsUrA6B67NKMqXDbzQ==}
     engines: {node: '>= 0.6'}
 
+  mime-db@1.54.0:
+    resolution: {integrity: sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==}
+    engines: {node: '>= 0.6'}
+
   mime-types@2.1.18:
     resolution: {integrity: sha512-lc/aahn+t4/SWV/qcmumYjymLsWfN3ELhpmVuUFjgsORruuZPVSwAQryq+HHGvO/SI2KVX26bx+En+zhM8g8hQ==}
+    engines: {node: '>= 0.6'}
+
+  mime-types@3.0.1:
+    resolution: {integrity: sha512-xRc4oEhT6eaBpU1XF7AjpOFD+xQmXNB5OVKwp4tqCuBpHLS/ZbBDrc07mYTDqVMg6PfxUjjNp85O6Cd2Z/5HWA==}
     engines: {node: '>= 0.6'}
 
   minimatch@10.0.3:
@@ -2799,9 +2810,15 @@ snapshots:
 
   mime-db@1.33.0: {}
 
+  mime-db@1.54.0: {}
+
   mime-types@2.1.18:
     dependencies:
       mime-db: 1.33.0
+
+  mime-types@3.0.1:
+    dependencies:
+      mime-db: 1.54.0
 
   minimatch@10.0.3:
     dependencies:

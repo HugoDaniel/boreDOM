@@ -1,4 +1,5 @@
 import fs from "fs-extra";
+import mime from "mime-types";
 import path from "path";
 import * as glob from "glob";
 import * as cheerio from "cheerio";
@@ -33,8 +34,8 @@ console.log(
 console.log(
   "## ",
   "--static <folder>",
-  "Static files folder, all files in here are copied verbatim",
-  'defaults to "./static"',
+  "Static files folder, all files in here are copied as is",
+  'defaults to "./public"',
 );
 // console.log(
 //   "## ",
@@ -53,7 +54,7 @@ program
   .option(
     "--static <folder>",
     "Folder containing static files to be copied as is",
-    "static",
+    "public",
   )
   // .option(
   //   "--bundle <folder>",
@@ -156,16 +157,22 @@ async function updateIndex(components) {
   const indexPath = path.resolve(options.index);
   let indexContent = await fs.readFile(indexPath, "utf-8");
   const $ = cheerio.load(indexContent, { decodeEntities: false });
+  $("head").prepend(
+    `\n  <script type="importmap">{ "imports": {\
+      "@mr_hugo/boredom/dist/boreDOM.full.js": "./boreDOM.js",\n \
+      "boredom": "./boreDOM.js"\n \
+    } }</script>`,
+  );
   $("body").append(`\n  <script src="boreDOM.js" type="module"></script>`);
 
   // For each component, add references to its JS/CSS files and inject its full <template> tag
   Object.keys(components).forEach((component) => {
     if (
       components[component].hasJS &&
-      $(`script[src="components/${component}/${component}.js"]`).length === 0
+      $(`script[src="./components/${component}/${component}.js"]`).length === 0
     ) {
       $("body").append(
-        `\n  <script src="components/${component}/${component}.js" type="module"></script>`,
+        `\n  <script src="./components/${component}/${component}.js" type="module"></script>`,
       );
       console.log(`Added script reference for ${component}`);
     }
@@ -206,8 +213,36 @@ async function updateIndex(components) {
 async function startServer() {
   if (serverStarted) return;
 
+  function serveFile(req, res, opts) {
+    // strip query & hash
+    let urlPath = decodeURIComponent(req.url.split(/[?#]/)[0]);
+    // default to index.html
+    if (urlPath === "/" || urlPath.endsWith("/")) {
+      urlPath = path.posix.join(urlPath, "index.html");
+    }
+
+    const filePath = path.join(BUILD_DIR, urlPath);
+
+    fs.pathExists(filePath).then((exists) => {
+      if (!exists) {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        return res.end("Not Found");
+      }
+
+      // lookup based on extension, fallback to octet-stream
+      const contentType = mime.lookup(filePath) || "application/octet-stream";
+      console.log("Content type is ", contentType, "for", filePath);
+      res.writeHead(200, { "Content-Type": contentType });
+      fs.createReadStream(filePath).pipe(res);
+    }).catch((err) => {
+      console.error(err);
+      res.writeHead(500, { "Content-Type": "text/plain" });
+      res.end("Internal Server Error");
+    });
+  }
+
   const server = http.createServer((req, res) => {
-    return handler(req, res, {
+    return serveFile(req, res, {
       cleanUrls: true,
       public: path.resolve(BUILD_DIR),
     });

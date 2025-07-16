@@ -1,16 +1,25 @@
 {
   "name": "@mr_hugo/boredom",
-  "version": "0.25.6",
+  "version": "0.25.10",
   "description": "Another boring JavaScript framework.",
-  "main": "dist/boreDOM.min.js",
+  "main": "dist/boreDOM.full.js",
+  "module": "dist/boreDOM.full.js",
+  "types": "dist/boreDOM.full.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/boreDOM.full.d.ts",
+      "import": "./dist/boreDOM.full.js",
+      "require": "./dist/boreDOM.full.js"
+    }
+  },
   "bin": {
     "boreDOM": "./dist/boreDOM.js"
   },
   "scripts": {
-    "build_decls": "dts-bundle-generator -o dist/boreDOM.d.ts src/index.ts",
+    "build_decls": "dts-bundle-generator -o dist/boreDOM.d.ts src/index.ts && cp dist/boreDOM.d.ts dist/boreDOM.full.d.ts && cp dist/boreDOM.d.ts dist/boreDOM.min.d.ts",
     "build_module": "esbuild src/index.ts --bundle --outfile=dist/boreDOM.min.js --target=es2022 --minify --platform=neutral",
     "build_full_module": "esbuild src/index.ts --bundle --outfile=dist/boreDOM.full.js --target=es2022 --platform=neutral",
-    "build": "pnpm run build_decls && pnpm run build_module",
+    "build": "pnpm run build_decls && pnpm run build_module && pnpm run build_full_module",
     "bundle_cli": "pnpm run build_cli && esbuild boreDOMCLI/generated_cli.js --bundle --outfile=dist/boreDOM.js --platform=node --target=node24.4 --packages=external",
     "build_cli": "pnpm run build_full_module && pnpm run build_decls && echo '#!/usr/bin/env node\nconst boredom=`' > dist/boreDOM.js && cat dist/boreDOM.full.js | base64 >> dist/boreDOM.js && echo '`;' >> dist/boreDOM.js && cat boreDOMCLI/cli.js >> dist/boreDOM.js && chmod +x dist/boreDOM.js && cp dist/boreDOM.js boreDOMCLI/generated_cli.js",
     "dev": "esbuild src/boreDOM.ts --bundle --outdir=www/js --watch --servedir=www --platform=neutral",
@@ -52,7 +61,9 @@
     "js-beautify": "^1.15.4",
     "jsdom": "^26.1.0",
     "jsom": "^1.0.0",
+    "mime-types": "^3.0.1",
     "pretty": "^2.0.0",
     "serve-handler": "^6.1.6"
-  }
+  },
+  "packageManager": "pnpm@10.13.1"
 }

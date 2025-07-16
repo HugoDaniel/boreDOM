@@ -170,14 +170,7 @@ var component = (tag, props = {}) => {
                   eventNames.forEach((customEventName) => {
                     node.addEventListener(
                       getEventName(attribute.name),
-                      (e) => dispatch(customEventName, {
-                        event: e,
-                        dispatcher: node,
-                        component: this,
-                        index: this.parentElement ? Array.from(this.parentElement.children).indexOf(
-                          this
-                        ) : -1
-                      })
+                      (e) => dispatch(customEventName, { event: e })
                     );
                   });
                 }
@@ -383,7 +376,6 @@ function createEventsHandler(c, app, detail) {
   return (eventName, handler) => {
     addEventListener(eventName, (e) => {
       let target = e?.detail?.event.currentTarget;
-      let emiterElem = void 0;
       while (target) {
         if (target === c) {
           handler({ state: app, e: e.detail, detail });
@@ -607,7 +599,6 @@ async function inflictBoreDOM(state, componentsLogic) {
   };
   const proxifiedState = proxify(initialState);
   runComponentsInitializer(proxifiedState);
-  if (!proxifiedState.app) throw new Error("Unable to proxify state object.");
   return proxifiedState.app;
 }
 function webComponent(initFunction) {

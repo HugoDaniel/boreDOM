@@ -1,0 +1,33 @@
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B6B" />
+      <stop offset="50%" stop-color="#FFD93D" />
+      <stop offset="100%" stop-color="#6BCB77" />
+    </linearGradient>
+    <clipPath id="circle-clip">
+      <circle cx="400" cy="300" r="250" />
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="600" fill="#1E1E2F" />
+
+  <!-- Abstract overlapping shapes -->
+  <g clip-path="url(#circle-clip)">
+    <rect x="150" y="50" width="500" height="500" rx="80" fill="url(#grad)" opacity="0.8" transform="rotate(25 400 300)" />
+    <circle cx="400" cy="300" r="200" fill="#FFFFFF22" />
+    <polygon points="400,50 550,450 250,450" fill="#FFFFFF11" />
+  </g>
+
+  <!-- Accent lines -->
+  <path d="M50,550 L750,550" stroke="#FFFFFF33" stroke-width="4" stroke-dasharray="20,15" />
+  <path d="M750,50 L50,50" stroke="#FFFFFF33" stroke-width="4" stroke-dasharray="10,10" />
+
+  <!-- Optional text (uncomment to use) -->
+  <text x="400" y="320" text-anchor="middle" fill="#FFFFFFEE" font-family="Verdana" font-size="48">
+    boreDOM
+  </text>
+</svg>
+

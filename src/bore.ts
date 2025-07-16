@@ -1,7 +1,7 @@
 /**
  * Mostly state management things
  */
-import { Bored, create, createComponent, queryComponent } from "./dom";
+import { Bored, create, createComponent, isBored, queryComponent } from "./dom";
 import {
   AppState,
   ReadonlyProxy,
@@ -66,6 +66,8 @@ export function createEventsHandler<S>(
     addEventListener(eventName as any, (e) => {
       let target: HTMLElement | undefined | null = e?.detail?.event
         .currentTarget;
+
+      let emiterElem: HTMLElement | undefined | null = undefined;
 
       // Only dispatch if the component 'c' is found in the hierarchy:
       while (target) {
@@ -251,7 +253,7 @@ function createSubscribersDispatcher<S>(state: AppState<S>) {
  * @returns The same reference as provided in argument, but with
  * proxies in its attributes.
  */
-export function proxify<S extends object>(boredom: AppState<S>) {
+export function proxify<S>(boredom: AppState<S>) {
   const runtime = boredom.internal;
   const state = boredom;
   if (state === undefined) return boredom;
@@ -352,7 +354,7 @@ export function createAndRunCode<S extends object>(
   state: AppState<S>,
   detail?: WebComponentDetail,
 ) {
-  // "code" is the function returned by the `webComponent()` above, it
+  // "code" is the function returned by the `webComponent()` (index.ts), it
   // creates the state reactive proxy and calls the initialization from
   // the corresponding template .js file
   const code = state.internal.components.get(name);
