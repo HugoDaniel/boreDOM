@@ -48,7 +48,7 @@ export async function inflictBoreDOM<S>(
 
   // Initial state for boreDOM:
   const initialState: AppState<S> = {
-    app: state ?? {},
+    app: state,
     internal: {
       customTags: registeredNames,
       components: componentsCode,

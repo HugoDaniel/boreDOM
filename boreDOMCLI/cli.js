@@ -106,7 +106,7 @@ async function processComponents() {
           `${componentName}.html`,
         );
         await fs.copy(filePath, destHtmlPath);
-        console.log(`Copied ${componentName}.html to ${componentBuildDir}`);
+        // console.log(`Copied ${componentName}.html to ${componentBuildDir}`);
 
         // Look for corresponding JS and CSS files (even in subfolders)
         const componentDir = path.dirname(filePath);
@@ -174,7 +174,7 @@ async function updateIndex(components) {
       $("body").append(
         `\n  <script src="./components/${component}/${component}.js" type="module"></script>`,
       );
-      console.log(`Added script reference for ${component}`);
+      // console.log(`Added script reference for ${component}`);
     }
     if (
       components[component].hasCSS &&
@@ -183,7 +183,7 @@ async function updateIndex(components) {
       $("head").append(
         `\n  <link rel="stylesheet" href="components/${component}/${component}.css">`,
       );
-      console.log(`Added stylesheet reference for ${component}`);
+      // console.log(`Added stylesheet reference for ${component}`);
     }
     if ($(`template[data-component="${component}"]`).length === 0) {
       $("body").append(`\n  ${components[component].templateTag}`);
@@ -231,11 +231,11 @@ async function startServer() {
 
       // lookup based on extension, fallback to octet-stream
       const contentType = mime.lookup(filePath) || "application/octet-stream";
-      console.log("Content type is ", contentType, "for", filePath);
+      // console.log("Content type is ", contentType, "for", filePath);
       res.writeHead(200, { "Content-Type": contentType });
       fs.createReadStream(filePath).pipe(res);
     }).catch((err) => {
-      console.error(err);
+      // console.error(err);
       res.writeHead(500, { "Content-Type": "text/plain" });
       res.end("Internal Server Error");
     });
@@ -271,7 +271,7 @@ async function startServer() {
 }
 
 async function build() {
-  console.log("Starting build process...");
+  // console.log("Starting build process...");
   // Clean the build directory
   await fs.remove(BUILD_DIR);
   await fs.ensureDir(BUILD_DIR);
@@ -281,7 +281,7 @@ async function build() {
   await copyBoreDOM();
   const components = await processComponents();
   await updateIndex(components);
-  console.log("Build process complete.");
+  // console.log("Build process complete.");
 }
 
 async function watchFiles() {

@@ -149,11 +149,16 @@ var component = (tag, props = {}) => {
        * with custom dispatchers.
        * @returns an array of strings
        */
+      /** Extracts event names from strings like "dispatch('a','b')" */
       #parseCustomEventNames(str) {
         return str.split("'").filter(
           (s) => s.length > 2 && !(s.includes("(") || s.includes(",") || s.includes(")"))
         );
       }
+      /**
+       * Replaces inline on* attributes within the component DOM with real
+        * listeners that dispatch custom events using dispatch().
+       */
       #createDispatchers() {
         let host;
         this.traverse((node) => {
@@ -247,6 +252,10 @@ var component = (tag, props = {}) => {
         this.#createDispatchers();
         this.isInitialized = true;
       }
+      /**
+       * User-provided renderer is assigned here by createComponent.
+       * Called on connect and whenever state triggers subscriptions.
+       */
       renderCallback = (_) => {
       };
       connectedCallback() {
@@ -556,21 +565,25 @@ function proxify(boredom) {
 }
 function runComponentsInitializer(state) {
   const tagsInDom = state.internal.customTags.filter(
-    (tag) => queryComponent(tag) !== void 0
+    (tag) => (
+      // A tag is considered present if at least one instance exists in the DOM
+      document.querySelector(tag) !== null
+    )
   );
   const components = state.internal.components;
   for (const [tagName, code] of components.entries()) {
     if (code === null || !tagsInDom.includes(tagName)) continue;
-    const componentClass = queryComponent(tagName);
-    if (!componentClass) {
-      console.log(
-        `<${tagName}> is not yet in the DOM. The associated JS script will be called when the component is connected.`
-      );
-      return;
+    const elements = Array.from(
+      document.querySelectorAll(tagName)
+    ).filter((el) => isBored(el));
+    if (elements.length === 0) {
+      continue;
     }
-    code(state, { index: 0, name: tagName, data: void 0 })(
-      componentClass
-    );
+    elements.forEach((componentClass, index) => {
+      code(state, { index, name: tagName, data: void 0 })(
+        componentClass
+      );
+    });
   }
   return;
 }
@@ -607,7 +620,6 @@ async function inflictBoreDOM(state, componentsLogic) {
   };
   const proxifiedState = proxify(initialState);
   runComponentsInitializer(proxifiedState);
-  if (!proxifiedState.app) throw new Error("Unable to proxify state object.");
   return proxifiedState.app;
 }
 function webComponent(initFunction) {
