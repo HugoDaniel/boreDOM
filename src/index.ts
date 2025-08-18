@@ -48,7 +48,7 @@ export async function inflictBoreDOM<S>(
 
   // Initial state for boreDOM:
   const initialState: AppState<S> = {
-    app: state,
+    app: state ?? {},
     internal: {
       customTags: registeredNames,
       components: componentsCode,
@@ -65,8 +65,8 @@ export async function inflictBoreDOM<S>(
   // Call the code from the corresponding .js file of each component:
   runComponentsInitializer(proxifiedState);
 
-  if (!proxifiedState.app) throw new Error("Unable to proxify state object.");
-
+  // When no initial state is provided, return undefined. This still
+  // initializes components, event wiring, and subscriptions.
   return proxifiedState.app;
 }
 

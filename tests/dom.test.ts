@@ -406,6 +406,33 @@ export default function () {
         expect(elem).to.be.an.instanceof(HTMLElement);
         expect(elem.tagName).to.be.equals("INLINE-COMPONENT1");
       });
+
+      it("should initialize all instances of the same component", async () => {
+        const container = await renderHTMLFrame(`
+          <multi-instance-component></multi-instance-component>
+          <multi-instance-component></multi-instance-component>
+
+          <template data-component="multi-instance-component">
+            <p>Multi instance component</p>
+          </template>
+
+          <script src="/multi-instance-component.js"></script>
+        `);
+
+        await inflictBoreDOM();
+
+        const instances = Array.from(
+          container.querySelectorAll("multi-instance-component"),
+        );
+
+        expect(instances.length).to.equal(2);
+        expect(instances[0]).to.be.an.instanceof(HTMLElement);
+        expect(instances[1]).to.be.an.instanceof(HTMLElement);
+
+        // Both instances should have been initialized with their index
+        expect(instances[0].getAttribute("data-index")).to.equal("0");
+        expect(instances[1].getAttribute("data-index")).to.equal("1");
+      });
     });
 
     describe("Event handlers in scripts", () => {

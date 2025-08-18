@@ -314,7 +314,8 @@ export function proxify<S>(boredom: AppState<S>) {
 export function runComponentsInitializer<S>(state: AppState<S>) {
   // Start by finding all bored web component tags that are in the dom:
   const tagsInDom = state.internal.customTags.filter((tag) =>
-    queryComponent(tag) !== undefined
+    // A tag is considered present if at least one instance exists in the DOM
+    document.querySelector(tag) !== null
   );
 
   const components = state.internal.components;
@@ -325,18 +326,20 @@ export function runComponentsInitializer<S>(state: AppState<S>) {
     // way, it prevents the `code` function from being run more than once if a given component
     // `code` dynamically creates another component that is not yet in the DOM by now.
 
-    const componentClass = queryComponent(tagName);
+    const elements = Array.from(
+      document.querySelectorAll(tagName),
+    ).filter((el): el is Bored => isBored(el));
 
-    if (!componentClass) {
-      console.log(
-        `<${tagName}> is not yet in the DOM. The associated JS script will be called when the component is connected.`,
-      );
-      return;
+    if (elements.length === 0) {
+      // No upgraded elements yet; skip and let connectedCallback or later creation handle it
+      continue;
     }
 
-    code(state as any, { index: 0, name: tagName, data: undefined })(
-      componentClass,
-    );
+    elements.forEach((componentClass, index) => {
+      code(state as any, { index, name: tagName, data: undefined })(
+        componentClass,
+      );
+    });
   }
 
   return;
