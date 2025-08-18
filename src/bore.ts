@@ -1,5 +1,12 @@
 /**
- * Mostly state management things
+ * bore.ts — state and component runtime utilities
+ *
+ * Responsibilities:
+ * - Provide per-instance event scoping for custom events
+ * - Expose refs/slots accessors for component templates
+ * - Create read-only state accessors for render-time subscription
+ * - Proxify mutable state to trigger batched renders (rAF)
+ * - Initialize component scripts for elements present in the DOM
  */
 import { Bored, create, createComponent, isBored, queryComponent } from "./dom";
 import {
@@ -48,6 +55,21 @@ const listener = (name, state, h) => {
 */
 
 /** */
+/**
+ * Creates a component-scoped event registration helper used by webComponent.
+ *
+ * Scope: The handler only fires when the dispatched custom event originates
+ * from within the component's DOM subtree (so multiple instances don't cross-talk).
+ *
+ * Example:
+ * ```ts
+ * const My = webComponent(({ on, state }) => {
+ *   on('increment', () => { state.count++; });
+ *   return () => {};
+ * });
+ * // <my-comp><button onclick="dispatch('increment')"></button></my-comp>
+ * ```
+ */
 export function createEventsHandler<S>(
   c: Bored,
   app: S,
@@ -86,6 +108,20 @@ export function createEventsHandler<S>(
   };
 }
 /** */
+/**
+ * Provides read-only access to elements marked with data-ref in the component.
+ * Throws if a requested ref is not found; returns a single element or an array
+ * when multiple elements share the same ref name.
+ *
+ * Example (template):
+ * ```html
+ * <p data-ref="label"></p>
+ * ```
+ * Example (init/render):
+ * ```ts
+ * const { refs } = opts; refs.label.innerText = 'Hello';
+ * ```
+ */
 export function createRefsAccessor(c: Bored): ReadonlyProxy<Refs> {
   return new Proxy({}, {
     get(target, prop, receiver) {
@@ -108,6 +144,19 @@ export function createRefsAccessor(c: Bored): ReadonlyProxy<Refs> {
 }
 
 /** */
+/**
+ * Exposes named <slot> placeholders. Reading returns the <slot> element(s).
+ * Setting a slot by name replaces the <slot> in DOM with an element/string,
+ * and tags it with data-slot for idempotent updates.
+ *
+ * Example:
+ * ```html
+ * <slot name="title">Default</slot>
+ * ```
+ * ```ts
+ * slots.title = 'My Title'; // replaces the slot
+ * ```
+ */
 export function createSlotsAccessor(c: Bored): Slots {
   return new Proxy({}, {
     get(target, prop, reciever) {
@@ -161,6 +210,17 @@ export function createSlotsAccessor(c: Bored): Slots {
  * @param state
  * @param log This array is updated with the paths being accessed
  * @param accum
+ */
+/**
+ * Creates a read-only proxy view of state for component render-time usage.
+ * Reading properties records access paths so the render function is subscribed
+ * to updates on those paths. Mutations inside renders are blocked by design.
+ *
+ * Example:
+ * ```ts
+ * const s = createStateAccessor(appState, log);
+ * // reading s.user.name subscribes render to updates on user.name
+ * ```
  */
 export function createStateAccessor<S>(
   state: S | undefined,
@@ -225,6 +285,7 @@ export function createStateAccessor<S>(
   });
 }
 
+/** Batches subscriber calls for updated paths into a single rAF tick. */
 function createSubscribersDispatcher<S>(state: AppState<S>) {
   return () => {
     const updates = state.internal.updates;
@@ -252,6 +313,17 @@ function createSubscribersDispatcher<S>(state: AppState<S>) {
  *
  * @returns The same reference as provided in argument, but with
  * proxies in its attributes.
+ */
+/**
+ * Wraps arrays/objects in the app state with Proxies that detect mutations
+ * and schedule a single rAF to notify subscribed render functions.
+ *
+ * Example:
+ * ```ts
+ * const app = proxify(initial);
+ * app.internal.updates.subscribers.set('user.name', [render]);
+ * app.app.user.name = 'New'; // schedules render(user)
+ * ```
  */
 export function proxify<S>(boredom: AppState<S>) {
   const runtime = boredom.internal;
@@ -311,6 +383,20 @@ export function proxify<S>(boredom: AppState<S>) {
 /**
  * Runs the init function of every webComponent tag that exists in the DOM
  */
+/**
+ * Initializes component scripts for all instances currently in the DOM.
+ * For each registered tag with a loaded script, calls the webComponent-
+ * provided function with instance-specific detail including its index.
+ *
+ * Example:
+ * ```html
+ * <item-card></item-card><item-card></item-card>
+ * ```
+ * ```ts
+ * // both instances receive index 0 and 1 respectively
+ * runComponentsInitializer(state);
+ * ```
+ */
 export function runComponentsInitializer<S>(state: AppState<S>) {
   // Start by finding all bored web component tags that are in the dom:
   const tagsInDom = state.internal.customTags.filter((tag) =>
@@ -351,6 +437,16 @@ export function runComponentsInitializer<S>(state: AppState<S>) {
  * @param name the tagname of the component to create
  * @param state the
  * @param [detail]
+ */
+/**
+ * Creates a component element and, if a script exists for the tag, wires its
+ * render callback by invoking the loaded function with the provided detail.
+ *
+ * Example:
+ * ```ts
+ * const el = createAndRunCode('user-card', appState, { index: 0, name: 'user-card' });
+ * parent.appendChild(el);
+ * ```
  */
 export function createAndRunCode<S extends object>(
   name: string,

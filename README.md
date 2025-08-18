@@ -1,16 +1,19 @@
 # boreDOM
 
-A JavaScript framework for building reactive web components with template-based architecture and automatic state synchronization.
+A JavaScript framework for building reactive web components with template-based
+architecture and automatic state synchronization.
 
 ## Features
 
-- 🚀 **Reactive State Management** - Automatic DOM updates when state changes
-- 🧩 **Template-based Components** - Define components using HTML templates with `data-component` attributes
-- 🔥 **Hot Module Reloading** - Built-in dev server with file watching and auto-reload
-- 📦 **Zero Configuration** - Works out of the box with sensible defaults
-- 🛠️ **CLI Tools** - Development server and build tools included
-- 🎯 **TypeScript Support** - Full TypeScript definitions included
-- 📁 **Project Generator** - Quick project scaffolding with `create-boredom`
+- 🥱 **Reactive State Management** - Automatic DOM updates when state changes
+- 🥱 **Template-based Components** - Define components using HTML templates with
+  `data-component` attributes
+- 🥱 **Hot Module Reloading** - Built-in dev server with file watching and
+  auto-reload
+- 🥱 **Zero Configuration** - Works out of the box with sensible defaults
+- 🥱 **CLI Tools** - Development server and build tools included
+- 🥱 **TypeScript Support** - Full TypeScript definitions included
+- 🥱 **Project Generator** - Quick project scaffolding with `create-boredom`
 
 ## Quick Start
 
@@ -33,23 +36,23 @@ pnpm dev
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>My boreDOM App</title>
-</head>
-<body>
-  <h1>Counter Example</h1>
-  <simple-counter></simple-counter>
+  <head>
+    <title>My boreDOM App</title>
+  </head>
+  <body>
+    <h1>Counter Example</h1>
+    <simple-counter></simple-counter>
 
-  <template data-component="simple-counter">
-    <div>
-      <p>Count: <slot name="counter">0</slot></p>
-      <button onclick="dispatch('increase')">+</button>
-      <button onclick="dispatch('decrease')">-</button>
-    </div>
-  </template>
+    <template data-component="simple-counter">
+      <div>
+        <p>Count: <slot name="counter">0</slot></p>
+        <button onclick="['increase']">+</button>
+        <button onclick="['decrease']">-</button>
+      </div>
+    </template>
 
-  <script src="main.js" type="module"></script>
-</body>
+    <script src="main.js" type="module"></script>
+  </body>
 </html>
 ```
 
@@ -57,7 +60,7 @@ pnpm dev
 
 ```javascript
 // main.js
-import { inflictBoreDOM, webComponent } from '@mr_hugo/boredom';
+import { inflictBoreDOM, webComponent } from "@mr_hugo/boredom";
 
 // Initialize with state
 const uiState = await inflictBoreDOM({ count: 0 });
@@ -67,7 +70,7 @@ export const SimpleCounter = webComponent(({ on }) => {
   on("increase", ({ state }) => {
     state.count += 1;
   });
-  
+
   on("decrease", ({ state }) => {
     state.count -= 1;
   });
@@ -91,6 +94,7 @@ npx boredom --index ./src/index.html --html ./components --static ./public
 ```
 
 The CLI will:
+
 - Watch for file changes in components, HTML, and static files
 - Automatically rebuild and inject components
 - Serve your app with hot reloading
@@ -109,9 +113,9 @@ Initializes the boreDOM framework and creates reactive state.
 - **Returns** - Proxified reactive state object
 
 ```javascript
-const state = await inflictBoreDOM({ 
+const state = await inflictBoreDOM({
   users: [],
-  selectedUser: null 
+  selectedUser: null,
 });
 ```
 
@@ -141,6 +145,7 @@ const MyComponent = webComponent(({ on, state, refs, self }) => {
 Components receive these parameters:
 
 #### Initialization Phase
+
 - **`on(eventName, handler)`** - Register event listeners
 - **`state`** - Reactive state accessor
 - **`refs`** - DOM element references
@@ -148,9 +153,10 @@ Components receive these parameters:
 - **`detail`** - Component-specific data
 
 #### Render Phase
+
 - **`state`** - Current state (read-only in render)
 - **`slots`** - Named content slots for the template
-- **`refs`** - DOM element references  
+- **`refs`** - DOM element references
 - **`makeComponent(tag, options)`** - Create child components
 
 ### Template Syntax
@@ -164,15 +170,99 @@ Templates use standard HTML with special attributes:
     <h2><slot name="title">Default Title</slot></h2>
     <p><slot name="content">Default content</slot></p>
   </div>
-  
+
   <!-- Event dispatching -->
-  <button onclick="dispatch('save')">Save</button>
-  <button onclick="dispatch('cancel')">Cancel</button>
-  
+  <button onclick="['save']">Save</button>
+  <button onclick="['cancel']">Cancel</button>
+
   <!-- Reference elements -->
   <input ref="userInput" type="text">
 </template>
 ```
+
+## How Templates Become Components
+
+1. Declare a template with a tag name
+
+```html
+<simple-counter></simple-counter>
+
+<template data-component="simple-counter" data-aria-label="Counter">
+  <p>Count: <slot name="count">0</slot></p>
+  <button onclick="['increment']">+</button>
+  <button onclick="['decrement']">-</button>
+  <!-- Any other data-* on the template is mirrored to the element -->
+  <!-- e.g., data-aria-label -> aria-label on <simple-counter> -->
+  <!-- Add shadowrootmode="open" to render into a ShadowRoot -->
+  <!-- <template data-component=\"simple-counter\" shadowrootmode=\"open\"> -->
+
+  <!-- Optional: external script for behavior -->
+  <script type="module" src="/simple-counter.js"></script>
+</template>
+```
+
+2. Provide behavior (first export is used)
+
+```js
+// /simple-counter.js
+import { webComponent } from "@mr_hugo/boredom";
+
+export const SimpleCounter = webComponent(({ on }) => {
+  on("increment", ({ state }) => {
+    state.count += 1;
+  });
+  on("decrement", ({ state }) => {
+    state.count -= 1;
+  });
+  return ({ state, slots }) => {
+    slots.count = String(state.count);
+  };
+});
+```
+
+3. Initialize once
+
+```js
+import { inflictBoreDOM } from "@mr_hugo/boredom";
+await inflictBoreDOM({ count: 0 });
+```
+
+What happens under the hood
+
+- The runtime scans `<template data-component>` and registers custom elements.
+- It mirrors template `data-*` to host attributes and wires inline
+  `onclick="['...']"` to custom events ("[]" is the dispatch action).
+- Scripts are dynamically imported and run for every matching instance in the
+  DOM (including multiple instances).
+- Subsequent instances created programmatically use the same initialization via
+  `makeComponent()`.
+
+## State and Subscriptions
+
+Rendering subscribes to the state paths it reads, and mutations trigger batched
+updates.
+
+```js
+import { inflictBoreDOM, webComponent } from "@mr_hugo/boredom";
+
+export const Counter = webComponent(({ on }) => {
+  on("inc", ({ state }) => {
+    state.count++;
+  }); // mutable state in handlers
+  return ({ state, slots }) => { // read-only during render
+    slots.value = String(state.count); // reading subscribes to `count`
+  };
+});
+
+await inflictBoreDOM({ count: 0 });
+```
+
+- Subscriptions: Any property read in render (e.g., `state.count`) registers
+  that render as a subscriber to that path.
+- Mutations: Changing arrays/objects (e.g., `state.todos.push(...)`,
+  `state.user.name = 'X'`) schedules a single rAF to call subscribed renders.
+- Scope: Subscriptions are per component instance; only components that read a
+  path re-render when that path changes.
 
 ## Project Structure
 
@@ -194,11 +284,12 @@ my-app/
 ## Examples
 
 ### Counter Component
+
 ```javascript
 const Counter = webComponent(({ on }) => {
   on("increment", ({ state }) => state.count++);
   on("decrement", ({ state }) => state.count--);
-  
+
   return ({ state, slots }) => {
     slots.value = state.count;
   };
@@ -206,21 +297,22 @@ const Counter = webComponent(({ on }) => {
 ```
 
 ### Todo List Component
+
 ```javascript
 const TodoList = webComponent(({ on }) => {
   on("add-todo", ({ state, e }) => {
     state.todos.push({ id: Date.now(), text: e.text, done: false });
   });
-  
+
   on("toggle-todo", ({ state, e }) => {
-    const todo = state.todos.find(t => t.id === e.id);
+    const todo = state.todos.find((t) => t.id === e.id);
     if (todo) todo.done = !todo.done;
   });
 
   return ({ state, slots, makeComponent }) => {
-    slots.items = state.todos.map(todo => 
-      makeComponent('todo-item', { detail: { todo } })
-    ).join('');
+    slots.items = state.todos.map((todo) =>
+      makeComponent("todo-item", { detail: { todo } })
+    ).join("");
   };
 });
 ```
@@ -242,16 +334,16 @@ Options:
 boreDOM includes full TypeScript definitions:
 
 ```typescript
-import { inflictBoreDOM, webComponent } from '@mr_hugo/boredom';
+import { inflictBoreDOM, webComponent } from "@mr_hugo/boredom";
 
 interface AppState {
   count: number;
   users: User[];
 }
 
-const state = await inflictBoreDOM<AppState>({ 
-  count: 0, 
-  users: [] 
+const state = await inflictBoreDOM<AppState>({
+  count: 0,
+  users: [],
 });
 
 const MyComponent = webComponent<AppState>(({ on, state }) => {
@@ -268,8 +360,10 @@ const MyComponent = webComponent<AppState>(({ on, state }) => {
 
 ## Resources
 
-- **Official Documentation**: [https://hugodaniel.com/pages/boredom/](https://hugodaniel.com/pages/boredom/)
-- **Repository**: [https://github.com/HugoDaniel/boreDOM](https://github.com/HugoDaniel/boreDOM)
+- **Official Documentation**:
+  [https://hugodaniel.com/pages/boredom/](https://hugodaniel.com/pages/boredom/)
+- **Repository**:
+  [https://github.com/HugoDaniel/boreDOM](https://github.com/HugoDaniel/boreDOM)
 - **Examples**: Check the `/examples` directory for complete examples
 
 ## License

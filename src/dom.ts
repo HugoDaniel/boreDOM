@@ -1,3 +1,13 @@
+/**
+ * DOM integration layer for boreDOM.
+ *
+ * Responsibilities:
+ * - Discover <template data-component> nodes and register custom elements
+ * - Provide utilities to query and create elements
+ * - Define the base custom element class (Bored) and the component factory
+ * - Wire inline event attributes (onclick, etc.) to custom event dispatchers
+ * - Support dynamic import of per-component scripts
+ */
 import { createSlotsAccessor } from "./bore";
 import type { LoadedFunction } from "./types";
 
@@ -9,6 +19,26 @@ import type { LoadedFunction } from "./types";
  *
  * @returns A Map of the registered web-components tag names, and their corresponding
  * dynamically loaded .js file exported function (or null if there is no .js file).
+ */
+/**
+ * Attempts to import component scripts based on <script src> tags present
+ * in the document. For each tag name, it finds a script whose src contains
+ * that name, and dynamically imports it.
+ *
+ * Notes:
+ * - The first export found in the module is used as the component function.
+ *   Keep component modules with a single export to avoid ambiguity.
+ * - Errors are logged but do not throw to keep the page operational.
+ *
+ * Example:
+ * ```html
+ * <!-- In your HTML -->
+ * <script type="module" src="/components/user-card.js"></script>
+ * ```
+ * ```ts
+ * const map = await dynamicImportScripts(['user-card']);
+ * const init = map.get('user-card'); // a loaded function or null
+ * ```
  */
 export const dynamicImportScripts = async (names: string[]) => {
   const result: Map<string, null | LoadedFunction> = new Map();
@@ -48,6 +78,20 @@ export const dynamicImportScripts = async (names: string[]) => {
  *
  * @returns A list of the tag names that were registered.
  */
+/**
+ * Scans the DOM for <template data-component> and registers a custom element
+ * for each one. Any additional data-* attributes on the template are copied
+ * to the custom element instance as attributes on connect.
+ *
+ * Example:
+ * ```html
+ * <template data-component="user-card" data-aria-label="Profile"></template>
+ * ```
+ * ```ts
+ * const names = searchForComponents(); // ['user-card']
+ * customElements.get('user-card'); // defined
+ * ```
+ */
 export const searchForComponents = () => {
   // Query all templates with a data-component attribute, these will be used to
   // create custom web components with the tag name similar to the id
@@ -63,8 +107,8 @@ export const searchForComponents = () => {
         if (attribute === "component") {
           result.name = t.dataset[attribute] ?? "";
         } else {
-          // Attribute is not "component", pass it as is but
-          // assume a value of true (""):
+          // Attribute is not "component": pass it as-is (kebab-case),
+          // using empty string when no value is present.
           result.attributes.push([
             decamelize(attribute),
             t.dataset[attribute] ?? "",
@@ -87,6 +131,16 @@ export const searchForComponents = () => {
 
 /**
  * Creates a new web-component and registers it with the provided tag name
+ */
+/**
+ * Creates an element for a registered tag and optionally assigns its render
+ * callback. Throws if the tag was not registered via a matching template.
+ *
+ * Example:
+ * ```ts
+ * const el = createComponent('user-card', (c) => { c.textContent = 'Hi'; });
+ * document.body.appendChild(el);
+ * ```
  */
 export const createComponent = (
   name: string,
@@ -111,6 +165,16 @@ export const createComponent = (
 /**
  * Queries for the component tag name in the DOM. Throws error if not found.
  */
+/**
+ * Queries a component by CSS selector and returns it only if it is a
+ * boreDOM component (Bored). Returns undefined when not found/mismatched.
+ *
+ * Example:
+ * ```ts
+ * const card = queryComponent('user-card');
+ * if (card) card.setAttribute('data-visible', 'true');
+ * ```
+ */
 export const queryComponent = (q: string): Bored | undefined => {
   const elem = query(q);
 
@@ -122,6 +186,7 @@ export const queryComponent = (q: string): Bored | undefined => {
 };
 
 /** `document.querySelector` */
+/** document.querySelector */
 export const query = (query: string) => document.querySelector(query);
 /** `document.querySelectorAll` */
 export const queryAll = (query: string) => document.querySelectorAll(query);
@@ -142,6 +207,18 @@ export const queryHtml = (q: string): HTMLElement => {
   return html;
 };
 /** `dispatchEvent(new CustomEvent(name, { detail }))` */
+/**
+ * Dispatches a CustomEvent on the document, ensuring it runs after DOM is
+ * ready if called too early. Used by inline handlers via onclick="dispatch('...')".
+ *
+ * Example (HTML + TS):
+ * ```html
+ * <button onclick="dispatch('save', { id: 1 })">Save</button>
+ * ```
+ * ```ts
+ * handle<{ id: number }>('save', ({ id }) => console.log(id));
+ * ```
+ */
 export const dispatch = (name: string, detail?: any) => {
   if (document.readyState === "loading") {
     addEventListener(
@@ -153,6 +230,7 @@ export const dispatch = (name: string, detail?: any) => {
   }
 };
 /** Calls addEventListener, returns the function used as listener */
+/** Adds an event listener for a custom event and returns the bound handler */
 export const handle = <T>(name: string, f: (detail: T) => void) => {
   const handler = (e: CustomEvent) => f(e.detail);
   addEventListener(name as any, handler);
@@ -165,8 +243,8 @@ const isObject = (t: any): t is object => typeof t === "object";
 const isFunction = (t: any): t is Function => typeof t === "function";
 export const isBored = (t: unknown): t is Bored =>
   isObject(t) && "isBored" in t && Boolean(t.isBored);
-export const emitsEvent = (eventName: string, elem: HTMLElement) => {
-};
+/** Placeholder for future API to introspect event emissions */
+export const emitsEvent = (eventName: string, elem: HTMLElement) => {};
 const camelize = (str: string) => {
   return str.split("-")
     .map((item, index) =>
@@ -194,6 +272,10 @@ const decamelize = (str: string): string => {
   return result;
 };
 
+/**
+ * Finds the first ancestor that is a custom element (has a dash in tagName).
+ * Not exported; kept for potential future use.
+ */
 const firstWebComponentParent = (elem: HTMLElement) => {
   let currentParent = elem.parentElement;
 
@@ -209,6 +291,10 @@ type StartsWithQueriedOn = `queriedOn${string}`;
 const isStartsWithOn = (s: string): s is StartsWithOn => s.startsWith("on");
 const isStartsWithQueriedOn = (s: string): s is StartsWithQueriedOn =>
   s.startsWith("queriedOn");
+/**
+ * Normalizes prop names like onClick/queriedOnClick to native event names
+ * ("click").
+ */
 const getEventName = (s: StartsWithOn | StartsWithQueriedOn) => {
   if (isStartsWithOn(s)) {
     return s.slice(2).toLowerCase();
@@ -221,6 +307,24 @@ export abstract class Bored extends HTMLElement {
   abstract renderCallback: (elem: Bored) => void;
 }
 
+/**
+ * Defines and registers a custom element for a tag name, applying lifecycle
+ * hooks, attribute mirroring, and event wiring.
+ *
+ * Props support:
+ * - shadow/shadowrootmode/style: ShadowRoot setup and styling
+ * - on*, queriedOn*: Event listeners either on host (on*) or queried children
+ * - attributeChangedCallback: per-attribute change handlers
+ * - attributes: initial attributes to mirror from template data-*
+ *
+ * Example (event wiring):
+ * ```ts
+ * component('my-tag', {
+ *   onKeydown: (e) => console.log('host keydown', e.key),
+ *   queriedOnClick: { 'button.primary': () => console.log('clicked') },
+ * });
+ * ```
+ */
 const component = <T>(tag: string, props: {
   /** Shadow-root content for this component */
   shadow?: string;
@@ -297,12 +401,17 @@ const component = <T>(tag: string, props: {
        * with custom dispatchers.
        * @returns an array of strings
        */
+      /** Extracts event names from strings like "dispatch('a','b')" */
       #parseCustomEventNames(str: string) {
         return str.split("'").filter((s) =>
           s.length > 2 &&
           !(s.includes("(") || s.includes(",") || s.includes(")"))
         );
       }
+      /**
+       * Replaces inline on* attributes within the component DOM with real
+        * listeners that dispatch custom events using dispatch().
+       */
       #createDispatchers() {
         let host: HTMLElement;
 
@@ -433,6 +542,10 @@ const component = <T>(tag: string, props: {
         this.isInitialized = true;
       }
 
+      /**
+       * User-provided renderer is assigned here by createComponent.
+       * Called on connect and whenever state triggers subscriptions.
+       */
       renderCallback = (_: Bored) => {};
       connectedCallback() {
         if (!this.isInitialized) this.#init();
