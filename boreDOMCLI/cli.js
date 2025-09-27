@@ -56,19 +56,131 @@ program
     "Folder containing static files to be copied as is",
     "public",
   )
+  .option(
+    "--components-serve <folder>",
+    "Build subfolder used to serve processed components",
+    "components",
+  )
+  .option(
+    "--static-serve <folder>",
+    "Build subfolder used to serve static assets",
+    "static",
+  )
   // .option(
   //   "--bundle <folder>",
   //   "Folder containing files to be bundled",
   //   "components", 0; //
   // )
-  .parse(process.argv);
+  ;
+
+const isTestMode = Boolean(process.env.BOREDOM_CLI_TEST_MODE);
+
+if (isTestMode) {
+  program.parse([], { from: "user" });
+} else {
+  program.parse(process.argv);
+}
 
 const options = program.opts();
+
+function sanitizeServeInput(value) {
+  const normalizedSlashes = value.replace(/\\+/g, "/").trim();
+  if (!normalizedSlashes) {
+    return { fsPath: "", urlPath: "" };
+  }
+
+  if (["/", "./"].includes(normalizedSlashes)) {
+    return { fsPath: "", urlPath: "/" };
+  }
+
+  let working = normalizedSlashes;
+  while (working.startsWith("./")) {
+    working = working.slice(2);
+  }
+
+  const isAbsolute = working.startsWith("/");
+  if (isAbsolute) {
+    working = working.replace(/^\/+/, "");
+  }
+  working = working.replace(/\/+$/, "");
+
+  const fsPath = working;
+  if (!fsPath) {
+    return { fsPath: "", urlPath: isAbsolute ? "/" : "" };
+  }
+  const urlPath = isAbsolute ? `/${fsPath}` : fsPath;
+  return { fsPath, urlPath };
+}
+
+function normalizeServePath(input, fallback) {
+  if (typeof input === "undefined" || input === null) {
+    return sanitizeServeInput(fallback);
+  }
+  const trimmed = String(input).trim();
+  if (!trimmed) {
+    return sanitizeServeInput(fallback);
+  }
+  return sanitizeServeInput(trimmed);
+}
+
+function buildRelativeServePath(base, ...segments) {
+  const cleanSegments = segments.filter(Boolean).map((segment) => {
+    return segment.replace(/^\/+/, "").replace(/\/+$/, "");
+  });
+
+  if (!base || base === ".") {
+    return cleanSegments.join("/");
+  }
+
+  if (base === "/") {
+    const joined = cleanSegments.join("/");
+    return joined ? `/${joined}` : "/";
+  }
+
+  const cleanBase = base.replace(/\/+$/, "");
+  return [cleanBase, ...cleanSegments].join("/");
+}
+
+let componentsServePath;
+let staticServePath;
+let componentsServeUrlPath;
+let staticServeUrlPath;
+
+function setServePaths(currentOptions = options) {
+  const componentsPaths = normalizeServePath(
+    currentOptions.componentsServe,
+    "components",
+  );
+  const staticPaths = normalizeServePath(currentOptions.staticServe, "static");
+
+  componentsServePath = componentsPaths.fsPath;
+  componentsServeUrlPath = componentsPaths.urlPath;
+  staticServePath = staticPaths.fsPath;
+  staticServeUrlPath = staticPaths.urlPath;
+
+  return {
+    componentsServePath,
+    componentsServeUrlPath,
+    staticServePath,
+    staticServeUrlPath,
+  };
+}
+
+function getServePaths() {
+  return {
+    componentsServePath,
+    componentsServeUrlPath,
+    staticServePath,
+    staticServeUrlPath,
+  };
+}
+
+setServePaths();
 
 async function copyStatic() {
   const staticDir = path.resolve(options.static);
   if (await fs.pathExists(staticDir)) {
-    await fs.copy(staticDir, path.join(BUILD_DIR, "static"));
+    await fs.copy(staticDir, path.join(BUILD_DIR, staticServePath));
     console.log("Static folder copied.");
   }
 }
@@ -95,7 +207,7 @@ async function processComponents() {
         // Create a dedicated folder for this component
         const componentBuildDir = path.join(
           BUILD_DIR,
-          "components",
+          componentsServePath,
           componentName,
         );
         await fs.ensureDir(componentBuildDir);
@@ -167,21 +279,31 @@ async function updateIndex(components) {
 
   // For each component, add references to its JS/CSS files and inject its full <template> tag
   Object.keys(components).forEach((component) => {
+    const componentScriptPath = buildRelativeServePath(
+      componentsServeUrlPath,
+      component,
+      `${component}.js`,
+    );
+    const componentCssPath = buildRelativeServePath(
+      componentsServeUrlPath,
+      component,
+      `${component}.css`,
+    );
     if (
       components[component].hasJS &&
-      $(`script[src="./components/${component}/${component}.js"]`).length === 0
+      $(`script[src="${componentScriptPath}"]`).length === 0
     ) {
       $("body").append(
-        `\n  <script src="./components/${component}/${component}.js" type="module"></script>`,
+        `\n  <script src="${componentScriptPath}" type="module"></script>`,
       );
       // console.log(`Added script reference for ${component}`);
     }
     if (
       components[component].hasCSS &&
-      $(`link[href="components/${component}/${component}.css"]`).length === 0
+      $(`link[href="${componentCssPath}"]`).length === 0
     ) {
       $("head").append(
-        `\n  <link rel="stylesheet" href="components/${component}/${component}.css">`,
+        `\n  <link rel="stylesheet" href="${componentCssPath}">`,
       );
       // console.log(`Added stylesheet reference for ${component}`);
     }
@@ -296,7 +418,7 @@ async function watchFiles() {
     pathsToWatch.push(path.resolve(options.html));
   }
   // Watch the static folder if it exists
-  const staticDir = path.join(process.cwd(), "static");
+  const staticDir = path.resolve(options.static);
   if (await fs.pathExists(staticDir)) {
     pathsToWatch.push(staticDir);
   }
@@ -345,7 +467,22 @@ async function main() {
   await watchFiles();
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (!isTestMode) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+export {
+  BUILD_DIR,
+  build,
+  buildRelativeServePath,
+  copyBoreDOM,
+  getServePaths,
+  normalizeServePath,
+  options,
+  processComponents,
+  setServePaths,
+  updateIndex,
+};

@@ -157,7 +157,7 @@ var component = (tag, props = {}) => {
       }
       /**
        * Replaces inline on* attributes within the component DOM with real
-        * listeners that dispatch custom events using dispatch().
+       * listeners that dispatch custom events using dispatch().
        */
       #createDispatchers() {
         let host;
@@ -320,11 +320,9 @@ var component = (tag, props = {}) => {
             }
             */
       disconnectedCallback() {
-        console.log("disconnected " + this.tagName);
         props.disconnectedCallback?.(this);
       }
       adoptedCallback() {
-        console.log("adopted " + this.tagName);
         props.adoptedCallback?.(this);
       }
       attributeChangedCallback(name, oldValue, newValue) {

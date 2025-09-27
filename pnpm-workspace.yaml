@@ -1,0 +1,4 @@
+packages:
+  # Don't forget to add this to create-boredom/template-minimal/package.json:
+  # "@mr_hugo/boredom": "workspace:*"
+  - 'create-boredom/template-minimal'

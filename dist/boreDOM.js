@@ -6,6 +6,10 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -22,8 +26,23 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // boreDOMCLI/generated_cli.js
+var generated_cli_exports = {};
+__export(generated_cli_exports, {
+  BUILD_DIR: () => BUILD_DIR,
+  build: () => build,
+  buildRelativeServePath: () => buildRelativeServePath,
+  copyBoreDOM: () => copyBoreDOM,
+  getServePaths: () => getServePaths,
+  normalizeServePath: () => normalizeServePath,
+  options: () => options,
+  processComponents: () => processComponents,
+  setServePaths: () => setServePaths,
+  updateIndex: () => updateIndex
+});
+module.exports = __toCommonJS(generated_cli_exports);
 var import_fs_extra = __toESM(require("fs-extra"));
 var import_mime_types = __toESM(require("mime-types"));
 var import_path = __toESM(require("path"));
@@ -69,12 +88,104 @@ import_commander.program.option("--index <path to file>", "Index file to serve",
   "--static <folder>",
   "Folder containing static files to be copied as is",
   "public"
-).parse(process.argv);
+).option(
+  "--components-serve <folder>",
+  "Build subfolder used to serve processed components",
+  "components"
+).option(
+  "--static-serve <folder>",
+  "Build subfolder used to serve static assets",
+  "static"
+);
+var isTestMode = Boolean(process.env.BOREDOM_CLI_TEST_MODE);
+if (isTestMode) {
+  import_commander.program.parse([], { from: "user" });
+} else {
+  import_commander.program.parse(process.argv);
+}
 var options = import_commander.program.opts();
+function sanitizeServeInput(value) {
+  const normalizedSlashes = value.replace(/\\+/g, "/").trim();
+  if (!normalizedSlashes) {
+    return { fsPath: "", urlPath: "" };
+  }
+  if (["/", "./"].includes(normalizedSlashes)) {
+    return { fsPath: "", urlPath: "/" };
+  }
+  let working = normalizedSlashes;
+  while (working.startsWith("./")) {
+    working = working.slice(2);
+  }
+  const isAbsolute = working.startsWith("/");
+  if (isAbsolute) {
+    working = working.replace(/^\/+/, "");
+  }
+  working = working.replace(/\/+$/, "");
+  const fsPath = working;
+  if (!fsPath) {
+    return { fsPath: "", urlPath: isAbsolute ? "/" : "" };
+  }
+  const urlPath = isAbsolute ? `/${fsPath}` : fsPath;
+  return { fsPath, urlPath };
+}
+function normalizeServePath(input, fallback) {
+  if (typeof input === "undefined" || input === null) {
+    return sanitizeServeInput(fallback);
+  }
+  const trimmed = String(input).trim();
+  if (!trimmed) {
+    return sanitizeServeInput(fallback);
+  }
+  return sanitizeServeInput(trimmed);
+}
+function buildRelativeServePath(base, ...segments) {
+  const cleanSegments = segments.filter(Boolean).map((segment) => {
+    return segment.replace(/^\/+/, "").replace(/\/+$/, "");
+  });
+  if (!base || base === ".") {
+    return cleanSegments.join("/");
+  }
+  if (base === "/") {
+    const joined = cleanSegments.join("/");
+    return joined ? `/${joined}` : "/";
+  }
+  const cleanBase = base.replace(/\/+$/, "");
+  return [cleanBase, ...cleanSegments].join("/");
+}
+var componentsServePath;
+var staticServePath;
+var componentsServeUrlPath;
+var staticServeUrlPath;
+function setServePaths(currentOptions = options) {
+  const componentsPaths = normalizeServePath(
+    currentOptions.componentsServe,
+    "components"
+  );
+  const staticPaths = normalizeServePath(currentOptions.staticServe, "static");
+  componentsServePath = componentsPaths.fsPath;
+  componentsServeUrlPath = componentsPaths.urlPath;
+  staticServePath = staticPaths.fsPath;
+  staticServeUrlPath = staticPaths.urlPath;
+  return {
+    componentsServePath,
+    componentsServeUrlPath,
+    staticServePath,
+    staticServeUrlPath
+  };
+}
+function getServePaths() {
+  return {
+    componentsServePath,
+    componentsServeUrlPath,
+    staticServePath,
+    staticServeUrlPath
+  };
+}
+setServePaths();
 async function copyStatic() {
   const staticDir = import_path.default.resolve(options.static);
   if (await import_fs_extra.default.pathExists(staticDir)) {
-    await import_fs_extra.default.copy(staticDir, import_path.default.join(BUILD_DIR, "static"));
+    await import_fs_extra.default.copy(staticDir, import_path.default.join(BUILD_DIR, staticServePath));
     console.log("Static folder copied.");
   }
 }
@@ -96,7 +207,7 @@ async function processComponents() {
         const fullTemplate = $.html(template);
         const componentBuildDir = import_path.default.join(
           BUILD_DIR,
-          "components",
+          componentsServePath,
           componentName
         );
         await import_fs_extra.default.ensureDir(componentBuildDir);
@@ -159,16 +270,26 @@ async function updateIndex(components) {
   $("body").append(`
   <script src="boreDOM.js" type="module"></script>`);
   Object.keys(components).forEach((component) => {
-    if (components[component].hasJS && $(`script[src="./components/${component}/${component}.js"]`).length === 0) {
+    const componentScriptPath = buildRelativeServePath(
+      componentsServeUrlPath,
+      component,
+      `${component}.js`
+    );
+    const componentCssPath = buildRelativeServePath(
+      componentsServeUrlPath,
+      component,
+      `${component}.css`
+    );
+    if (components[component].hasJS && $(`script[src="${componentScriptPath}"]`).length === 0) {
       $("body").append(
         `
-  <script src="./components/${component}/${component}.js" type="module"></script>`
+  <script src="${componentScriptPath}" type="module"></script>`
       );
     }
-    if (components[component].hasCSS && $(`link[href="components/${component}/${component}.css"]`).length === 0) {
+    if (components[component].hasCSS && $(`link[href="${componentCssPath}"]`).length === 0) {
       $("head").append(
         `
-  <link rel="stylesheet" href="components/${component}/${component}.css">`
+  <link rel="stylesheet" href="${componentCssPath}">`
       );
     }
     if ($(`template[data-component="${component}"]`).length === 0) {
@@ -255,7 +376,7 @@ async function watchFiles() {
   if (options.html) {
     pathsToWatch.push(import_path.default.resolve(options.html));
   }
-  const staticDir = import_path.default.join(process.cwd(), "static");
+  const staticDir = import_path.default.resolve(options.static);
   if (await import_fs_extra.default.pathExists(staticDir)) {
     pathsToWatch.push(staticDir);
   }
@@ -291,7 +412,22 @@ Please specify a location for it with "--index"`
   startServer();
   await watchFiles();
 }
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
+if (!isTestMode) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  BUILD_DIR,
+  build,
+  buildRelativeServePath,
+  copyBoreDOM,
+  getServePaths,
+  normalizeServePath,
+  options,
+  processComponents,
+  setServePaths,
+  updateIndex
 });

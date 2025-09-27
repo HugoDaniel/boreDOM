@@ -1,6 +1,6 @@
 {
   "name": "@mr_hugo/boredom",
-  "version": "0.25.15",
+  "version": "0.25.16",
   "description": "Another boring JavaScript framework.",
   "main": "dist/boreDOM.full.js",
   "module": "dist/boreDOM.full.js",
@@ -23,7 +23,8 @@
     "bundle_cli": "pnpm run build_cli && esbuild boreDOMCLI/generated_cli.js --bundle --outfile=dist/boreDOM.js --platform=node --target=node24.4 --packages=external",
     "build_cli": "pnpm run build_full_module && pnpm run build_decls && echo '#!/usr/bin/env node\nconst boredom=`' > dist/boreDOM.js && cat dist/boreDOM.full.js | base64 >> dist/boreDOM.js && echo '`;' >> dist/boreDOM.js && cat boreDOMCLI/cli.js >> dist/boreDOM.js && chmod +x dist/boreDOM.js && cp dist/boreDOM.js boreDOMCLI/generated_cli.js",
     "dev": "esbuild src/boreDOM.ts --bundle --outdir=www/js --watch --servedir=www --platform=neutral",
-    "test": "esbuild tests/runner.ts --bundle --outdir=tests/js --watch --servedir=tests --platform=browser"
+    "test": "esbuild tests/runner.ts --bundle --outdir=tests/js --watch --servedir=tests --platform=browser",
+    "test:cli": "mocha \"boreDOMCLI/tests/**/*.spec.mjs\""
   },
   "keywords": [
     "dom",
@@ -39,24 +40,24 @@
   "repository": "github:HugoDaniel/boreDOM",
   "homespage": "https://hugodaniel.com/pages/boredom/",
   "devDependencies": {
-    "@testing-library/dom": "^10.4.0",
+    "@testing-library/dom": "^10.4.1",
     "@types/chai": "^5.2.2",
     "@types/mocha": "^10.0.10",
-    "@webgpu/types": "^0.1.64",
-    "chai": "^5.2.1",
+    "@webgpu/types": "^0.1.65",
+    "chai": "^5.3.3",
     "dts-bundle-generator": "^9.5.1",
-    "esbuild": "^0.25.6",
+    "esbuild": "^0.25.10",
     "mocha": "^10.8.2",
     "nyc": "^17.1.0",
     "typedoc": "0.26.7",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   },
   "dependencies": {
-    "cheerio": "^1.1.0",
+    "cheerio": "^1.1.2",
     "chokidar": "^4.0.3",
     "commander": "^13.1.0",
     "finalhandler": "^2.1.0",
-    "fs-extra": "^11.3.0",
+    "fs-extra": "^11.3.2",
     "glob": "^11.0.3",
     "js-beautify": "^1.15.4",
     "jsdom": "^26.1.0",

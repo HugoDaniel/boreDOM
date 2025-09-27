@@ -410,7 +410,7 @@ const component = <T>(tag: string, props: {
       }
       /**
        * Replaces inline on* attributes within the component DOM with real
-        * listeners that dispatch custom events using dispatch().
+       * listeners that dispatch custom events using dispatch().
        */
       #createDispatchers() {
         let host: HTMLElement;
@@ -621,12 +621,12 @@ const component = <T>(tag: string, props: {
       */
 
       disconnectedCallback() {
-        console.log("disconnected " + this.tagName);
+        // console.log("disconnected " + this.tagName);
         props.disconnectedCallback?.(this);
       }
 
       adoptedCallback() {
-        console.log("adopted " + this.tagName);
+        // console.log("adopted " + this.tagName);
         props.adoptedCallback?.(this);
       }
 
