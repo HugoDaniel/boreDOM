@@ -308,7 +308,14 @@ async function updateIndex(components) {
       // console.log(`Added stylesheet reference for ${component}`);
     }
     if ($(`template[data-component="${component}"]`).length === 0) {
-      $("body").append(`\n  ${components[component].templateTag}`);
+      const templateMarkup = `\n  ${components[component].templateTag}`;
+
+      const firstScript = $("body > script").first();
+      if (firstScript.length > 0) {
+        firstScript.before(templateMarkup);
+      } else {
+        $("body").prepend(templateMarkup);
+      }
       console.log(`Injected template for ${component}`);
     }
   });
