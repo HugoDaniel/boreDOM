@@ -15,6 +15,10 @@ import {
 } from "./dom";
 import type { AppState, InitFunction } from "./types";
 export { queryComponent } from "./dom";
+import { VERSION } from "./version";
+export { VERSION } from "./version";
+
+let hasLoggedVersion = false;
 
 /**
  * Queries all `<template>` elements that
@@ -37,6 +41,13 @@ export async function inflictBoreDOM<S>(
   state?: S,
   componentsLogic?: { [key: string]: ReturnType<typeof webComponent> },
 ): Promise<AppState<S>["app"]> {
+  if (!hasLoggedVersion) {
+    hasLoggedVersion = true;
+    if (typeof console !== "undefined" && typeof console.info === "function") {
+      console.info(`[boreDOM] v${VERSION}`);
+    }
+  }
+
   const registeredNames = searchForComponents();
   const componentsCode = await dynamicImportScripts(registeredNames);
 

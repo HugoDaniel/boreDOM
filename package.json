@@ -1,6 +1,6 @@
 {
   "name": "@mr_hugo/boredom",
-  "version": "0.25.20",
+  "version": "0.25.21",
   "description": "Another boring JavaScript framework.",
   "main": "dist/boreDOM.full.js",
   "module": "dist/boreDOM.full.js",

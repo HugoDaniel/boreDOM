@@ -69,6 +69,7 @@ export declare const queryComponent: (q: string) => Bored | undefined;
 declare abstract class Bored extends HTMLElement {
 	abstract renderCallback: (elem: Bored) => void;
 }
+export declare const VERSION = "0.25.21";
 /**
  * Queries all `<template>` elements that
  * have a `data-component` attribute defined and creates web components

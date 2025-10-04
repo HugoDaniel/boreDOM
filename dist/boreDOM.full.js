@@ -623,9 +623,20 @@ function createAndRunCode(name, state, detail) {
   }
   return createComponent(name);
 }
+console.log("boreDOM");
+
+// src/version.ts
+var VERSION = "0.25.21";
 
 // src/index.ts
+var hasLoggedVersion = false;
 async function inflictBoreDOM(state, componentsLogic) {
+  if (!hasLoggedVersion) {
+    hasLoggedVersion = true;
+    if (typeof console !== "undefined" && typeof console.info === "function") {
+      console.info(`[boreDOM] v${VERSION}`);
+    }
+  }
   const registeredNames = searchForComponents();
   const componentsCode = await dynamicImportScripts(registeredNames);
   if (componentsLogic) {
@@ -700,6 +711,7 @@ function webComponent(initFunction) {
   };
 }
 export {
+  VERSION,
   inflictBoreDOM,
   queryComponent,
   webComponent
