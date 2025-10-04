@@ -388,12 +388,26 @@ function isPOJO(arg) {
 // src/bore.ts
 function createEventsHandler(c, app, detail) {
   return (eventName, handler) => {
-    addEventListener(eventName, (e) => {
-      let target = e?.detail?.event.currentTarget;
+    addEventListener(eventName, (event) => {
+      let target = event?.detail?.event.currentTarget;
       let emiterElem = void 0;
       while (target) {
         if (target === c) {
-          handler({ state: app, e: e.detail, detail });
+          try {
+            const maybePromise = handler({
+              state: app,
+              e: event.detail,
+              detail
+            });
+            Promise.resolve(maybePromise).catch((error) => {
+              console.error(
+                `Error in async handler for "${eventName}" event`,
+                error
+              );
+            });
+          } catch (error) {
+            console.error(`Error in handler for "${eventName}" event`, error);
+          }
           return;
         }
         if (target instanceof HTMLElement) {

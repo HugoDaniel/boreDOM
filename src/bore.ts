@@ -80,13 +80,13 @@ export function createEventsHandler<S>(
     handler: (
       options: {
         state: S | undefined;
-        e: CustomEvent;
+        e: CustomEvent["detail"];
         detail: WebComponentDetail;
       },
-    ) => void,
+    ) => void | Promise<void>,
   ) => {
-    addEventListener(eventName as any, (e) => {
-      let target: HTMLElement | undefined | null = e?.detail?.event
+    addEventListener(eventName as any, (event: CustomEvent<any>) => {
+      let target: HTMLElement | undefined | null = event?.detail?.event
         .currentTarget;
 
       let emiterElem: HTMLElement | undefined | null = undefined;
@@ -94,7 +94,21 @@ export function createEventsHandler<S>(
       // Only dispatch if the component 'c' is found in the hierarchy:
       while (target) {
         if (target === c) {
-          handler({ state: app, e: e.detail, detail });
+          try {
+            const maybePromise = handler({
+              state: app,
+              e: event.detail,
+              detail,
+            });
+            Promise.resolve(maybePromise).catch((error) => {
+              console.error(
+                `Error in async handler for "${eventName}" event`,
+                error,
+              );
+            });
+          } catch (error) {
+            console.error(`Error in handler for "${eventName}" event`, error);
+          }
           return;
         }
 

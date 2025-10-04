@@ -617,6 +617,37 @@ export default function () {
         );
         expect(elem).to.be.an.instanceof(HTMLSpanElement);
       });
+
+      it("should re-render when state changes in an async event handler", async () => {
+        const container = await renderHTMLFrame(`
+          <stateful-component9></stateful-component9>
+
+          <template data-component="stateful-component9">
+            <button onclick="dispatch('update')">Click to update</button>
+            <p>Initial state is: <span data-ref="container"></span></p>
+          </template>
+
+          <script src="/stateful-component9.js"></script>
+        `);
+
+        const state = { content: { value: "Initial state" } };
+        await inflictBoreDOM(state);
+
+        const btn = getByText(
+          container,
+          "Click to update",
+        );
+
+        fireEvent.click(btn);
+
+        await frame();
+
+        const elem = getByText(
+          container,
+          "This is async content",
+        );
+        expect(elem).to.be.an.instanceof(HTMLSpanElement);
+      });
     });
 
     describe("Lists of components in <script> code", () => {

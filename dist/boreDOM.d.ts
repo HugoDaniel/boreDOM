@@ -14,7 +14,7 @@ export type WebComponentInitParams<S> = {
 		state: S | undefined;
 		e: CustomEvent["detail"];
 		detail: WebComponentDetail;
-	}) => void) => void;
+	}) => void | Promise<void>) => void;
 };
 export type WebComponentRenderParams<S> = {
 	detail: WebComponentDetail;
