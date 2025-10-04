@@ -306,10 +306,31 @@ function createSubscribersDispatcher<S>(state: AppState<S>) {
     // Call the subscribers for each path that was updated
     for (let i = 0; i < updates.path.length; i++) {
       const path = updates.path[i];
-      const functions =
-        updates.subscribers.get(path.slice(path.indexOf(".") + 1)) ?? [];
-      for (let j = 0; j < functions.length; j++) {
-        functions[j](state.app);
+      const relativePath = path.slice(path.indexOf(".") + 1);
+      const notified = new Set<(s?: S) => void>();
+
+      const notify = (fns: ((s?: S) => void)[] | undefined) => {
+        if (!fns) return;
+        for (let j = 0; j < fns.length; j++) {
+          const fn = fns[j];
+          if (notified.has(fn)) continue;
+          notified.add(fn);
+          fn(state.app);
+        }
+      };
+
+      notify(updates.subscribers.get(relativePath));
+
+      for (const [subscriberPath, fns] of updates.subscribers.entries()) {
+        if (subscriberPath === relativePath) continue;
+        const subscriberWithDot = `${subscriberPath}.`;
+        const relativeWithDot = `${relativePath}.`;
+        if (
+          relativePath.startsWith(subscriberWithDot) ||
+          subscriberPath.startsWith(relativeWithDot)
+        ) {
+          notify(fns);
+        }
       }
     }
 

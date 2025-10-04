@@ -648,6 +648,31 @@ export default function () {
         );
         expect(elem).to.be.an.instanceof(HTMLSpanElement);
       });
+
+      it("should re-render when nested objects are replaced in the state", async () => {
+        const container = await renderHTMLFrame(`
+          <stateful-component10></stateful-component10>
+
+          <template data-component="stateful-component10">
+            <span data-ref="value"></span>
+          </template>
+
+          <script src="/stateful-component10.js"></script>
+        `);
+
+        const state = { content: { nested: { value: "initial" } } };
+        await inflictBoreDOM(state);
+
+        state.content.nested = { value: "updated" };
+
+        await frame();
+
+        const elem = getByText(
+          container,
+          "updated",
+        );
+        expect(elem).to.be.an.instanceof(HTMLSpanElement);
+      });
     });
 
     describe("Lists of components in <script> code", () => {
