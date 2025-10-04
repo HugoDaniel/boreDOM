@@ -673,6 +673,41 @@ export default function () {
         );
         expect(elem).to.be.an.instanceof(HTMLSpanElement);
       });
+
+      it("should re-render nested updates gated behind an unrelated flag", async () => {
+        const container = await renderHTMLFrame(`
+          <stateful-component11></stateful-component11>
+
+          <template data-component="stateful-component11">
+            <p data-ref="info"></p>
+          </template>
+
+          <script src="/stateful-component11.js"></script>
+        `);
+
+        const state = {
+          gpu: {
+            isReady: false,
+            info: { adapter: "none", device: "none" },
+          },
+        };
+        await inflictBoreDOM(state);
+
+        state.gpu.info = { adapter: "Ada", device: "RTX" };
+
+        await frame();
+
+        // No update yet because the render only runs when isReady flips
+        let elem = queryByText(container, "Adapter: Ada | Device: RTX");
+        expect(elem).to.be.null;
+
+        state.gpu.isReady = true;
+
+        await frame();
+
+        elem = getByText(container, "Adapter: Ada | Device: RTX");
+        expect(elem).to.be.an.instanceof(HTMLParagraphElement);
+      });
     });
 
     describe("Lists of components in <script> code", () => {
