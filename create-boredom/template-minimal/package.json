@@ -4,12 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "boredom --html src/components --static src --components-serve /components --static-serve /",
-    "build": "tsc && boredom build",
-    "preview": "boredom preview"
+    "dev": "boredom --html src/components --static src --static public",
+    "validate": "tsc",
+    "build": "echo 'run \"pnpm dev\" and everything placed in build/ is ready to be used in production'"
   },
   "devDependencies": {
-    "typescript": "~5.8.3",
-    "boredom": "npm:@mr_hugo/boredom@^0.25.16"
+    "typescript": "~5.9.3",
+    "boredom": "npm:@mr_hugo/boredom@^0.25.25"
   }
 }

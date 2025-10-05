@@ -1,6 +1,7 @@
 /** @typedef {import("./types.ts").UIState} UIState */
 /** @typedef {import("boredom").inflictBoreDOM<UIState>} */
-import { inflictBoreDOM } from "../boreDOM.js";
+import { inflictBoreDOM } from "boredom";
+// ^ this import "boredom" is possible because importmaps are in use
 
 /** @type UIState */
 const initialUIState = {
