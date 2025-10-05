@@ -333,7 +333,7 @@ async function updateIndex(components) {
       `${component}.js`,
     );
     const existingComponentScript =
-      $(`script[src$="/${component}.js"]`).first();
+      $(`script[src*="${component}.js"]`).first();
     const componentCssPath = buildRelativeServePath(
       componentsServeUrlPath,
       component,
@@ -350,14 +350,17 @@ async function updateIndex(components) {
         // console.log(`Added script reference for ${component}`);
       }
     }
-    if (
-      components[component].hasCSS &&
-      $(`link[href="${componentCssPath}"]`).length === 0
-    ) {
-      $("head").append(
-        `\n  <link rel="stylesheet" href="${componentCssPath}">`,
-      );
-      // console.log(`Added stylesheet reference for ${component}`);
+    if (components[component].hasCSS) {
+      const existingComponentStylesheet =
+        $(`link[href*="${component}.css"]`).first();
+      if (existingComponentStylesheet.length > 0) {
+        existingComponentStylesheet.attr("href", componentCssPath);
+      } else if ($(`link[href="${componentCssPath}"]`).length === 0) {
+        $("head").append(
+          `\n  <link rel="stylesheet" href="${componentCssPath}">`,
+        );
+        // console.log(`Added stylesheet reference for ${component}`);
+      }
     }
     if ($(`template[data-component="${component}"]`).length === 0) {
       const templateMarkup = `\n  ${components[component].templateTag}`;

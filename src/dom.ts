@@ -52,7 +52,10 @@ export const dynamicImportScripts = async (names: string[]) => {
     if (scriptLocation) {
       // Dynamic import it and get the default export
       try {
-        const exports = await import(scriptLocation);
+        // Resolve relative component paths against the current document base so
+        // assets continue to work when a build is hosted under a subdirectory.
+        const moduleUrl = new URL(scriptLocation, document.baseURI).href;
+        const exports = await import(moduleUrl);
         for (const exported of Object.keys(exports)) {
           f = exports[exported];
           break;

@@ -8,7 +8,8 @@ var dynamicImportScripts = async (names) => {
     let f = null;
     if (scriptLocation) {
       try {
-        const exports = await import(scriptLocation);
+        const moduleUrl = new URL(scriptLocation, document.baseURI).href;
+        const exports = await import(moduleUrl);
         for (const exported of Object.keys(exports)) {
           f = exports[exported];
           break;
@@ -625,7 +626,7 @@ function createAndRunCode(name, state, detail) {
 }
 
 // src/version.ts
-var VERSION = "0.25.24";
+var VERSION = "0.25.25";
 
 // src/index.ts
 var hasLoggedVersion = false;
