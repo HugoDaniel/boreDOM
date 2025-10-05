@@ -57,10 +57,15 @@ describe("CLI serve path configuration", () => {
 
     await fs.mkdir("public", { recursive: true });
     await fs.writeFile(path.join("public", "site.txt"), "static-asset");
+    await fs.writeFile(path.join("public", "shared.txt"), "from-public");
+
+    await fs.mkdir("extra-static", { recursive: true });
+    await fs.writeFile(path.join("extra-static", "extra.txt"), "from-extra");
+    await fs.writeFile(path.join("extra-static", "shared.txt"), "from-extra-static");
 
     options.index = "index.html";
     options.html = "components";
-    options.static = "public";
+    options.static = ["public"];
     delete options.componentsServe;
     delete options.staticServe;
     setServePaths(options);
@@ -71,7 +76,7 @@ describe("CLI serve path configuration", () => {
     await fs.rm(tempDir, { recursive: true, force: true });
     options.index = "index.html";
     options.html = "components";
-    options.static = "public";
+    options.static = ["public"];
     delete options.componentsServe;
     delete options.staticServe;
     setServePaths(options);
@@ -79,6 +84,7 @@ describe("CLI serve path configuration", () => {
 
   it("writes assets to custom serve targets and updates index references", async () => {
     options.componentsServe = "assets/components";
+    options.static = ["public", "extra-static"];
     options.staticServe = "assets/static";
     setServePaths(options);
 
@@ -111,10 +117,35 @@ describe("CLI serve path configuration", () => {
       "utf8",
     );
     assert.equal(staticFile, "static-asset");
+
+    const extraFile = await fs.readFile(
+      path.join("build", "assets", "static", "extra.txt"),
+      "utf8",
+    );
+    assert.equal(extraFile, "from-extra");
+
+    const sharedFile = await fs.readFile(
+      path.join("build", "assets", "static", "shared.txt"),
+      "utf8",
+    );
+    assert.equal(sharedFile, "from-extra-static");
+  });
+
+  it("copies static assets to the build root by default", async () => {
+    setServePaths(options);
+
+    await build();
+
+    const site = await fs.readFile(path.join("build", "site.txt"), "utf8");
+    assert.equal(site, "static-asset");
+
+    const shared = await fs.readFile(path.join("build", "shared.txt"), "utf8");
+    assert.equal(shared, "from-public");
   });
 
   it("supports absolute serve roots", async () => {
     options.componentsServe = "/components";
+    options.static = ["public"];
     options.staticServe = "/";
     setServePaths(options);
 

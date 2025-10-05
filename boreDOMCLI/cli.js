@@ -14,9 +14,18 @@ import net from "net";
 
 const beautify = jsBeautify.html;
 
+const DEFAULT_COMPONENTS_DIR = "components";
+const DEFAULT_STATIC_DIR = "src";
+const DEFAULT_STATIC_SERVE = "";
 const BUILD_DIR = "build";
 let serverStarted = false;
 let numberOfRefreshes = 0;
+
+function collectMultiValue(value, previous) {
+  const next = Array.isArray(previous) ? [...previous] : [];
+  next.push(value);
+  return next;
+}
 
 console.log("## boreDOM CLI options");
 console.log(
@@ -35,7 +44,13 @@ console.log(
   "## ",
   "--static <folder>",
   "Static files folder, all files in here are copied as is",
-  'defaults to "./public"',
+  'defaults to "./src"',
+);
+console.log(
+  "## ",
+  "--static-serve <folder>",
+  "Build subfolder used to serve static assets",
+  'defaults to "./"',
 );
 // console.log(
 //   "## ",
@@ -49,22 +64,23 @@ program
   .option(
     "--html <folder>",
     "Folder containing HTML component files",
-    "components",
+    DEFAULT_COMPONENTS_DIR,
   )
   .option(
     "--static <folder>",
     "Folder containing static files to be copied as is",
-    "public",
+    collectMultiValue,
+    [DEFAULT_STATIC_DIR],
   )
   .option(
     "--components-serve <folder>",
     "Build subfolder used to serve processed components",
-    "components",
+    DEFAULT_COMPONENTS_DIR,
   )
   .option(
     "--static-serve <folder>",
     "Build subfolder used to serve static assets",
-    "static",
+    DEFAULT_STATIC_SERVE,
   )
   // .option(
   //   "--bundle <folder>",
@@ -167,7 +183,10 @@ function setServePaths(currentOptions = options) {
     currentOptions.componentsServe,
     "components",
   );
-  const staticPaths = normalizeServePath(currentOptions.staticServe, "static");
+  const staticPaths = normalizeServePath(
+    currentOptions.staticServe,
+    DEFAULT_STATIC_SERVE,
+  );
 
   componentsServePath = componentsPaths.fsPath;
   componentsServeUrlPath = componentsPaths.urlPath;
@@ -194,10 +213,23 @@ function getServePaths() {
 setServePaths();
 
 async function copyStatic() {
-  const staticDir = path.resolve(options.static);
-  if (await fs.pathExists(staticDir)) {
-    await fs.copy(staticDir, path.join(BUILD_DIR, staticServePath));
-    console.log("Static folder copied.");
+  const staticFolders = Array.isArray(options.static)
+    ? options.static
+    : [options.static].filter(Boolean);
+
+  if (staticFolders.length === 0) {
+    return;
+  }
+
+  for (const folder of staticFolders) {
+    const staticDir = path.resolve(folder);
+    if (await fs.pathExists(staticDir)) {
+      await fs.copy(staticDir, path.join(BUILD_DIR, staticServePath), {
+        overwrite: true,
+        errorOnExist: false,
+      });
+      console.log(`Static folder copied from ${folder}.`);
+    }
   }
 }
 
@@ -441,9 +473,14 @@ async function watchFiles() {
     pathsToWatch.push(path.resolve(options.html));
   }
   // Watch the static folder if it exists
-  const staticDir = path.resolve(options.static);
-  if (await fs.pathExists(staticDir)) {
-    pathsToWatch.push(staticDir);
+  const staticFolders = Array.isArray(options.static)
+    ? options.static
+    : [options.static].filter(Boolean);
+  for (const folder of staticFolders) {
+    const staticDir = path.resolve(folder);
+    if (await fs.pathExists(staticDir)) {
+      pathsToWatch.push(staticDir);
+    }
   }
   // Watch the bundle folder
   // if (options.bundle) {
