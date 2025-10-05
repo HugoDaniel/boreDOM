@@ -332,19 +332,23 @@ async function updateIndex(components) {
       component,
       `${component}.js`,
     );
+    const existingComponentScript =
+      $(`script[src$="/${component}.js"]`).first();
     const componentCssPath = buildRelativeServePath(
       componentsServeUrlPath,
       component,
       `${component}.css`,
     );
-    if (
-      components[component].hasJS &&
-      $(`script[src="${componentScriptPath}"]`).length === 0
-    ) {
-      $("body").append(
-        `\n  <script src="${componentScriptPath}" type="module"></script>`,
-      );
-      // console.log(`Added script reference for ${component}`);
+    if (components[component].hasJS) {
+      if (existingComponentScript.length > 0) {
+        existingComponentScript.attr("src", componentScriptPath);
+        existingComponentScript.attr("type", "module");
+      } else if ($(`script[src="${componentScriptPath}"]`).length === 0) {
+        $("body").append(
+          `\n  <script src="${componentScriptPath}" type="module"></script>`,
+        );
+        // console.log(`Added script reference for ${component}`);
+      }
     }
     if (
       components[component].hasCSS &&

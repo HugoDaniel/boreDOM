@@ -625,7 +625,7 @@ function createAndRunCode(name, state, detail) {
 }
 
 // src/version.ts
-var VERSION = "0.25.21";
+var VERSION = "0.25.24";
 
 // src/index.ts
 var hasLoggedVersion = false;

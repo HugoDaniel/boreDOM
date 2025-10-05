@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
+import * as cheerio from "cheerio";
 import { describe, it, before, beforeEach, afterEach } from "mocha";
 import { strict as assert } from "assert";
 
@@ -141,6 +142,22 @@ describe("CLI serve path configuration", () => {
 
     const shared = await fs.readFile(path.join("build", "shared.txt"), "utf8");
     assert.equal(shared, "from-public");
+  });
+
+  it("normalizes pre-existing component script paths", async () => {
+    await fs.writeFile(
+      "index.html",
+      "<!DOCTYPE html><html><head></head><body><script type=\"module\" src=\"components/demo/demo.js\"></script></body></html>",
+    );
+
+    setServePaths(options);
+
+    await build();
+
+    const indexContent = await fs.readFile(path.join("build", "index.html"), "utf8");
+    const $ = cheerio.load(indexContent);
+    const normalized = $('script[src="./components/demo/demo.js"]');
+    assert.equal(normalized.attr("type"), "module");
   });
 
   it("supports absolute serve roots", async () => {
