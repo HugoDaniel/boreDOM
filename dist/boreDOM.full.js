@@ -623,7 +623,6 @@ function createAndRunCode(name, state, detail) {
   }
   return createComponent(name);
 }
-console.log("boreDOM");
 
 // src/version.ts
 var VERSION = "0.25.21";

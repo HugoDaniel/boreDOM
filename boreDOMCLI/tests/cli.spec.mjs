@@ -87,13 +87,13 @@ describe("CLI serve path configuration", () => {
     const indexContent = await fs.readFile(path.join("build", "index.html"), "utf8");
     assert.ok(
       indexContent.includes(
-        '<script src="assets/components/demo/demo.js" type="module"></script>',
+        '<script src="./assets/components/demo/demo.js" type="module"></script>',
       ),
       "expected script tag to reference remapped component path",
     );
     assert.ok(
       indexContent.includes(
-        '<link rel="stylesheet" href="assets/components/demo/demo.css">',
+        '<link rel="stylesheet" href="./assets/components/demo/demo.css">',
       ),
       "expected stylesheet link to reference remapped component path",
     );

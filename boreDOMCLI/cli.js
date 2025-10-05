@@ -128,8 +128,24 @@ function buildRelativeServePath(base, ...segments) {
     return segment.replace(/^\/+/, "").replace(/\/+$/, "");
   });
 
+  const ensureModuleRelative = (candidate) => {
+    if (!candidate) {
+      return candidate;
+    }
+
+    if (
+      candidate.startsWith("/") ||
+      candidate.startsWith("./") ||
+      candidate.startsWith("../")
+    ) {
+      return candidate;
+    }
+
+    return `./${candidate}`;
+  };
+
   if (!base || base === ".") {
-    return cleanSegments.join("/");
+    return ensureModuleRelative(cleanSegments.join("/"));
   }
 
   if (base === "/") {
@@ -138,7 +154,7 @@ function buildRelativeServePath(base, ...segments) {
   }
 
   const cleanBase = base.replace(/\/+$/, "");
-  return [cleanBase, ...cleanSegments].join("/");
+  return ensureModuleRelative([cleanBase, ...cleanSegments].join("/"));
 }
 
 let componentsServePath;
