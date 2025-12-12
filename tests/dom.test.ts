@@ -643,6 +643,8 @@ export default function () {
 
         fireEvent.click(btn);
 
+        // Wait for async handler (Promise.resolve microtask) + rAF for re-render
+        await frame();
         await frame();
 
         const elem = getByText(
@@ -800,8 +802,8 @@ export default function () {
             <script src="/batching-component.js"></script>
           `);
 
-          const state = { a: 0, b: 0, c: 0 };
-          await inflictBoreDOM(state);
+          // Use the returned proxy for mutations (top-level props need proxy access)
+          const state = await inflictBoreDOM({ a: 0, b: 0, c: 0 });
 
           const elem = container.querySelector("batching-component") as HTMLElement;
           const initialRenderCount = elem.getAttribute("data-render-count");
@@ -833,8 +835,8 @@ export default function () {
             <script src="/batching-component.js"></script>
           `);
 
-          const state = { a: 0, b: 0, c: 0 };
-          await inflictBoreDOM(state);
+          // Use the returned proxy for mutations (top-level props need proxy access)
+          const state = await inflictBoreDOM({ a: 0, b: 0, c: 0 });
 
           const elem = container.querySelector("batching-component") as HTMLElement;
 
@@ -903,8 +905,8 @@ export default function () {
           `);
 
           const RUNTIME = Symbol("runtime");
-          const state = { count: 0, [RUNTIME]: { hidden: "initial" } } as any;
-          await inflictBoreDOM(state);
+          // Use the returned proxy for mutations (top-level props need proxy access)
+          const state = await inflictBoreDOM({ count: 0, [RUNTIME]: { hidden: "initial" } }) as any;
 
           const elem = container.querySelector("symbol-key-component") as HTMLElement;
           expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -937,7 +939,7 @@ export default function () {
               <p>Parent subscriber</p>
             </template>
 
-            <script src="/hierarchical-subscription-component.js"></script>
+            <script src="/hierarchical-parent-component.js"></script>
           `);
 
           const state = { user: { name: "Alice", email: "alice@test.com" } };
@@ -964,7 +966,7 @@ export default function () {
               <p>Child subscriber</p>
             </template>
 
-            <script src="/hierarchical-subscription-component.js"></script>
+            <script src="/hierarchical-child-component.js"></script>
           `);
 
           const state = { user: { name: "Alice", email: "alice@test.com" } };
@@ -1005,14 +1007,14 @@ export default function () {
             <script src="/object-replacement-component.js"></script>
           `);
 
-          const state = { user: { name: "Alice", email: "alice@test.com" } };
-          await inflictBoreDOM(state);
+          // Use the returned proxy for mutations (top-level props need proxy access)
+          const state = await inflictBoreDOM({ user: { name: "Alice", email: "alice@test.com" } });
 
           const elem = container.querySelector("object-replacement-component") as HTMLElement;
           expect(elem.getAttribute("data-render-count")).to.equal("1");
           expect(elem.getAttribute("data-name")).to.equal("Alice");
 
-          // Replace the entire nested object
+          // Replace the entire nested object - goes through proxy
           state.user = { name: "Bob", email: "bob@test.com" };
 
           await frame();
@@ -1025,37 +1027,196 @@ export default function () {
 
         it("should continue to be reactive after object replacement", async () => {
           const container = await renderHTMLFrame(`
-            <object-replacement-component></object-replacement-component>
+            <new-object-reactivity-component></new-object-reactivity-component>
 
-            <template data-component="object-replacement-component">
-              <p>Object replacement test</p>
+            <template data-component="new-object-reactivity-component">
+              <p>New object reactivity test</p>
             </template>
 
-            <script src="/object-replacement-component.js"></script>
+            <script src="/new-object-reactivity-component.js"></script>
           `);
 
-          const state = { user: { name: "Alice", email: "alice@test.com" } };
-          await inflictBoreDOM(state);
+          // Use the returned proxy for mutations (top-level props need proxy access)
+          const state = await inflictBoreDOM({
+            user: { name: "Alice", email: "alice@test.com" },
+            data: { level1: { level2: { level3: { value: "initial" } } } },
+            items: ["a", "b"],
+          }) as any;
 
-          const elem = container.querySelector("object-replacement-component") as HTMLElement;
+          const elem = container.querySelector("new-object-reactivity-component") as HTMLElement;
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
 
-          // Replace object
+          // Replace object - goes through proxy, new object gets proxified
           state.user = { name: "Bob", email: "bob@test.com" };
           await frame();
 
-          expect(elem.getAttribute("data-name")).to.equal("Bob");
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-user-name")).to.equal("Bob");
 
-          // Now mutate the NEW object - this tests if new object got proxified
-          // Note: This is a known limitation - new object may not be proxified
+          // Mutate the NEW object - should trigger re-render
           state.user.name = "Carol";
           await frame();
 
-          // Document the actual behavior (may or may not update based on implementation)
-          const finalName = elem.getAttribute("data-name");
-          // The test documents current behavior rather than asserting expected
-          console.info(
-            `After replacing object and mutating new object: name = ${finalName}`,
-          );
+          expect(elem.getAttribute("data-render-count")).to.equal("3");
+          expect(elem.getAttribute("data-user-name")).to.equal("Carol");
+        });
+
+        it("should proxify deeply nested new objects", async () => {
+          // Use unique tag name to avoid conflicts with other tests
+          const container = await renderHTMLFrame(`
+            <deep-object-test></deep-object-test>
+
+            <template data-component="deep-object-test">
+              <p>Deep object test</p>
+            </template>
+          `);
+
+          // Use inline component logic (same module as test) to avoid dual-module issues
+          let deepRenderCount = 0;
+          const deepObjectComponent = webComponent(() => {
+            return ({ self, state }: any) => {
+              deepRenderCount++;
+              self.setAttribute("data-render-count", String(deepRenderCount));
+              self.setAttribute("data-deep-value", state.data?.level1?.level2?.level3?.value ?? "none");
+            };
+          });
+
+          // Use the returned proxy for mutations (top-level props need proxy access)
+          const state = await inflictBoreDOM({
+            user: { name: "Alice" },
+            data: {},
+            items: [],
+          }, {
+            "deep-object-test": deepObjectComponent,
+          }) as any;
+
+          const elem = container.querySelector("deep-object-test") as HTMLElement;
+          await frame(); // Ensure initial render completes
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+
+          // Replace with deeply nested object - goes through proxy
+          state.data = {
+            level1: {
+              level2: {
+                level3: { value: "deep" },
+              },
+            },
+          };
+          await frame();
+          await frame(); // Extra frame for re-render
+
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-deep-value")).to.equal("deep");
+
+          // Mutate deep inside the new object
+          state.data.level1.level2.level3.value = "mutated deep";
+          await frame();
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("3");
+          expect(elem.getAttribute("data-deep-value")).to.equal("mutated deep");
+        });
+
+        it("should proxify new arrays on replacement", async () => {
+          // Use unique tag name to avoid conflicts with other tests
+          const container = await renderHTMLFrame(`
+            <array-replace-test></array-replace-test>
+
+            <template data-component="array-replace-test">
+              <p>Array replacement test</p>
+            </template>
+          `);
+
+          // Use inline component logic (same module as test) to avoid dual-module issues
+          let arrayRenderCount = 0;
+          const arrayReplaceComponent = webComponent(() => {
+            return ({ self, state }: any) => {
+              arrayRenderCount++;
+              self.setAttribute("data-render-count", String(arrayRenderCount));
+              self.setAttribute("data-items", state.items?.join(",") ?? "none");
+            };
+          });
+
+          // Use the returned proxy for mutations (top-level props need proxy access)
+          const state = await inflictBoreDOM({
+            user: { name: "Alice" },
+            data: {},
+            items: ["old1", "old2"],
+          }, {
+            "array-replace-test": arrayReplaceComponent,
+          }) as any;
+
+          const elem = container.querySelector("array-replace-test") as HTMLElement;
+          await frame(); // Ensure initial render completes
+          expect(elem.getAttribute("data-items")).to.equal("old1,old2");
+
+          // Replace array - goes through proxy
+          state.items = ["new1", "new2", "new3"];
+          await frame();
+          await frame(); // Extra frame for re-render
+
+          expect(elem.getAttribute("data-items")).to.equal("new1,new2,new3");
+
+          // Mutate the new array by index
+          state.items[0] = "mutated";
+          await frame();
+          await frame();
+
+          expect(elem.getAttribute("data-items")).to.equal("mutated,new2,new3");
+
+          // Push to the new array
+          state.items.push("pushed");
+          await frame();
+          await frame();
+
+          expect(elem.getAttribute("data-items")).to.equal("mutated,new2,new3,pushed");
+        });
+
+        it("should proxify dynamically added nested objects", async () => {
+          // Use unique tag name to avoid conflicts with other tests
+          const container = await renderHTMLFrame(`
+            <dynamic-nested-test></dynamic-nested-test>
+
+            <template data-component="dynamic-nested-test">
+              <p>Dynamic nested test</p>
+            </template>
+          `);
+
+          // Use inline component logic (same module as test) to avoid dual-module issues
+          let dynamicRenderCount = 0;
+          const dynamicNestedComponent = webComponent(() => {
+            return ({ self, state }: any) => {
+              dynamicRenderCount++;
+              self.setAttribute("data-render-count", String(dynamicRenderCount));
+              self.setAttribute("data-profile-bio", state.user?.profile?.bio ?? "none");
+            };
+          });
+
+          // Use the returned proxy for mutations (top-level props need proxy access)
+          const state = await inflictBoreDOM({
+            user: { name: "Alice" },
+            data: {},
+            items: [],
+          }, {
+            "dynamic-nested-test": dynamicNestedComponent,
+          }) as any;
+
+          const elem = container.querySelector("dynamic-nested-test") as HTMLElement;
+          expect(elem.getAttribute("data-profile-bio")).to.equal("none");
+
+          // Add new nested object - goes through the user proxy
+          state.user.profile = { bio: "Hello", age: 25 };
+          await frame();
+          await frame(); // Extra frame for re-render
+
+          expect(elem.getAttribute("data-profile-bio")).to.equal("Hello");
+
+          // Mutate the dynamically added object
+          state.user.profile.bio = "Updated bio";
+          await frame();
+          await frame();
+
+          expect(elem.getAttribute("data-profile-bio")).to.equal("Updated bio");
         });
       });
 
@@ -1434,12 +1595,14 @@ export default function () {
         `);
 
         let renderCount = 0;
-        const state = { value: "test" };
 
-        await inflictBoreDOM(state, {
+        // Use the returned proxy for mutations (top-level props need proxy access)
+        const state = await inflictBoreDOM({ value: "test" }, {
           "same-value-component": webComponent(() => {
-            return ({ self }) => {
+            return ({ self, state }: any) => {
               renderCount++;
+              // Must read from state to subscribe to changes
+              self.setAttribute("data-value", state.value ?? "none");
               self.setAttribute("data-render-count", String(renderCount));
             };
           }),
@@ -1447,15 +1610,15 @@ export default function () {
 
         expect(renderCount).to.equal(1);
 
-        // Set same value
+        // Set same value - should NOT trigger re-render
         state.value = "test";
 
         await frame();
 
-        // Should NOT have re-rendered
+        // Should NOT have re-rendered (same value)
         expect(renderCount).to.equal(1);
 
-        // Set different value
+        // Set different value - should trigger re-render
         state.value = "different";
 
         await frame();
@@ -1606,9 +1769,9 @@ export default function () {
       it("should return true for Object.create(null)", () => {
         const nullProto = Object.create(null);
         nullProto.a = 1;
-        // Note: Object.create(null) has no prototype, behavior may vary
-        // This documents expected behavior based on implementation
-        expect(isPOJO(nullProto)).to.be.false; // No Object.prototype
+        // Object.create(null) has no prototype, but isPOJO treats it as a POJO
+        // since it's still a plain object (just without Object.prototype)
+        expect(isPOJO(nullProto)).to.be.true;
       });
     });
   });
