@@ -1,0 +1,423 @@
+# Building with boreDOM - LLM Guide
+
+This guide is for LLMs tasked with building applications using the boreDOM framework.
+
+## Quick Start Checklist
+
+1. Create project structure with `src/`, `src/components/`
+2. Define state type in `types.ts`
+3. Create `main.js` with initial state and `inflictBoreDOM()` call
+4. Create component folders with `.html`, `.js`, `.css` files
+5. Use components in `index.html`
+
+## Project Setup
+
+### package.json
+
+```json
+{
+  "name": "my-boredom-app",
+  "type": "module",
+  "scripts": {
+    "dev": "boredom --html src/components --static src --static public"
+  },
+  "devDependencies": {
+    "boredom": "npm:@mr_hugo/boredom@^0.25.25",
+    "typescript": "~5.8.3"
+  }
+}
+```
+
+### File Structure
+
+```
+my-app/
+├── index.html
+├── package.json
+├── tsconfig.json
+├── src/
+│   ├── main.js
+│   ├── types.ts
+│   └── components/
+│       └── my-component/
+│           ├── my-component.html
+│           ├── my-component.js
+│           └── my-component.css
+```
+
+## State Definition
+
+### Step 1: Define Types (types.ts)
+
+```ts
+export type AppState = {
+  // Primitive values
+  count: number
+  message: string
+  isLoading: boolean
+
+  // Nested objects (all reactive)
+  user: {
+    name: string
+    email: string
+  }
+
+  // Arrays (reactive - changes trigger re-render)
+  items: string[]
+  errors: string[]
+
+  // Optional: methods that components can call
+  fetchData?: () => Promise<void>
+}
+```
+
+### Step 2: Create Initial State (main.js)
+
+```js
+/** @typedef {import("./types").AppState} AppState */
+import { inflictBoreDOM } from "boredom"
+
+/** @type {AppState} */
+const initialState = {
+  count: 0,
+  message: "Hello",
+  isLoading: false,
+  user: {
+    name: "",
+    email: "",
+  },
+  items: [],
+  errors: [],
+}
+
+window.addEventListener("DOMContentLoaded", async () => {
+  await inflictBoreDOM(initialState)
+})
+```
+
+## Component Creation
+
+### Template (.html)
+
+```html
+<template data-component="counter-display">
+  <div class="counter">
+    <h2>Count: <slot name="count">0</slot></h2>
+    <button onclick="['increment']">+</button>
+    <button onclick="['decrement']">-</button>
+    <input data-ref="input" type="number" oninput="['setCount']" />
+  </div>
+</template>
+```
+
+Key points:
+- `data-component="tag-name"` - defines the custom element tag (must have hyphen)
+- `slot name="x"` - placeholder for dynamic content
+- `data-ref="x"` - element reference accessible via `refs.x`
+- `onclick="['eventName']"` - dispatches custom event
+
+### Logic (.js)
+
+```js
+// @ts-check
+/** @typedef {import("../../types").AppState} AppState */
+/** @typedef {import("boredom").InitFunction<AppState | undefined>} InitFunction */
+/** @typedef {import("boredom").RenderFunction<AppState | undefined>} RenderFunction */
+import { webComponent } from "boredom"
+
+export const CounterDisplay = webComponent(
+  /** @type {InitFunction} */
+  ({ on }) => {
+    // Event handlers - state is MUTABLE here
+    on("increment", ({ state: mutable }) => {
+      if (mutable) mutable.count++
+    })
+
+    on("decrement", ({ state: mutable }) => {
+      if (mutable) mutable.count--
+    })
+
+    on("setCount", ({ state: mutable, e }) => {
+      if (mutable) {
+        mutable.count = Number(e.event.target.value)
+      }
+    })
+
+    return onRender
+  }
+)
+
+/** @type {RenderFunction} */
+function onRender({ state, slots, refs }) {
+  if (!state) return
+
+  // Update slot content
+  slots.count = String(state.count)
+
+  // Update ref element
+  if (refs.input instanceof HTMLInputElement) {
+    refs.input.value = String(state.count)
+  }
+}
+```
+
+### Usage (index.html)
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="./main.js" type="module"></script>
+</head>
+<body>
+  <counter-display></counter-display>
+</body>
+</html>
+```
+
+## Common Patterns
+
+### Pattern: Render-Only Component
+
+No events, just displays state:
+
+```js
+export const StatusBadge = webComponent(() => onRender)
+
+function onRender({ state, slots }) {
+  if (!state) return
+  slots.status = state.isLoading ? "Loading..." : "Ready"
+}
+```
+
+### Pattern: List Rendering
+
+```html
+<template data-component="item-list">
+  <ul data-ref="list"></ul>
+</template>
+```
+
+```js
+export const ItemList = webComponent(() => onRender)
+
+function onRender({ state, refs }) {
+  if (!state) return
+
+  const list = refs.list
+  if (!(list instanceof HTMLElement)) return
+
+  // Clear and rebuild (simple approach)
+  list.innerHTML = ""
+  state.items.forEach((item, i) => {
+    const li = document.createElement("li")
+    li.textContent = item
+    list.appendChild(li)
+  })
+}
+```
+
+### Pattern: Conditional Rendering
+
+```html
+<template data-component="loading-panel">
+  <div data-ref="loading" hidden>Loading...</div>
+  <div data-ref="content" hidden>
+    <slot name="data"></slot>
+  </div>
+</template>
+```
+
+```js
+function onRender({ state, refs, slots }) {
+  if (!state) return
+
+  const loading = refs.loading
+  const content = refs.content
+
+  if (loading instanceof HTMLElement) {
+    loading.hidden = !state.isLoading
+  }
+  if (content instanceof HTMLElement) {
+    content.hidden = state.isLoading
+  }
+
+  if (!state.isLoading) {
+    slots.data = state.message
+  }
+}
+```
+
+### Pattern: Dynamic Child Components
+
+```js
+function onRender({ state, slots, makeComponent }) {
+  if (!state) return
+
+  const container = slots.items
+  if (!(container instanceof HTMLElement)) return
+
+  // Only create once
+  if (container.childElementCount === 0) {
+    state.items.forEach((item, index) => {
+      const child = makeComponent("item-card", {
+        detail: { data: item, index, name: "item-card" }
+      })
+      container.appendChild(child)
+    })
+  }
+}
+```
+
+### Pattern: Non-Reactive Runtime Data
+
+For canvas contexts, WebSocket connections, timers, etc:
+
+```js
+// Create a Symbol in a separate file
+export const runtime = Symbol("runtime")
+
+// Add to state type
+export type AppState = {
+  count: number
+  [runtime]: {
+    ctx?: CanvasRenderingContext2D
+    socket?: WebSocket
+  }
+}
+
+// Initialize in state
+const initialState = {
+  count: 0,
+  [runtime]: {}
+}
+
+// Use in event handler (mutations don't trigger re-render)
+on("initCanvas", ({ state: mutable, refs }) => {
+  const canvas = refs.canvas
+  if (canvas instanceof HTMLCanvasElement) {
+    mutable[runtime].ctx = canvas.getContext("2d")
+  }
+})
+```
+
+### Pattern: Async Operations
+
+```js
+export const DataFetcher = webComponent(({ on }) => {
+  on("fetchData", async ({ state: mutable }) => {
+    if (!mutable) return
+
+    mutable.isLoading = true
+    mutable.errors = []
+
+    try {
+      const response = await fetch("/api/data")
+      const data = await response.json()
+      mutable.items = data.items
+    } catch (error) {
+      mutable.errors.push(error.message)
+    } finally {
+      mutable.isLoading = false
+    }
+  })
+
+  return onRender
+})
+```
+
+### Pattern: Debounced Input
+
+```js
+export const SearchInput = webComponent(({ on }) => {
+  let debounceTimer
+
+  on("search", ({ state: mutable, e }) => {
+    if (!mutable) return
+
+    clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+      mutable.searchQuery = e.event.target.value
+      // Trigger search...
+    }, 300)
+  })
+
+  return onRender
+})
+```
+
+### Pattern: Form Handling
+
+```html
+<template data-component="login-form">
+  <form>
+    <input data-ref="email" type="email" oninput="['emailChange']" />
+    <input data-ref="password" type="password" oninput="['passwordChange']" />
+    <button onclick="['submit']">Login</button>
+    <div data-ref="error" hidden></div>
+  </form>
+</template>
+```
+
+```js
+export const LoginForm = webComponent(({ on }) => {
+  on("emailChange", ({ state: mutable, e }) => {
+    if (mutable) mutable.user.email = e.event.target.value
+  })
+
+  on("passwordChange", ({ state: mutable, e }) => {
+    if (mutable) mutable.user.password = e.event.target.value
+  })
+
+  on("submit", async ({ state: mutable, e }) => {
+    e.event.preventDefault?.()
+    if (!mutable) return
+
+    mutable.isLoading = true
+    try {
+      await loginUser(mutable.user)
+    } catch (err) {
+      mutable.errors.push(err.message)
+    }
+    mutable.isLoading = false
+  })
+
+  return onRender
+})
+```
+
+## Important Rules
+
+### DO:
+- Always check `if (!state) return` at start of render
+- Use `state: mutable` in event handlers for mutations
+- Use Symbol keys for non-reactive data (canvas, sockets, etc)
+- Create separate `.html`, `.js`, `.css` files per component
+- Use `data-ref` for elements you need to manipulate
+- Use `slot` for content that changes based on state
+
+### DON'T:
+- Don't mutate state in render functions (state is read-only there)
+- Don't forget the hyphen in component names (`my-component`, not `mycomponent`)
+- Don't use `dispatch()` in templates - use `onclick="['eventName']"` syntax
+- Don't create components without matching templates
+- Don't store DOM elements or browser APIs directly in reactive state
+
+## Debugging Tips
+
+1. **State not updating?** Check you're using `state: mutable` in event handler
+2. **Component not rendering?** Verify template `data-component` matches tag usage
+3. **Event not firing?** Check event name matches between template and `on()`
+4. **Slot not updating?** Ensure slot name in template matches `slots.name` access
+5. **Refs undefined?** Verify `data-ref` attribute exists in template
+
+## Type Imports Reference
+
+```js
+// @ts-check
+/** @typedef {import("./types").AppState} AppState */
+/** @typedef {import("boredom").InitFunction<AppState | undefined>} InitFunction */
+/** @typedef {import("boredom").RenderFunction<AppState | undefined>} RenderFunction */
+/** @typedef {import("boredom").WebComponentRenderParams<AppState | undefined>} WebComponentRenderParams */
+/** @typedef {import("boredom").WebComponentInitParams<AppState | undefined>} WebComponentInitParams */
+```
