@@ -61,6 +61,34 @@ const app = await inflictBoreDOM({ count: 0 })
 app.count++ // triggers re-render of subscribed components
 ```
 
+**Important: Return Value vs Original Object**
+
+`inflictBoreDOM` returns a proxy wrapping the `app` state. For **top-level** property mutations, you MUST use this returned proxy:
+
+```ts
+// CORRECT - use returned proxy for top-level mutations
+const state = await inflictBoreDOM({ data: {} })
+state.data = { value: "new" }  // Goes through proxy ✓
+
+// INCORRECT - original object is not a proxy
+const original = { data: {} }
+await inflictBoreDOM(original)
+original.data = { value: "new" }  // Does NOT trigger re-render ✗
+```
+
+However, **nested properties** on the original object ARE proxified in place during initialization:
+
+```ts
+const original = { user: { name: "Alice" } }
+await inflictBoreDOM(original)
+original.user.name = "Bob"  // Works! user object was proxified in place ✓
+```
+
+This asymmetry exists because:
+- The returned `app` is a proxy wrapping the original state object
+- During `proxify()`, nested objects are replaced with proxies on the original object
+- But the original object itself is never replaced with a proxy
+
 #### `webComponent<S>(initFunction)`
 
 Factory for component logic. Returns a curried function that:
@@ -204,9 +232,11 @@ get(target, prop) {
 
 | Issue | Cause |
 |-------|-------|
-| Object replacement not reactive | `state.user = newObj` — new object not proxified |
-| New nested objects not tracked | Proxies created at init only |
 | Symbol keys bypass reactivity | Intentional — use for runtime data |
+
+**Resolved limitations:**
+- Object replacement is now reactive — new objects are recursively proxified in the set trap
+- Dynamically added nested objects are now tracked
 
 ---
 
@@ -884,7 +914,6 @@ index.ts
 |-----|------|-------|
 | **`queryComponent()` export** | Low | Utility function, simple wrapper |
 | **rAF cancellation on rapid updates** | Low | Edge case, batching already tested |
-| **New object proxification after replacement** | Medium | Known limitation documented in TODO |
 
 ### Coverage Summary
 
