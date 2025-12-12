@@ -303,21 +303,23 @@ export function createStateAccessor<S>(
 function createSubscribersDispatcher<S>(state: AppState<S>) {
   return () => {
     const updates = state.internal.updates;
+    // Track which render functions have already been called this batch
+    const notified = new Set<(s?: S) => void>();
+
+    const notify = (fns: ((s?: S) => void)[] | undefined) => {
+      if (!fns) return;
+      for (let j = 0; j < fns.length; j++) {
+        const fn = fns[j];
+        if (notified.has(fn)) continue;
+        notified.add(fn);
+        fn(state.app);
+      }
+    };
+
     // Call the subscribers for each path that was updated
     for (let i = 0; i < updates.path.length; i++) {
       const path = updates.path[i];
       const relativePath = path.slice(path.indexOf(".") + 1);
-      const notified = new Set<(s?: S) => void>();
-
-      const notify = (fns: ((s?: S) => void)[] | undefined) => {
-        if (!fns) return;
-        for (let j = 0; j < fns.length; j++) {
-          const fn = fns[j];
-          if (notified.has(fn)) continue;
-          notified.add(fn);
-          fn(state.app);
-        }
-      };
 
       notify(updates.subscribers.get(relativePath));
 
@@ -365,8 +367,99 @@ export function proxify<S>(boredom: AppState<S>) {
   const state = boredom;
   if (state === undefined) return boredom;
 
-  // Keep track of which objects have been proxified:
+  // Keep track of which objects have been proxified (tracks both originals and proxies):
   const objectsWithProxies = new WeakSet();
+  // Marker to identify our proxies
+  const PROXY_MARKER = Symbol("boredom-proxy");
+
+  /**
+   * Creates a reactive proxy for a single value (object or array).
+   * Recursively proxifies all nested objects/arrays.
+   */
+  function createReactiveProxy(
+    value: any,
+    dottedPath: string,
+  ): any {
+    if (objectsWithProxies.has(value)) return value;
+
+    const proxy = new Proxy(value, {
+      get(target, prop, receiver) {
+        // Return marker to identify this as our proxy
+        if (prop === PROXY_MARKER) return true;
+        return Reflect.get(target, prop, receiver);
+      },
+      set(target, prop, newValue) {
+        // @ts-ignore Always do the default op when the value is changed
+        const isChanged = target[prop] !== newValue;
+        if (!isChanged) return true;
+
+        // If the new value is a POJO or Array (and not already a proxy), proxify it
+        if (typeof prop === "string") {
+          const newPath = Array.isArray(value)
+            ? dottedPath
+            : `${dottedPath}.${prop}`;
+          const isAlreadyProxy = newValue && newValue[PROXY_MARKER] === true;
+          if (!isAlreadyProxy && (Array.isArray(newValue) || isPOJO(newValue))) {
+            newValue = proxifyValue(newValue, newPath);
+          }
+        }
+
+        // Update the value and issue the "update" event on the next frame
+        // Issuing the event on the next frame gives us time to batch a few
+        // of these in case they are happening too fast, which is a good thing
+        // since most of the listeners are DOM transformation templates.
+        Reflect.set(target, prop, newValue);
+        if (typeof prop !== "string") return true;
+        if (Array.isArray(value)) {
+          runtime.updates.path.push(`${dottedPath}`);
+        } else {
+          runtime.updates.path.push(`${dottedPath}.${prop}`);
+        }
+        runtime.updates.value.push(target);
+        if (!runtime.updates.raf) {
+          runtime.updates.raf = requestAnimationFrame(
+            createSubscribersDispatcher(boredom),
+          );
+        }
+
+        return true;
+      },
+    });
+    objectsWithProxies.add(value);
+    objectsWithProxies.add(proxy);
+    return proxy;
+  }
+
+  /**
+   * Recursively proxifies a value and all its nested objects/arrays.
+   * Used both at initialization and when new objects are assigned.
+   */
+  function proxifyValue(value: any, basePath: string): any {
+    if (!Array.isArray(value) && !isPOJO(value)) return value;
+    if (objectsWithProxies.has(value)) return value;
+    // Check if it's already one of our proxies
+    if (value && (value as any)[PROXY_MARKER] === true) return value;
+
+    // First, recursively proxify all nested objects/arrays
+    if (Array.isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        const item = value[i];
+        if (Array.isArray(item) || isPOJO(item)) {
+          value[i] = proxifyValue(item, basePath);
+        }
+      }
+    } else {
+      for (const key of Object.keys(value)) {
+        const item = (value as Record<string, any>)[key];
+        if (Array.isArray(item) || isPOJO(item)) {
+          (value as Record<string, any>)[key] = proxifyValue(item, `${basePath}.${key}`);
+        }
+      }
+    }
+
+    // Then create the proxy for this value
+    return createReactiveProxy(value, basePath);
+  }
 
   // Traverse through all the properties in state
   flatten(boredom, ["internal"]).forEach(({ path, value }) => {
@@ -380,34 +473,7 @@ export function proxify<S>(boredom: AppState<S>) {
       if (isRoot) return;
 
       // @ts-ignore
-      parent[path.at(-1)] = new Proxy(value, {
-        set(target, prop, newValue) {
-          // @ts-ignore Always do the default op when the value is changed
-          const isChanged = target[prop] !== newValue;
-          if (!isChanged) return true;
-
-          // Update the value and issue the "update" event on the next frame
-          // Issuing the event on the next frame gives us time to batch a few
-          // of these in case they are happening too fast, which is a good thing
-          // since most of the listeners are DOM transformation templates.
-          Reflect.set(target, prop, newValue);
-          if (typeof prop !== "string") return true;
-          if (Array.isArray(value)) {
-            runtime.updates.path.push(`${dottedPath}`);
-          } else {
-            runtime.updates.path.push(`${dottedPath}.${prop}`);
-          }
-          runtime.updates.value.push(target);
-          if (!runtime.updates.raf) {
-            runtime.updates.raf = requestAnimationFrame(
-              createSubscribersDispatcher(boredom),
-            );
-          }
-
-          return true;
-        },
-      });
-      objectsWithProxies.add(value);
+      parent[path.at(-1)] = createReactiveProxy(value, dottedPath);
     }
   });
   // boredom.app = state.app;

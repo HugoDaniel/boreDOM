@@ -73,6 +73,13 @@ export async function inflictBoreDOM<S>(
   };
   // Proxifies the `initialState.app`:
   const proxifiedState = proxify(initialState);
+  // Clear any updates generated during proxy setup (these are initialization noise)
+  proxifiedState.internal.updates.path = [];
+  proxifiedState.internal.updates.value = [];
+  if (proxifiedState.internal.updates.raf) {
+    cancelAnimationFrame(proxifiedState.internal.updates.raf);
+    proxifiedState.internal.updates.raf = undefined;
+  }
   // Call the code from the corresponding .js file of each component:
   runComponentsInitializer(proxifiedState);
 
