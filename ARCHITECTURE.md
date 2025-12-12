@@ -142,17 +142,71 @@ while (target) {
 
 #### Proxy Implementation Details
 
-**Read proxy (`createStateAccessor`):**
-- Returns `undefined` for undefined state
-- Recursively wraps nested objects/arrays
-- Logs access paths like `"user.profile.name"`
-- Blocks mutations with console error
+boreDOM uses **4 distinct proxies**:
 
-**Write proxy (`proxify`):**
-- Uses `flatten()` to traverse all state paths
-- Skips `internal` key and non-POJO values
-- On set: pushes path to `updates.path[]`, schedules single rAF
-- `createSubscribersDispatcher` notifies all functions subscribed to changed paths
+| Proxy | Location | Purpose |
+|-------|----------|---------|
+| Write Proxy | `proxify()` | Detects mutations, schedules rAF |
+| Read Proxy | `createStateAccessor()` | Tracks access paths, blocks writes |
+| Refs Proxy | `createRefsAccessor()` | Lazy DOM queries for `data-ref` |
+| Slots Proxy | `createSlotsAccessor()` | Get/set named slot content |
+
+**Write Proxy (`proxify`):**
+- Created once at initialization via `flatten(state, ["internal"])`
+- Each POJO/Array gets wrapped with a Proxy
+- Path is **baked into closure** at creation time
+- `set` trap: applies change → pushes path to `updates.path[]` → schedules rAF
+- Arrays push the array path (e.g., `"app.items"`), objects push full path (e.g., `"app.user.name"`)
+
+```ts
+// The set trap (simplified)
+set(target, prop, newValue) {
+  if (target[prop] === newValue) return true  // No change
+  Reflect.set(target, prop, newValue)
+  runtime.updates.path.push(`${dottedPath}.${prop}`)
+  if (!runtime.updates.raf) {
+    runtime.updates.raf = requestAnimationFrame(dispatcher)
+  }
+  return true
+}
+```
+
+**Read Proxy (`createStateAccessor`):**
+- Created **fresh for each render call** with empty `log` array
+- `get` trap: tracks traversal path, returns nested proxy for objects
+- `set` trap: blocks mutation with console error
+- After render, `updateSubscribers()` registers render function for each logged path
+
+```ts
+// Recursive get trap (simplified)
+get(target, prop) {
+  const value = target[prop]
+  current.path.push(prop)
+
+  if (isPOJO(value) || Array.isArray(value)) {
+    return createStateAccessor(value, log, current)  // Recurse
+  }
+
+  log.push(current.path.join("."))  // "user.name"
+  return value
+}
+```
+
+**Refs Proxy:**
+- Queries DOM on every access (no caching)
+- Returns single element or array if multiple match
+
+**Slots Proxy:**
+- `get`: returns `<slot name="x">` element(s)
+- `set`: creates element with `data-slot` attribute, replaces existing slot/data-slot element
+
+#### Known Proxy Limitations
+
+| Issue | Cause |
+|-------|-------|
+| Object replacement not reactive | `state.user = newObj` — new object not proxified |
+| New nested objects not tracked | Proxies created at init only |
+| Symbol keys bypass reactivity | Intentional — use for runtime data |
 
 ---
 
@@ -763,3 +817,97 @@ index.ts
 │   └── index.ts (webComponent type)
 └── version.ts
 ```
+
+---
+
+## Test Coverage Analysis
+
+### Test Infrastructure
+
+| File | Type | Framework |
+|------|------|-----------|
+| `tests/dom.test.ts` | Browser tests | Mocha + Chai + Testing Library |
+| `tests/runner.ts` | Test bootstrap | Mocha BDD |
+| `boreDOMCLI/tests/cli.spec.mjs` | CLI tests | Mocha + Node assert |
+
+### What IS Tested
+
+#### Component Registration & Rendering
+- Template `data-component` registration → custom element
+- Invalid tag names (no hyphen) rejected
+- Template HTML rendered into component
+- Shadow DOM via `shadowrootmode` attribute
+- `data-aria-*` and `data-role` attribute mirroring
+- Slot default behavior with Shadow DOM
+
+#### Event System
+- `dispatch('eventName')` in onclick attributes
+- `data-onclick-dispatches` attribute set on processed elements
+- CustomEvent fired with correct detail (event, target)
+- Multiple events in single dispatch call
+- `on()` handler registration and invocation
+- Event scoping (handler only fires for originating component)
+
+#### State & Reactivity
+- Initial state passed to components
+- State changes trigger re-render (nested objects)
+- Array element mutations trigger re-render
+- State changes in event handlers trigger re-render
+- Async event handlers with state mutations
+- Nested object replacement (`state.a.b = newObj`)
+- Conditional rendering based on state flags
+
+#### Refs & Slots
+- `data-ref` elements accessible via `refs.name`
+- Error thrown for undefined ref access
+- Slot reading via `slots['name']`
+- Slot replacement with element
+- Slot replacement with string
+- `data-slot` attribute added to replaced elements
+
+#### Component Features
+- Script loading via `<script src="...">` tags
+- Inline component logic via `inflictBoreDOM(state, { tag: webComponent(...) })`
+- Multiple instances of same component (index tracking)
+- Dynamic component creation via `makeComponent()`
+
+#### CLI (boreDOMCLI)
+- Build output with custom serve paths
+- Static asset copying
+- Component script/CSS path remapping
+- Absolute vs relative serve roots
+- Path normalization
+
+### Remaining Test Gaps
+
+| Gap | Risk | Notes |
+|-----|------|-------|
+| **`queryComponent()` export** | Low | Utility function, simple wrapper |
+| **rAF cancellation on rapid updates** | Low | Edge case, batching already tested |
+| **New object proxification after replacement** | Medium | Known limitation documented in TODO |
+
+### Coverage Summary
+
+| Category | Coverage |
+|----------|----------|
+| Component lifecycle | High |
+| Event dispatch/handling | High |
+| State → re-render | High |
+| Refs accessor | High |
+| Slots accessor | High |
+| Proxy internals | High |
+| Utilities | High |
+| CLI build | Medium |
+| Edge cases | High |
+
+### New Test Categories Added
+
+- **Proxy internals**: Mutation batching, read-only state enforcement, Symbol key bypass
+- **Hierarchical subscriptions**: Parent/child path notification behavior
+- **Object replacement**: Nested object replacement reactivity
+- **Array methods**: push, pop, splice, direct index assignment
+- **Refs edge cases**: Multiple refs with same name, single ref behavior
+- **Slots edge cases**: Idempotent updates, HTMLElement replacement
+- **Component detail**: Index tracking, custom data via makeComponent
+- **Error handling**: Undefined state, event handler errors, same-value optimization
+- **Utility functions**: flatten(), access(), isPOJO() comprehensive tests

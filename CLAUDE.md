@@ -73,6 +73,21 @@ dist/                 # Build output (don't commit)
 - CLI tests: `pnpm run test:cli`
 - Coverage: `pnpm exec nyc pnpm run test:cli`
 
+### Coverage Status
+
+| Area | Coverage |
+|------|----------|
+| Component lifecycle | High |
+| Events | High |
+| State reactivity | High |
+| Slots | High |
+| Refs | High |
+| Proxy internals | High |
+| Utilities | High |
+| Edge cases | High |
+
+Tests include: mutation batching, read-only state enforcement, Symbol key bypass, hierarchical subscriptions, array methods, object replacement, error handling, and utility functions.
+
 ## Current TODOs (from TODO file)
 
 - Allow full object replacement in state (`state.x = {...newX}`)

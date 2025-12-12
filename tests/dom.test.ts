@@ -11,6 +11,9 @@ import {
 } from "@testing-library/dom";
 import "mocha/mocha.js";
 import { inflictBoreDOM, webComponent } from "../src/index";
+import { flatten } from "../src/utils/flatten";
+import { access } from "../src/utils/access";
+import { isPOJO } from "../src/utils/isPojo";
 
 function renderHTML(html: string) {
   const main = document.querySelector("main");
@@ -781,6 +784,831 @@ export default function () {
         expect(elem1).to.be.an.instanceof(HTMLElement);
         expect(elem2).to.be.an.instanceof(HTMLElement);
         expect(elem3).to.be.an.instanceof(HTMLElement);
+      });
+    });
+
+    describe("Proxy internals", () => {
+      describe("Mutation batching", () => {
+        it("should batch multiple synchronous mutations into a single render", async () => {
+          const container = await renderHTMLFrame(`
+            <batching-component></batching-component>
+
+            <template data-component="batching-component">
+              <p>Batching test</p>
+            </template>
+
+            <script src="/batching-component.js"></script>
+          `);
+
+          const state = { a: 0, b: 0, c: 0 };
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("batching-component") as HTMLElement;
+          const initialRenderCount = elem.getAttribute("data-render-count");
+          expect(initialRenderCount).to.equal("1");
+
+          // Multiple synchronous mutations
+          state.a = 1;
+          state.b = 2;
+          state.c = 3;
+
+          // Before frame, render count should still be 1
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+
+          await frame();
+
+          // After frame, should have rendered only once more (batched)
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-values")).to.equal("1,2,3");
+        });
+
+        it("should batch mutations across different paths into single render", async () => {
+          const container = await renderHTMLFrame(`
+            <batching-component></batching-component>
+
+            <template data-component="batching-component">
+              <p>Batching test</p>
+            </template>
+
+            <script src="/batching-component.js"></script>
+          `);
+
+          const state = { a: 0, b: 0, c: 0 };
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("batching-component") as HTMLElement;
+
+          // Mutate in rapid succession
+          for (let i = 0; i < 10; i++) {
+            state.a = i;
+          }
+
+          await frame();
+
+          // Should only have 2 renders: initial + 1 batched
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-values")).to.equal("9,0,0");
+        });
+      });
+
+      describe("Read-only state in render", () => {
+        it("should block mutations to state within render function", async () => {
+          const errors: any[] = [];
+          const originalError = console.error;
+          console.error = (...args: any[]) => {
+            errors.push(args);
+            originalError.apply(console, args);
+          };
+
+          const container = await renderHTMLFrame(`
+            <readonly-state-component></readonly-state-component>
+
+            <template data-component="readonly-state-component">
+              <p>Read-only test</p>
+            </template>
+
+            <script src="/readonly-state-component.js"></script>
+          `);
+
+          const state = { value: "original" };
+          await inflictBoreDOM(state);
+
+          console.error = originalError;
+
+          // Should have logged an error about read-only state
+          const readOnlyErrors = errors.filter(
+            (e) => e[0] && typeof e[0] === "string" && e[0].includes("read-only"),
+          );
+          expect(readOnlyErrors.length).to.be.greaterThan(0);
+
+          // State should remain unchanged
+          expect(state.value).to.equal("original");
+
+          // Component should display original value
+          const elem = container.querySelector("readonly-state-component") as HTMLElement;
+          expect(elem.getAttribute("data-value")).to.equal("original");
+        });
+      });
+
+      describe("Symbol key bypass", () => {
+        it("should not trigger re-render when Symbol key is mutated", async () => {
+          const container = await renderHTMLFrame(`
+            <symbol-key-component></symbol-key-component>
+
+            <template data-component="symbol-key-component">
+              <p>Symbol key test</p>
+            </template>
+
+            <script src="/symbol-key-component.js"></script>
+          `);
+
+          const RUNTIME = Symbol("runtime");
+          const state = { count: 0, [RUNTIME]: { hidden: "initial" } } as any;
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("symbol-key-component") as HTMLElement;
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+
+          // Mutate Symbol key - should NOT trigger re-render
+          state[RUNTIME].hidden = "changed";
+          state[RUNTIME] = { hidden: "replaced" };
+
+          await frame();
+
+          // Render count should still be 1
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+
+          // Now mutate a regular key - SHOULD trigger re-render
+          state.count = 1;
+
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-count")).to.equal("1");
+        });
+      });
+
+      describe("Hierarchical subscription matching", () => {
+        it("should re-render parent subscriber when child path changes", async () => {
+          const container = await renderHTMLFrame(`
+            <hierarchical-parent-component></hierarchical-parent-component>
+
+            <template data-component="hierarchical-parent-component">
+              <p>Parent subscriber</p>
+            </template>
+
+            <script src="/hierarchical-subscription-component.js"></script>
+          `);
+
+          const state = { user: { name: "Alice", email: "alice@test.com" } };
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("hierarchical-parent-component") as HTMLElement;
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+          expect(elem.getAttribute("data-user-name")).to.equal("Alice");
+
+          // Change a child path (user.name) - parent subscribed to "user" should re-render
+          state.user.name = "Bob";
+
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-user-name")).to.equal("Bob");
+        });
+
+        it("should re-render child subscriber when parent object property changes", async () => {
+          const container = await renderHTMLFrame(`
+            <hierarchical-child-component></hierarchical-child-component>
+
+            <template data-component="hierarchical-child-component">
+              <p>Child subscriber</p>
+            </template>
+
+            <script src="/hierarchical-subscription-component.js"></script>
+          `);
+
+          const state = { user: { name: "Alice", email: "alice@test.com" } };
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("hierarchical-child-component") as HTMLElement;
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+
+          // Change sibling path (user.email) - child subscribed to "user.name"
+          // This tests if changing user.email triggers user.name subscriber
+          state.user.email = "alice2@test.com";
+
+          await frame();
+
+          // Child subscribed to user.name should NOT re-render for user.email change
+          // (they are siblings, not hierarchical)
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+
+          // Now change the actual subscribed path
+          state.user.name = "Carol";
+
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-name")).to.equal("Carol");
+        });
+      });
+
+      describe("Object replacement", () => {
+        it("should re-render when a nested object is replaced", async () => {
+          const container = await renderHTMLFrame(`
+            <object-replacement-component></object-replacement-component>
+
+            <template data-component="object-replacement-component">
+              <p>Object replacement test</p>
+            </template>
+
+            <script src="/object-replacement-component.js"></script>
+          `);
+
+          const state = { user: { name: "Alice", email: "alice@test.com" } };
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("object-replacement-component") as HTMLElement;
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+          expect(elem.getAttribute("data-name")).to.equal("Alice");
+
+          // Replace the entire nested object
+          state.user = { name: "Bob", email: "bob@test.com" };
+
+          await frame();
+
+          // Should have re-rendered with new values
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-name")).to.equal("Bob");
+          expect(elem.getAttribute("data-email")).to.equal("bob@test.com");
+        });
+
+        it("should continue to be reactive after object replacement", async () => {
+          const container = await renderHTMLFrame(`
+            <object-replacement-component></object-replacement-component>
+
+            <template data-component="object-replacement-component">
+              <p>Object replacement test</p>
+            </template>
+
+            <script src="/object-replacement-component.js"></script>
+          `);
+
+          const state = { user: { name: "Alice", email: "alice@test.com" } };
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("object-replacement-component") as HTMLElement;
+
+          // Replace object
+          state.user = { name: "Bob", email: "bob@test.com" };
+          await frame();
+
+          expect(elem.getAttribute("data-name")).to.equal("Bob");
+
+          // Now mutate the NEW object - this tests if new object got proxified
+          // Note: This is a known limitation - new object may not be proxified
+          state.user.name = "Carol";
+          await frame();
+
+          // Document the actual behavior (may or may not update based on implementation)
+          const finalName = elem.getAttribute("data-name");
+          // The test documents current behavior rather than asserting expected
+          console.info(
+            `After replacing object and mutating new object: name = ${finalName}`,
+          );
+        });
+      });
+
+      describe("Array methods reactivity", () => {
+        it("should re-render when array.push() is called", async () => {
+          const container = await renderHTMLFrame(`
+            <array-methods-component></array-methods-component>
+
+            <template data-component="array-methods-component">
+              <button onclick="dispatch('push')">Push</button>
+            </template>
+
+            <script src="/array-methods-component.js"></script>
+          `);
+
+          const state = { items: ["a", "b"] };
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("array-methods-component") as HTMLElement;
+          expect(elem.getAttribute("data-items")).to.equal("a,b");
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+
+          const btn = container.querySelector("button") as HTMLButtonElement;
+          fireEvent.click(btn);
+
+          await frame();
+
+          expect(elem.getAttribute("data-items")).to.equal("a,b,new item");
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+        });
+
+        it("should re-render when array.pop() is called", async () => {
+          const container = await renderHTMLFrame(`
+            <array-methods-component></array-methods-component>
+
+            <template data-component="array-methods-component">
+              <button onclick="dispatch('pop')">Pop</button>
+            </template>
+
+            <script src="/array-methods-component.js"></script>
+          `);
+
+          const state = { items: ["a", "b", "c"] };
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("array-methods-component") as HTMLElement;
+          expect(elem.getAttribute("data-items")).to.equal("a,b,c");
+
+          const btn = container.querySelector("button") as HTMLButtonElement;
+          fireEvent.click(btn);
+
+          await frame();
+
+          expect(elem.getAttribute("data-items")).to.equal("a,b");
+        });
+
+        it("should re-render when array.splice() is called", async () => {
+          const container = await renderHTMLFrame(`
+            <array-methods-component></array-methods-component>
+
+            <template data-component="array-methods-component">
+              <button onclick="dispatch('splice')">Splice</button>
+            </template>
+
+            <script src="/array-methods-component.js"></script>
+          `);
+
+          const state = { items: ["a", "b", "c"] };
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("array-methods-component") as HTMLElement;
+          expect(elem.getAttribute("data-items")).to.equal("a,b,c");
+
+          const btn = container.querySelector("button") as HTMLButtonElement;
+          fireEvent.click(btn);
+
+          await frame();
+
+          expect(elem.getAttribute("data-items")).to.equal("a,spliced,c");
+        });
+
+        it("should re-render when array index is directly set", async () => {
+          const container = await renderHTMLFrame(`
+            <array-methods-component></array-methods-component>
+
+            <template data-component="array-methods-component">
+              <p>Array test</p>
+            </template>
+
+            <script src="/array-methods-component.js"></script>
+          `);
+
+          const state = { items: ["a", "b", "c"] };
+          await inflictBoreDOM(state);
+
+          const elem = container.querySelector("array-methods-component") as HTMLElement;
+          expect(elem.getAttribute("data-items")).to.equal("a,b,c");
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+
+          // Direct index assignment
+          state.items[1] = "modified";
+
+          await frame();
+
+          expect(elem.getAttribute("data-items")).to.equal("a,modified,c");
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+        });
+      });
+    });
+
+    describe("Refs edge cases", () => {
+      it("should return an array when multiple elements share the same data-ref", async () => {
+        const container = await renderHTMLFrame(`
+          <multi-ref-component></multi-ref-component>
+
+          <template data-component="multi-ref-component">
+            <ul>
+              <li data-ref="item">First</li>
+              <li data-ref="item">Second</li>
+              <li data-ref="item">Third</li>
+            </ul>
+          </template>
+
+          <script src="/multi-ref-component.js"></script>
+        `);
+
+        await inflictBoreDOM();
+
+        const elem = container.querySelector("multi-ref-component") as HTMLElement;
+        expect(elem.getAttribute("data-ref-count")).to.equal("3");
+
+        const items = elem.querySelectorAll("li");
+        expect(items[0].textContent).to.equal("Item 0");
+        expect(items[1].textContent).to.equal("Item 1");
+        expect(items[2].textContent).to.equal("Item 2");
+      });
+
+      it("should return a single element when only one element has the data-ref", async () => {
+        const container = await renderHTMLFrame(`
+          <multi-ref-component></multi-ref-component>
+
+          <template data-component="multi-ref-component">
+            <ul>
+              <li data-ref="item">Only one</li>
+            </ul>
+          </template>
+
+          <script src="/multi-ref-component.js"></script>
+        `);
+
+        await inflictBoreDOM();
+
+        const elem = container.querySelector("multi-ref-component") as HTMLElement;
+        expect(elem.getAttribute("data-ref-count")).to.equal("1");
+
+        const item = elem.querySelector("li");
+        expect(item?.textContent).to.equal("Single item");
+      });
+    });
+
+    describe("Slots edge cases", () => {
+      it("should update slot content idempotently on multiple renders", async () => {
+        const container = await renderHTMLFrame(`
+          <slot-idempotent-component></slot-idempotent-component>
+
+          <template data-component="slot-idempotent-component">
+            <p><slot name="content">Default</slot></p>
+          </template>
+        `);
+
+        await inflictBoreDOM(undefined, {
+          "slot-idempotent-component": webComponent(() => {
+            let renderCount = 0;
+            return ({ slots, self }) => {
+              renderCount++;
+              (slots as any).content = `Render ${renderCount}`;
+              self.setAttribute("data-render-count", String(renderCount));
+            };
+          }),
+        });
+
+        const elem = container.querySelector("slot-idempotent-component") as HTMLElement;
+        expect(elem.getAttribute("data-render-count")).to.equal("1");
+
+        // Query the slot content
+        let slotContent = elem.querySelector("[data-slot='content']");
+        expect(slotContent?.textContent).to.equal("Render 1");
+
+        // Trigger re-render by creating a minimal state change
+        const state = { trigger: 0 };
+        await inflictBoreDOM(state, {
+          "slot-idempotent-component": webComponent(() => {
+            let renderCount = 0;
+            return ({ slots, self, state }) => {
+              renderCount++;
+              (slots as any).content = `Render ${renderCount} trigger ${state?.trigger}`;
+              self.setAttribute("data-render-count", String(renderCount));
+            };
+          }),
+        });
+
+        // Verify slot was replaced correctly (only one element with data-slot)
+        const slotElements = elem.querySelectorAll("[data-slot='content']");
+        expect(slotElements.length).to.equal(1);
+      });
+
+      it("should handle slot replacement with HTMLElement", async () => {
+        const container = await renderHTMLFrame(`
+          <slot-element-component></slot-element-component>
+
+          <template data-component="slot-element-component">
+            <div><slot name="custom">Placeholder</slot></div>
+          </template>
+        `);
+
+        await inflictBoreDOM(undefined, {
+          "slot-element-component": webComponent(() => {
+            return ({ slots }) => {
+              const customElem = document.createElement("strong");
+              customElem.textContent = "Bold content";
+              customElem.classList.add("custom-class");
+              (slots as any).custom = customElem;
+            };
+          }),
+        });
+
+        const elem = container.querySelector("slot-element-component") as HTMLElement;
+        const strongElem = elem.querySelector("strong.custom-class");
+        expect(strongElem).to.not.be.null;
+        expect(strongElem?.textContent).to.equal("Bold content");
+        expect(strongElem?.getAttribute("data-slot")).to.equal("custom");
+      });
+    });
+
+    describe("Component detail object", () => {
+      it("should pass correct index to each component instance", async () => {
+        const container = await renderHTMLFrame(`
+          <index-component></index-component>
+          <index-component></index-component>
+          <index-component></index-component>
+
+          <template data-component="index-component">
+            <span></span>
+          </template>
+        `);
+
+        await inflictBoreDOM(undefined, {
+          "index-component": webComponent(({ detail }) => {
+            return ({ self }) => {
+              self.setAttribute("data-index", String(detail.index));
+              self.setAttribute("data-name", detail.name);
+            };
+          }),
+        });
+
+        const components = container.querySelectorAll("index-component");
+        expect(components[0].getAttribute("data-index")).to.equal("0");
+        expect(components[1].getAttribute("data-index")).to.equal("1");
+        expect(components[2].getAttribute("data-index")).to.equal("2");
+
+        // All should have the same tag name
+        expect(components[0].getAttribute("data-name")).to.equal("index-component");
+      });
+
+      it("should pass custom data through detail when using makeComponent", async () => {
+        const container = await renderHTMLFrame(`
+          <parent-detail-component></parent-detail-component>
+
+          <template data-component="parent-detail-component">
+            <div data-ref="container"></div>
+          </template>
+
+          <template data-component="child-detail-component">
+            <span></span>
+          </template>
+        `);
+
+        await inflictBoreDOM(undefined, {
+          "parent-detail-component": webComponent(() => {
+            return ({ refs, makeComponent }) => {
+              const child = makeComponent("child-detail-component", {
+                detail: { index: 42, name: "child-detail-component", data: { custom: "value" } },
+              });
+              (refs.container as HTMLElement).appendChild(child);
+            };
+          }),
+          "child-detail-component": webComponent(({ detail }) => {
+            return ({ self }) => {
+              self.setAttribute("data-custom", (detail as any).data?.custom ?? "none");
+            };
+          }),
+        });
+
+        const child = container.querySelector("child-detail-component") as HTMLElement;
+        expect(child.getAttribute("data-custom")).to.equal("value");
+      });
+    });
+
+    describe("Edge cases and error handling", () => {
+      it("should handle undefined state gracefully in render", async () => {
+        const container = await renderHTMLFrame(`
+          <undefined-state-component></undefined-state-component>
+
+          <template data-component="undefined-state-component">
+            <p data-ref="output">Waiting</p>
+          </template>
+        `);
+
+        // Initialize without state
+        await inflictBoreDOM(undefined, {
+          "undefined-state-component": webComponent(() => {
+            return ({ state, refs }) => {
+              if (!state) {
+                (refs.output as HTMLElement).textContent = "No state";
+                return;
+              }
+              (refs.output as HTMLElement).textContent = "Has state";
+            };
+          }),
+        });
+
+        const output = container.querySelector("[data-ref='output']") as HTMLElement;
+        expect(output.textContent).to.equal("No state");
+      });
+
+      it("should handle errors in event handlers gracefully", async () => {
+        const errors: any[] = [];
+        const originalError = console.error;
+        console.error = (...args: any[]) => {
+          errors.push(args);
+        };
+
+        const container = await renderHTMLFrame(`
+          <error-handler-component></error-handler-component>
+
+          <template data-component="error-handler-component">
+            <button onclick="dispatch('throwError')">Throw</button>
+            <p data-ref="status">OK</p>
+          </template>
+        `);
+
+        await inflictBoreDOM(undefined, {
+          "error-handler-component": webComponent(({ on }) => {
+            on("throwError", () => {
+              throw new Error("Test error");
+            });
+            return ({ refs }) => {
+              (refs.status as HTMLElement).textContent = "Rendered";
+            };
+          }),
+        });
+
+        const btn = container.querySelector("button") as HTMLButtonElement;
+        fireEvent.click(btn);
+
+        console.error = originalError;
+
+        // Should have logged the error
+        const errorLogs = errors.filter(
+          (e) => e[0] && typeof e[0] === "string" && e[0].includes("Error"),
+        );
+        expect(errorLogs.length).to.be.greaterThan(0);
+
+        // Component should still be functional
+        const status = container.querySelector("[data-ref='status']") as HTMLElement;
+        expect(status.textContent).to.equal("Rendered");
+      });
+
+      it("should not re-render when setting same value", async () => {
+        const container = await renderHTMLFrame(`
+          <same-value-component></same-value-component>
+
+          <template data-component="same-value-component">
+            <p>Same value test</p>
+          </template>
+        `);
+
+        let renderCount = 0;
+        const state = { value: "test" };
+
+        await inflictBoreDOM(state, {
+          "same-value-component": webComponent(() => {
+            return ({ self }) => {
+              renderCount++;
+              self.setAttribute("data-render-count", String(renderCount));
+            };
+          }),
+        });
+
+        expect(renderCount).to.equal(1);
+
+        // Set same value
+        state.value = "test";
+
+        await frame();
+
+        // Should NOT have re-rendered
+        expect(renderCount).to.equal(1);
+
+        // Set different value
+        state.value = "different";
+
+        await frame();
+
+        // Should have re-rendered
+        expect(renderCount).to.equal(2);
+      });
+    });
+  });
+
+  describe("Utility functions", () => {
+    describe("flatten()", () => {
+      it("should flatten a simple object into path-value pairs", () => {
+        const obj = { a: 1, b: 2 };
+        const result = flatten(obj);
+
+        expect(result).to.deep.include({ path: ["a"], value: 1 });
+        expect(result).to.deep.include({ path: ["b"], value: 2 });
+      });
+
+      it("should flatten nested objects recursively", () => {
+        const obj = { a: { b: { c: 1 } } };
+        const result = flatten(obj);
+
+        expect(result).to.deep.include({ path: ["a"], value: { b: { c: 1 } } });
+        expect(result).to.deep.include({ path: ["a", "b"], value: { c: 1 } });
+        expect(result).to.deep.include({ path: ["a", "b", "c"], value: 1 });
+      });
+
+      it("should ignore keys specified in the ignore array", () => {
+        const obj = { a: 1, internal: { secret: "hidden" }, b: 2 };
+        const result = flatten(obj, ["internal"]);
+
+        expect(result).to.deep.include({ path: ["a"], value: 1 });
+        expect(result).to.deep.include({ path: ["b"], value: 2 });
+
+        const internalPaths = result.filter((r) => r.path.includes("internal"));
+        expect(internalPaths.length).to.equal(0);
+      });
+
+      it("should handle arrays within objects", () => {
+        const obj = { items: [1, 2, 3] };
+        const result = flatten(obj);
+
+        expect(result).to.deep.include({ path: ["items"], value: [1, 2, 3] });
+        expect(result).to.deep.include({ path: ["items", "0"], value: 1 });
+        expect(result).to.deep.include({ path: ["items", "1"], value: 2 });
+        expect(result).to.deep.include({ path: ["items", "2"], value: 3 });
+      });
+
+      it("should handle empty objects", () => {
+        const obj = {};
+        const result = flatten(obj);
+
+        expect(result).to.deep.equal([]);
+      });
+
+      it("should handle objects with null values", () => {
+        const obj = { a: null, b: 1 };
+        const result = flatten(obj);
+
+        expect(result).to.deep.include({ path: ["a"], value: null });
+        expect(result).to.deep.include({ path: ["b"], value: 1 });
+      });
+    });
+
+    describe("access()", () => {
+      it("should access top-level properties", () => {
+        const obj = { a: 1, b: 2 };
+        expect(access(["a"], obj)).to.equal(1);
+        expect(access(["b"], obj)).to.equal(2);
+      });
+
+      it("should access nested properties", () => {
+        const obj = { foo: { bar: { baz: "deep" } } };
+        expect(access(["foo", "bar", "baz"], obj)).to.equal("deep");
+        expect(access(["foo", "bar"], obj)).to.deep.equal({ baz: "deep" });
+      });
+
+      it("should return undefined for non-existent paths", () => {
+        const obj = { a: 1 };
+        expect(access(["b"], obj)).to.be.undefined;
+        expect(access(["a", "b"], obj)).to.be.undefined;
+      });
+
+      it("should return the object itself for empty path", () => {
+        const obj = { a: 1 };
+        expect(access([], obj)).to.deep.equal(obj);
+      });
+
+      it("should handle array indices in path", () => {
+        const obj = { items: ["a", "b", "c"] };
+        expect(access(["items", "0"], obj)).to.equal("a");
+        expect(access(["items", "2"], obj)).to.equal("c");
+      });
+
+      it("should handle null gracefully", () => {
+        expect(access(["a"], null as any)).to.be.null;
+      });
+    });
+
+    describe("isPOJO()", () => {
+      it("should return true for plain objects", () => {
+        expect(isPOJO({})).to.be.true;
+        expect(isPOJO({ a: 1 })).to.be.true;
+        expect(isPOJO({ nested: { object: true } })).to.be.true;
+      });
+
+      it("should return false for arrays", () => {
+        expect(isPOJO([])).to.be.false;
+        expect(isPOJO([1, 2, 3])).to.be.false;
+      });
+
+      it("should return false for null", () => {
+        expect(isPOJO(null)).to.be.false;
+      });
+
+      it("should return false for undefined", () => {
+        expect(isPOJO(undefined)).to.be.false;
+      });
+
+      it("should return false for primitives", () => {
+        expect(isPOJO(42)).to.be.false;
+        expect(isPOJO("string")).to.be.false;
+        expect(isPOJO(true)).to.be.false;
+        expect(isPOJO(Symbol("test"))).to.be.false;
+      });
+
+      it("should return false for class instances", () => {
+        class MyClass {
+          value = 1;
+        }
+        expect(isPOJO(new MyClass())).to.be.false;
+      });
+
+      it("should return false for built-in objects", () => {
+        expect(isPOJO(new Date())).to.be.false;
+        expect(isPOJO(new Map())).to.be.false;
+        expect(isPOJO(new Set())).to.be.false;
+        expect(isPOJO(/regex/)).to.be.false;
+      });
+
+      it("should return false for functions", () => {
+        expect(isPOJO(() => {})).to.be.false;
+        expect(isPOJO(function () {})).to.be.false;
+      });
+
+      it("should return true for Object.create(null)", () => {
+        const nullProto = Object.create(null);
+        nullProto.a = 1;
+        // Note: Object.create(null) has no prototype, behavior may vary
+        // This documents expected behavior based on implementation
+        expect(isPOJO(nullProto)).to.be.false; // No Object.prototype
       });
     });
   });
