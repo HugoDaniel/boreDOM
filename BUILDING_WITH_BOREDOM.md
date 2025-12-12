@@ -386,15 +386,81 @@ export const LoginForm = webComponent(({ on }) => {
 })
 ```
 
+## How Reactivity Works
+
+Understanding boreDOM's proxy system helps avoid common pitfalls.
+
+### What IS Reactive
+
+- **Plain objects (POJOs)**: `{ a: 1 }` - changes trigger re-renders
+- **Arrays**: `[]` - push, pop, splice, index assignment all reactive
+- **Nested objects**: `{ user: { name: "x" } }` - deep changes tracked
+
+### What is NOT Reactive
+
+- **Class instances**: `new MyClass()` - mutations ignored
+- **Map/Set**: `new Map()` - use POJOs or arrays instead
+- **DOM elements**: Never store in reactive state
+- **Symbol keys**: `state[mySymbol]` - intentionally bypasses reactivity
+
+```js
+// This WILL trigger re-render
+state.user.name = "Alice"
+state.items.push("new")
+state.config = { theme: "dark" }
+
+// This will NOT trigger re-render
+state.myMap.set("key", "value")  // Map mutations ignored
+state[Symbol("x")] = "data"      // Symbol keys bypass proxy
+```
+
+### Batching
+
+Multiple mutations in the same event loop tick are batched into a single re-render:
+
+```js
+on("bulkUpdate", ({ state: mutable }) => {
+  mutable.a = 1
+  mutable.b = 2
+  mutable.c = 3
+  // Only ONE re-render happens (via requestAnimationFrame)
+})
+```
+
+### Same-Value Optimization
+
+Setting a property to its current value does NOT trigger re-render:
+
+```js
+state.count = 5
+state.count = 5  // No re-render - value unchanged
+```
+
+### Subscription Model
+
+Components subscribe to specific state paths they read during render. Only changes to those paths (or their parents/children) trigger re-renders for that component.
+
+```js
+// Component A reads: state.user.name → subscribes to "app.user.name"
+// Component B reads: state.items → subscribes to "app.items"
+
+state.user.name = "Bob"  // Only Component A re-renders
+state.items.push("x")    // Only Component B re-renders
+```
+
+For deep implementation details, see `ARCHITECTURE.md`.
+
 ## Important Rules
 
 ### DO:
 - Always check `if (!state) return` at start of render
+- **Read from state in render functions** - Components only subscribe to state paths they actually access. If your render doesn't read `state.count`, changes to `count` won't trigger re-renders
 - Use `state: mutable` in event handlers for mutations
 - Use Symbol keys for non-reactive data (canvas, sockets, etc)
 - Create separate `.html`, `.js`, `.css` files per component
 - Use `data-ref` for elements you need to manipulate
 - Use `slot` for content that changes based on state
+- Store the return value from `inflictBoreDOM()` if you need to mutate top-level properties outside event handlers
 
 ### DON'T:
 - Don't mutate state in render functions (state is read-only there)
@@ -406,10 +472,12 @@ export const LoginForm = webComponent(({ on }) => {
 ## Debugging Tips
 
 1. **State not updating?** Check you're using `state: mutable` in event handler
-2. **Component not rendering?** Verify template `data-component` matches tag usage
-3. **Event not firing?** Check event name matches between template and `on()`
-4. **Slot not updating?** Ensure slot name in template matches `slots.name` access
-5. **Refs undefined?** Verify `data-ref` attribute exists in template
+2. **Component not re-rendering?** Make sure your render function actually reads from `state`. Components only subscribe to paths they access - if you don't read `state.foo`, changes to `foo` won't trigger re-renders
+3. **Component not rendering?** Verify template `data-component` matches tag usage
+4. **Event not firing?** Check event name matches between template and `on()`
+5. **Slot not updating?** Ensure slot name in template matches `slots.name` access
+6. **Refs undefined?** Verify `data-ref` attribute exists in template
+7. **Top-level state change not working?** If mutating outside event handlers, use the proxy returned by `inflictBoreDOM()`, not the original object
 
 ## Type Imports Reference
 
