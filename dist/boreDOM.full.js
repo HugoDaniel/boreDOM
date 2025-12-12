@@ -527,19 +527,19 @@ function createStateAccessor(state, log, accum) {
 function createSubscribersDispatcher(state) {
   return () => {
     const updates = state.internal.updates;
+    const notified = /* @__PURE__ */ new Set();
+    const notify = (fns) => {
+      if (!fns) return;
+      for (let j = 0; j < fns.length; j++) {
+        const fn = fns[j];
+        if (notified.has(fn)) continue;
+        notified.add(fn);
+        fn(state.app);
+      }
+    };
     for (let i = 0; i < updates.path.length; i++) {
       const path = updates.path[i];
       const relativePath = path.slice(path.indexOf(".") + 1);
-      const notified = /* @__PURE__ */ new Set();
-      const notify = (fns) => {
-        if (!fns) return;
-        for (let j = 0; j < fns.length; j++) {
-          const fn = fns[j];
-          if (notified.has(fn)) continue;
-          notified.add(fn);
-          fn(state.app);
-        }
-      };
       notify(updates.subscribers.get(relativePath));
       for (const [subscriberPath, fns] of updates.subscribers.entries()) {
         if (subscriberPath === relativePath) continue;
@@ -560,6 +560,65 @@ function proxify(boredom) {
   const state = boredom;
   if (state === void 0) return boredom;
   const objectsWithProxies = /* @__PURE__ */ new WeakSet();
+  const PROXY_MARKER = Symbol("boredom-proxy");
+  function createReactiveProxy(value, dottedPath) {
+    if (objectsWithProxies.has(value)) return value;
+    const proxy = new Proxy(value, {
+      get(target, prop, receiver) {
+        if (prop === PROXY_MARKER) return true;
+        return Reflect.get(target, prop, receiver);
+      },
+      set(target, prop, newValue) {
+        const isChanged = target[prop] !== newValue;
+        if (!isChanged) return true;
+        if (typeof prop === "string") {
+          const newPath = Array.isArray(value) ? dottedPath : `${dottedPath}.${prop}`;
+          const isAlreadyProxy = newValue && newValue[PROXY_MARKER] === true;
+          if (!isAlreadyProxy && (Array.isArray(newValue) || isPOJO(newValue))) {
+            newValue = proxifyValue(newValue, newPath);
+          }
+        }
+        Reflect.set(target, prop, newValue);
+        if (typeof prop !== "string") return true;
+        if (Array.isArray(value)) {
+          runtime.updates.path.push(`${dottedPath}`);
+        } else {
+          runtime.updates.path.push(`${dottedPath}.${prop}`);
+        }
+        runtime.updates.value.push(target);
+        if (!runtime.updates.raf) {
+          runtime.updates.raf = requestAnimationFrame(
+            createSubscribersDispatcher(boredom)
+          );
+        }
+        return true;
+      }
+    });
+    objectsWithProxies.add(value);
+    objectsWithProxies.add(proxy);
+    return proxy;
+  }
+  function proxifyValue(value, basePath) {
+    if (!Array.isArray(value) && !isPOJO(value)) return value;
+    if (objectsWithProxies.has(value)) return value;
+    if (value && value[PROXY_MARKER] === true) return value;
+    if (Array.isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        const item = value[i];
+        if (Array.isArray(item) || isPOJO(item)) {
+          value[i] = proxifyValue(item, basePath);
+        }
+      }
+    } else {
+      for (const key of Object.keys(value)) {
+        const item = value[key];
+        if (Array.isArray(item) || isPOJO(item)) {
+          value[key] = proxifyValue(item, `${basePath}.${key}`);
+        }
+      }
+    }
+    return createReactiveProxy(value, basePath);
+  }
   flatten(boredom, ["internal"]).forEach(({ path, value }) => {
     const needsProxy = Array.isArray(value) || isPOJO(value) && !objectsWithProxies.has(value);
     if (needsProxy) {
@@ -567,27 +626,7 @@ function proxify(boredom) {
       const parent = access(path.slice(0, -1), state);
       const isRoot = parent === value;
       if (isRoot) return;
-      parent[path.at(-1)] = new Proxy(value, {
-        set(target, prop, newValue) {
-          const isChanged = target[prop] !== newValue;
-          if (!isChanged) return true;
-          Reflect.set(target, prop, newValue);
-          if (typeof prop !== "string") return true;
-          if (Array.isArray(value)) {
-            runtime.updates.path.push(`${dottedPath}`);
-          } else {
-            runtime.updates.path.push(`${dottedPath}.${prop}`);
-          }
-          runtime.updates.value.push(target);
-          if (!runtime.updates.raf) {
-            runtime.updates.raf = requestAnimationFrame(
-              createSubscribersDispatcher(boredom)
-            );
-          }
-          return true;
-        }
-      });
-      objectsWithProxies.add(value);
+      parent[path.at(-1)] = createReactiveProxy(value, dottedPath);
     }
   });
   return boredom;
@@ -658,6 +697,12 @@ async function inflictBoreDOM(state, componentsLogic) {
     }
   };
   const proxifiedState = proxify(initialState);
+  proxifiedState.internal.updates.path = [];
+  proxifiedState.internal.updates.value = [];
+  if (proxifiedState.internal.updates.raf) {
+    cancelAnimationFrame(proxifiedState.internal.updates.raf);
+    proxifiedState.internal.updates.raf = void 0;
+  }
   runComponentsInitializer(proxifiedState);
   return proxifiedState.app;
 }
