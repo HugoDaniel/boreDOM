@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boreDOM Single File Example</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    section {
+      margin: 2rem 0;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      margin: 0.25rem;
+      cursor: pointer;
+    }
+    input {
+      padding: 0.5rem;
+      margin: 0.25rem;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Single File boreDOM</h1>
+  <p>Everything in one HTML file. No build step. No separate JS files.</p>
+
+  <!-- Component instances -->
+  <section>
+    <h2>Counter</h2>
+    <my-counter></my-counter>
+  </section>
+
+  <section>
+    <h2>Greeter</h2>
+    <name-input></name-input>
+    <my-greeter></my-greeter>
+  </section>
+
+  <section>
+    <h2>Temperature Converter</h2>
+    <temp-converter></temp-converter>
+  </section>
+
+  <!-- Component templates -->
+  <template data-component="my-counter">
+    <p>Count: <strong><slot name="value">0</slot></strong></p>
+    <button onclick="dispatch('decrement')">-</button>
+    <button onclick="dispatch('increment')">+</button>
+    <button onclick="dispatch('reset')">Reset</button>
+  </template>
+
+  <template data-component="name-input">
+    <label>
+      Your name:
+      <input type="text" data-ref="input" placeholder="Enter your name">
+    </label>
+    <button onclick="dispatch('update-name')">Update</button>
+  </template>
+
+  <template data-component="my-greeter">
+    <p><slot name="greeting">Hello, World!</slot></p>
+  </template>
+
+  <template data-component="temp-converter">
+    <div>
+      <label>
+        Celsius:
+        <input type="number" data-ref="celsius" value="0">
+      </label>
+      <button onclick="dispatch('convert-c')">Convert</button>
+    </div>
+    <p>
+      <slot name="celsius">0</slot>°C = <slot name="fahrenheit">32</slot>°F
+    </p>
+  </template>
+
+  <!-- All logic in a single script -->
+  <script type="module">
+    // For CDN usage, replace with:
+    // import { inflictBoreDOM, webComponent } from "https://esm.sh/@mr_hugo/boredom";
+    import { inflictBoreDOM, webComponent } from "./boreDOM.min.js";
+
+    // Define all components inline
+    const Counter = webComponent(({ on }) => {
+      on("increment", ({ state }) => {
+        state.count++;
+      });
+      on("decrement", ({ state }) => {
+        state.count--;
+      });
+      on("reset", ({ state }) => {
+        state.count = 0;
+      });
+
+      return ({ state, slots }) => {
+        slots.value = String(state.count);
+      };
+    });
+
+    const NameInput = webComponent(({ on, refs }) => {
+      on("update-name", ({ state }) => {
+        if (refs.input instanceof HTMLInputElement) {
+          state.name = refs.input.value || "World";
+        }
+      });
+
+      // No render needed - this component only handles input
+      return () => {};
+    });
+
+    const Greeter = webComponent(() => {
+      return ({ state, slots }) => {
+        slots.greeting = `Hello, ${state.name}!`;
+      };
+    });
+
+    const TempConverter = webComponent(({ on, refs }) => {
+      on("convert-c", ({ state }) => {
+        if (refs.celsius instanceof HTMLInputElement) {
+          state.celsius = parseFloat(refs.celsius.value) || 0;
+        }
+      });
+
+      return ({ state, slots }) => {
+        const fahrenheit = (state.celsius * 9/5) + 32;
+        slots.celsius = String(state.celsius);
+        slots.fahrenheit = fahrenheit.toFixed(1);
+      };
+    });
+
+    // Initialize with state and all component logic
+    await inflictBoreDOM(
+      {
+        count: 0,
+        name: "World",
+        celsius: 0,
+      },
+      {
+        "my-counter": Counter,
+        "name-input": NameInput,
+        "my-greeter": Greeter,
+        "temp-converter": TempConverter,
+      }
+    );
+
+    console.log("[boreDOM] Single file example loaded");
+  </script>
+</body>
+
+</html>

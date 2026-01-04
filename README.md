@@ -422,6 +422,74 @@ const MyComponent = webComponent<AppState>(({ on, state }) => {
 });
 ```
 
+## Single File Mode
+
+By default, boreDOM dynamically imports component scripts from separate `.js`
+files. For simpler deployments—CDN usage, embedded widgets, or truly zero-build
+setups—you can inline all component logic in a single HTML file.
+
+Pass your components as the second argument to `inflictBoreDOM()`:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Single File boreDOM</title>
+    <script type="module">
+      import { inflictBoreDOM, webComponent } from "https://esm.sh/@mr_hugo/boredom";
+
+      // Define components inline
+      const Counter = webComponent(({ on }) => {
+        on("increment", ({ state }) => state.count++);
+        on("decrement", ({ state }) => state.count--);
+        return ({ state, slots }) => {
+          slots.value = String(state.count);
+        };
+      });
+
+      const Greeter = webComponent(() => {
+        return ({ state, slots }) => {
+          slots.message = `Hello, ${state.name}!`;
+        };
+      });
+
+      // Initialize with state and inline components
+      await inflictBoreDOM(
+        { count: 0, name: "World" },
+        {
+          "my-counter": Counter,
+          "my-greeter": Greeter,
+        }
+      );
+    </script>
+  </head>
+  <body>
+    <my-greeter></my-greeter>
+    <my-counter></my-counter>
+
+    <template data-component="my-counter">
+      <p>Count: <slot name="value">0</slot></p>
+      <button onclick="['increment']">+</button>
+      <button onclick="['decrement']">-</button>
+    </template>
+
+    <template data-component="my-greeter">
+      <h1><slot name="message">Hello!</slot></h1>
+    </template>
+  </body>
+</html>
+```
+
+This approach:
+
+- Works without any build step or bundler
+- Can be served from a CDN or as a static file
+- Keeps everything self-contained in one HTML file
+- Skips dynamic imports entirely
+
+For larger applications, the standard multi-file approach with the CLI is
+recommended for better organization.
+
 ## Resources
 
 - **Official Documentation**:
