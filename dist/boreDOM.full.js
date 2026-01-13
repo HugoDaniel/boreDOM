@@ -2,9 +2,13 @@
 var dynamicImportScripts = async (names) => {
   const result = /* @__PURE__ */ new Map();
   for (let i = 0; i < names.length; ++i) {
-    const scriptLocation = query(`script[src*="${names[i]}"]`)?.getAttribute(
-      "src"
-    );
+    const scripts = Array.from(queryAll("script[src]"));
+    const matchingScript = scripts.find((script) => {
+      const src = script.getAttribute("src") ?? "";
+      const filename = src.split("/").pop() ?? "";
+      return filename === `${names[i]}.js`;
+    });
+    const scriptLocation = matchingScript?.getAttribute("src");
     let f = null;
     if (scriptLocation) {
       try {

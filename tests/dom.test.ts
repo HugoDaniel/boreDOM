@@ -733,8 +733,8 @@ export default function () {
           </template>
 
           <!-- Order matters for reproducing the bug - longer name first -->
-          <script src="/tests/multi-hyphen-component-extra.js"></script>
-          <script src="/tests/multi-hyphen-component.js"></script>
+          <script src="/multi-hyphen-component-extra.js"></script>
+          <script src="/multi-hyphen-component.js"></script>
         `);
 
         await inflictBoreDOM();
