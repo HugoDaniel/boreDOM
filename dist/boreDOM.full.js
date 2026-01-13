@@ -363,13 +363,16 @@ function flatten(obj, ignore = []) {
     obj
   }];
   const result = [];
+  const visited = /* @__PURE__ */ new WeakSet();
   while (stack.length > 0) {
     const { path, obj: obj2 } = stack.pop();
+    if (visited.has(obj2)) continue;
+    visited.add(obj2);
     for (const key in obj2) {
       if (ignore.includes(key)) continue;
       const value = obj2[key];
       const newPath = path.concat(key);
-      if (typeof value === "object" && value !== null) {
+      if (typeof value === "object" && value !== null && !visited.has(value)) {
         stack.push({
           path: newPath,
           obj: value

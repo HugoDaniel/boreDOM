@@ -11,9 +11,15 @@ export function flatten(obj: object, ignore: string[] = []): { path: string[], v
     obj,
   }];
   const result = [];
+  // Track visited objects to avoid infinite loops with circular references
+  const visited = new WeakSet<object>();
 
   while (stack.length > 0) {
     const { path, obj } = stack.pop()!;
+
+    // Skip if we've already visited this object (circular reference)
+    if (visited.has(obj)) continue;
+    visited.add(obj);
 
     for (const key in obj) {
       if (ignore.includes(key)) continue;
@@ -21,7 +27,7 @@ export function flatten(obj: object, ignore: string[] = []): { path: string[], v
       const value = obj[key];
       const newPath = path.concat(key);
 
-      if (typeof value === "object" && value !== null) {
+      if (typeof value === "object" && value !== null && !visited.has(value)) {
         // Push nested objects onto the stack
         stack.push({
           path: newPath,
