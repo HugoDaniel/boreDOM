@@ -68,6 +68,8 @@ export type DebugOptions = {
 	errorHistory?: boolean;
 	/** Log version on init (default: true) */
 	versionLog?: boolean;
+	/** Enable console API (define, operate) (default: true) */
+	api?: boolean;
 };
 /**
  * Configuration options for inflictBoreDOM.
@@ -118,6 +120,13 @@ declare abstract class Bored extends HTMLElement {
 	abstract renderCallback: (elem: Bored) => void;
 }
 /**
+ * Registers a custom element with the given tag name.
+ * Simpler alias for `component()` used by console API.
+ *
+ * @param tagName - The custom element tag name to register
+ */
+export declare const registerComponent: (tagName: string) => void;
+/**
  * Check if a debug feature is enabled.
  * Respects both build-time __DEBUG__ flag and runtime config.
  *
@@ -159,6 +168,41 @@ export declare function clearGlobals(): void;
 declare function exportState(tagName?: string): object | null;
 export declare const VERSION = "0.25.25";
 /**
+ * Context for a running component, accessible via operate()
+ */
+export interface ComponentContext<S = any> {
+	/** Mutable state proxy */
+	state: S;
+	/** Component refs */
+	refs: Refs;
+	/** Component slots */
+	slots: Slots;
+	/** DOM element */
+	self: HTMLElement;
+	/** Component detail */
+	detail: WebComponentDetail;
+	/** Force re-render */
+	rerender: () => void;
+}
+/**
+ * Exported component data structure
+ */
+export interface ExportedComponent {
+	/** Component tag name */
+	component: string;
+	/** Current state snapshot (JSON-serializable) */
+	state: any;
+	/** Template HTML (if available) */
+	template?: string;
+	/** Timestamp of export */
+	timestamp: string;
+	/** Error message if component errored */
+	error?: string;
+}
+declare function define<S>(tagName: string, template: string, logic: InitFunction<S> | ((appState: AppState<S>, detail?: any) => (c: any) => void)): void;
+declare function operate<S = any>(selectorOrElement: string | HTMLElement, index?: number): ComponentContext<S> | undefined;
+declare function exportComponent(selector: string): ExportedComponent | null;
+/**
  * Global boreDOM object for debugging and programmatic access.
  * Exposed on window.boreDOM when running in browser.
  *
@@ -182,6 +226,12 @@ export declare const boreDOM: {
 	readonly config: DebugOptions;
 	/** Framework version */
 	version: string;
+	/** Define a new component at runtime */
+	define: typeof define;
+	/** Get live access to a component's internals */
+	operate: typeof operate;
+	/** Export component state and template */
+	exportComponent: typeof exportComponent;
 };
 /**
  * Queries all `<template>` elements that

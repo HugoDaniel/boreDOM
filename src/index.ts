@@ -11,6 +11,7 @@ import {
   Bored,
   dynamicImportScripts,
   searchForComponents,
+  registerComponent,
 } from "./dom";
 import {
   setDebugConfig,
@@ -26,8 +27,15 @@ import {
   markComponentError,
   clearComponentErrorMark,
 } from "./debug";
+import {
+  setCurrentAppState,
+  storeComponentContext,
+  consoleAPI,
+} from "./console-api";
 // Re-export debug utilities for testing and advanced usage
 export { setDebugConfig, isDebugEnabled, clearGlobals } from "./debug";
+// Re-export for console-api dynamic import
+export { registerComponent } from "./dom";
 import type { AppState, InitFunction, BoreDOMConfig, ErrorContext } from "./types";
 export { queryComponent } from "./dom";
 import { VERSION } from "./version";
@@ -66,6 +74,13 @@ export const boreDOM = {
   },
   /** Framework version */
   version: VERSION,
+  // Console API (Phase 2)
+  /** Define a new component at runtime */
+  define: consoleAPI.define,
+  /** Get live access to a component's internals */
+  operate: consoleAPI.operate,
+  /** Export component state and template */
+  exportComponent: consoleAPI.exportComponent,
 };
 
 // Expose boreDOM global in browser environment
@@ -143,6 +158,10 @@ export async function inflictBoreDOM<S>(
     cancelAnimationFrame(proxifiedState.internal.updates.raf);
     proxifiedState.internal.updates.raf = undefined;
   }
+
+  // Store appState for console API access (pass function refs to avoid circular imports)
+  setCurrentAppState(proxifiedState, webComponent, registerComponent);
+
   // Call the code from the corresponding .js file of each component:
   runComponentsInitializer(proxifiedState);
 
@@ -289,6 +308,16 @@ export function webComponent<S>(
           updateSubscribers();
         }
       };
+
+      // Store component context for console API operate()
+      storeComponentContext(c, {
+        state: app as S,
+        refs: refs as any,
+        slots: slots as any,
+        self: c,
+        detail,
+        rerender: () => renderFunction(app as S),
+      });
     }
 
     // Do the initial call right away:

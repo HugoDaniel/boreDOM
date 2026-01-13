@@ -336,7 +336,7 @@ export abstract class Bored extends HTMLElement {
  * });
  * ```
  */
-const component = <T>(tag: string, props: {
+export const component = <T>(tag: string, props: {
   /** Shadow-root content for this component */
   shadow?: string;
   shadowrootmode?: ShadowRootMode;
@@ -657,4 +657,14 @@ const component = <T>(tag: string, props: {
       }
     },
   );
+};
+
+/**
+ * Registers a custom element with the given tag name.
+ * Simpler alias for `component()` used by console API.
+ *
+ * @param tagName - The custom element tag name to register
+ */
+export const registerComponent = (tagName: string): void => {
+  component(tagName, {});
 };

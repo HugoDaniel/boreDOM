@@ -119,6 +119,8 @@ export type DebugOptions = {
   errorHistory?: boolean
   /** Log version on init (default: true) */
   versionLog?: boolean
+  /** Enable console API (define, operate) (default: true) */
+  api?: boolean
 }
 
 /**

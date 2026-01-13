@@ -21,6 +21,7 @@ let debugConfig: DebugOptions = {
   visualIndicators: true,
   errorHistory: true,
   versionLog: true,
+  api: true,
 }
 
 // Error storage
@@ -83,6 +84,7 @@ export function setDebugConfig(config: boolean | DebugOptions): void {
       visualIndicators: enabled,
       errorHistory: enabled,
       versionLog: enabled,
+      api: enabled,
     }
   } else {
     debugConfig = { ...debugConfig, ...config }

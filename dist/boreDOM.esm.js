@@ -342,6 +342,9 @@ var component = (tag, props = {}) => {
     }
   );
 };
+var registerComponent = (tagName) => {
+  component(tagName, {});
+};
 
 // src/utils/access.ts
 function access(path, obj) {
@@ -678,7 +681,8 @@ var debugConfig = {
   errorBoundary: true,
   visualIndicators: true,
   errorHistory: true,
-  versionLog: true
+  versionLog: true,
+  api: true
 };
 var errors = /* @__PURE__ */ new Map();
 var lastError = null;
@@ -701,7 +705,8 @@ function setDebugConfig(config) {
       // Always keep error boundary for safety
       visualIndicators: enabled,
       errorHistory: enabled,
-      versionLog: enabled
+      versionLog: enabled,
+      api: enabled
     };
   } else {
     debugConfig = { ...debugConfig, ...config };
@@ -854,6 +859,129 @@ var debugAPI = {
   }
 };
 
+// src/console-api.ts
+var currentAppState = null;
+var storedWebComponent = null;
+var storedRegisterComponent = null;
+var componentContexts = /* @__PURE__ */ new WeakMap();
+function setCurrentAppState(state, webComponentFn, registerComponentFn) {
+  currentAppState = state;
+  if (webComponentFn) storedWebComponent = webComponentFn;
+  if (registerComponentFn) storedRegisterComponent = registerComponentFn;
+}
+function storeComponentContext(element, context) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("api")) return;
+  componentContexts.set(element, context);
+}
+function isWebComponentResult(fn) {
+  return typeof fn === "function" && fn.length === 2;
+}
+function define(tagName, template, logic) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    console.warn("[boreDOM] define() is not available in production build");
+    return;
+  }
+  if (!isDebugEnabled("api")) {
+    console.warn("[boreDOM] define() is disabled (debug.api is false)");
+    return;
+  }
+  if (!currentAppState) {
+    throw new Error("[boreDOM] Cannot define component before inflictBoreDOM()");
+  }
+  if (!tagName.includes("-")) {
+    throw new Error(`[boreDOM] Invalid tag name "${tagName}": must contain a hyphen`);
+  }
+  if (customElements.get(tagName)) {
+    throw new Error(`[boreDOM] Component "${tagName}" is already defined`);
+  }
+  if (!storedWebComponent || !storedRegisterComponent) {
+    throw new Error("[boreDOM] Console API not initialized. Call inflictBoreDOM() first.");
+  }
+  const templateEl = document.createElement("template");
+  templateEl.innerHTML = template;
+  templateEl.setAttribute("data-component", tagName);
+  document.body.appendChild(templateEl);
+  const componentLogic = isWebComponentResult(logic) ? logic : storedWebComponent(logic);
+  currentAppState.internal.components.set(tagName, componentLogic);
+  currentAppState.internal.customTags.push(tagName);
+  storedRegisterComponent(tagName);
+  initializeExistingElements(tagName, componentLogic);
+  if (isDebugEnabled("console")) {
+    console.log(
+      "%c\u2705 boreDOM: Defined %c<%s>",
+      "color: #27ae60; font-weight: bold",
+      "color: #4ecdc4; font-weight: bold",
+      tagName
+    );
+  }
+}
+function initializeExistingElements(tagName, logic) {
+  if (!currentAppState) return;
+  const elements = Array.from(document.querySelectorAll(tagName));
+  elements.forEach((elem, index) => {
+    if (elem instanceof HTMLElement && "renderCallback" in elem) {
+      const detail = { index, name: tagName, data: void 0 };
+      const renderCallback = logic(currentAppState, detail);
+      elem.renderCallback = renderCallback;
+      renderCallback(elem);
+    }
+  });
+}
+function operate(selectorOrElement, index = 0) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return void 0;
+  if (!isDebugEnabled("api")) return void 0;
+  let element = null;
+  if (typeof selectorOrElement === "string") {
+    const elements = Array.from(document.querySelectorAll(selectorOrElement)).filter((el) => el instanceof HTMLElement);
+    element = elements[index] ?? null;
+  } else {
+    element = selectorOrElement;
+  }
+  if (!element) {
+    if (isDebugEnabled("console")) {
+      console.warn(`[boreDOM] operate(): No element found for "${selectorOrElement}"`);
+    }
+    return void 0;
+  }
+  const context = componentContexts.get(element);
+  if (!context) {
+    if (isDebugEnabled("console")) {
+      console.warn(`[boreDOM] operate(): Element is not a boreDOM component or not initialized`);
+    }
+    return void 0;
+  }
+  return context;
+}
+function exportComponent(selector) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return null;
+  if (!isDebugEnabled("api")) return null;
+  const ctx = operate(selector);
+  if (!ctx) return null;
+  const templateEl = document.querySelector(`template[data-component="${ctx.detail.name}"]`);
+  const templateHtml = templateEl?.innerHTML ?? void 0;
+  try {
+    return {
+      component: ctx.detail.name,
+      state: JSON.parse(JSON.stringify(ctx.state)),
+      template: templateHtml,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  } catch (e) {
+    return {
+      component: ctx.detail.name,
+      state: "[Unable to serialize - contains circular references or functions]",
+      template: templateHtml,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+}
+var consoleAPI = {
+  define,
+  operate,
+  exportComponent
+};
+
 // src/version.ts
 var VERSION = "0.25.25";
 
@@ -879,7 +1007,14 @@ var boreDOM = {
     return debugAPI.config;
   },
   /** Framework version */
-  version: VERSION
+  version: VERSION,
+  // Console API (Phase 2)
+  /** Define a new component at runtime */
+  define: consoleAPI.define,
+  /** Get live access to a component's internals */
+  operate: consoleAPI.operate,
+  /** Export component state and template */
+  exportComponent: consoleAPI.exportComponent
 };
 if (typeof window !== "undefined") {
   window.boreDOM = boreDOM;
@@ -921,6 +1056,7 @@ async function inflictBoreDOM(state, componentsLogic, config) {
     cancelAnimationFrame(proxifiedState.internal.updates.raf);
     proxifiedState.internal.updates.raf = void 0;
   }
+  setCurrentAppState(proxifiedState, webComponent, registerComponent);
   runComponentsInitializer(proxifiedState);
   return proxifiedState.app;
 }
@@ -1019,6 +1155,14 @@ function webComponent(initFunction) {
           updateSubscribers();
         }
       };
+      storeComponentContext(c, {
+        state: app,
+        refs,
+        slots,
+        self: c,
+        detail,
+        rerender: () => renderFunction(app)
+      });
     }
     renderFunction(state);
     isInitialized = c;
@@ -1031,6 +1175,7 @@ export {
   inflictBoreDOM,
   isDebugEnabled,
   queryComponent,
+  registerComponent,
   setDebugConfig,
   webComponent
 };
