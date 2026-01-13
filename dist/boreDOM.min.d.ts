@@ -53,6 +53,54 @@ export type Slots = {
 	[key: `${Letter}${string}`]: HTMLElement;
 };
 /**
+ * Debug configuration options for granular control over debug features.
+ */
+export type DebugOptions = {
+	/** Log errors to console with full context (default: true) */
+	console?: boolean;
+	/** Expose $state, $refs, $slots, $self, $error, $rerender to window (default: true) */
+	globals?: boolean;
+	/** Catch render errors and prevent cascade (default: true, always recommended) */
+	errorBoundary?: boolean;
+	/** Add data-boredom-error attribute to errored components (default: true) */
+	visualIndicators?: boolean;
+	/** Store errors in boreDOM.errors map (default: true) */
+	errorHistory?: boolean;
+	/** Log version on init (default: true) */
+	versionLog?: boolean;
+};
+/**
+ * Configuration options for inflictBoreDOM.
+ */
+export type BoreDOMConfig = {
+	/** Debug mode: true for full debug, false to disable, or granular DebugOptions */
+	debug?: boolean | DebugOptions;
+};
+/**
+ * Context exposed when a component render throws an error.
+ * Available via $state, $refs, etc. globals and boreDOM.errors map.
+ */
+export type ErrorContext<S = any> = {
+	/** Component tag name */
+	component: string;
+	/** The DOM element */
+	element: HTMLElement;
+	/** The original error */
+	error: Error;
+	/** Write proxy - MUTABLE, use this to fix state */
+	state: S;
+	/** Refs proxy */
+	refs: Refs;
+	/** Slots proxy */
+	slots: Slots;
+	/** When the error occurred */
+	timestamp: number;
+	/** Function to retry rendering after fixing */
+	rerender: () => void;
+	/** Cleaned stack trace */
+	stack: string;
+};
+/**
  * Queries for the component tag name in the DOM. Throws error if not found.
  */
 /**
@@ -69,7 +117,47 @@ export declare const queryComponent: (q: string) => Bored | undefined;
 declare abstract class Bored extends HTMLElement {
 	abstract renderCallback: (elem: Bored) => void;
 }
+/**
+ * Check if a debug feature is enabled.
+ * Respects both build-time __DEBUG__ flag and runtime config.
+ */
+export declare function isDebugEnabled(feature: keyof DebugOptions): boolean;
+/**
+ * Set debug configuration.
+ * Can be called with boolean (enable/disable all) or granular options.
+ */
+export declare function setDebugConfig(config: boolean | DebugOptions): void;
+/**
+ * Clear debug globals from window.
+ */
+export declare function clearGlobals(): void;
+declare function exportState(tagName?: string): object | null;
 export declare const VERSION = "0.25.25";
+/**
+ * Global boreDOM object for debugging and programmatic access.
+ * Exposed on window.boreDOM when running in browser.
+ *
+ * Note: We define getters explicitly instead of spreading debugAPI
+ * because spread evaluates getters at spread-time, copying VALUES
+ * instead of preserving the getters. This would cause lastError
+ * and config to be frozen at module load time.
+ */
+export declare const boreDOM: {
+	/** Map of all current errors by component name */
+	readonly errors: Map<string, ErrorContext>;
+	/** Most recent error context */
+	readonly lastError: ErrorContext | null;
+	/** Re-render a specific component or the last errored one */
+	rerender: (tagName?: string) => void;
+	/** Clear error state for a component */
+	clearError: (tagName?: string) => void;
+	/** Export state snapshot */
+	export: typeof exportState;
+	/** Current debug configuration (read-only) */
+	readonly config: DebugOptions;
+	/** Framework version */
+	version: string;
+};
 /**
  * Queries all `<template>` elements that
  * have a `data-component` attribute defined and creates web components
@@ -85,11 +173,14 @@ export declare const VERSION = "0.25.25";
  * the `webComponent()` function. This overrides any external file
  * associated with the component.
  *
+ * @param config Optional configuration for debug mode and other settings.
+ * Set `{ debug: false }` for production-lite mode without a build step.
+ *
  * @returns The app initial state.
  */
 export declare function inflictBoreDOM<S>(state?: S, componentsLogic?: {
 	[key: string]: ReturnType<typeof webComponent>;
-}): Promise<AppState<S>["app"]>;
+}, config?: BoreDOMConfig): Promise<AppState<S>["app"]>;
 /**
  * Creates a Web Component render updater
  *

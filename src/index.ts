@@ -9,16 +9,69 @@ import {
 } from "./bore";
 import {
   Bored,
-  createComponent,
   dynamicImportScripts,
   searchForComponents,
 } from "./dom";
-import type { AppState, InitFunction } from "./types";
+import {
+  setDebugConfig,
+  isDebugEnabled,
+  debugAPI,
+  logError,
+  logErrorMinimal,
+  logInitError,
+  exposeGlobals,
+  storeError,
+  clearError,
+  clearGlobals,
+  markComponentError,
+  clearComponentErrorMark,
+} from "./debug";
+// Re-export debug utilities for testing and advanced usage
+export { setDebugConfig, isDebugEnabled, clearGlobals } from "./debug";
+import type { AppState, InitFunction, BoreDOMConfig, ErrorContext } from "./types";
 export { queryComponent } from "./dom";
 import { VERSION } from "./version";
 export { VERSION } from "./version";
+export type { BoreDOMConfig, DebugOptions, ErrorContext } from "./types";
 
 let hasLoggedVersion = false;
+
+/**
+ * Global boreDOM object for debugging and programmatic access.
+ * Exposed on window.boreDOM when running in browser.
+ *
+ * Note: We define getters explicitly instead of spreading debugAPI
+ * because spread evaluates getters at spread-time, copying VALUES
+ * instead of preserving the getters. This would cause lastError
+ * and config to be frozen at module load time.
+ */
+export const boreDOM = {
+  /** Map of all current errors by component name */
+  get errors() {
+    return debugAPI.errors;
+  },
+  /** Most recent error context */
+  get lastError() {
+    return debugAPI.lastError;
+  },
+  /** Re-render a specific component or the last errored one */
+  rerender: debugAPI.rerender,
+  /** Clear error state for a component */
+  clearError: debugAPI.clearError,
+  /** Export state snapshot */
+  export: debugAPI.export,
+  /** Current debug configuration (read-only) */
+  get config() {
+    return debugAPI.config;
+  },
+  /** Framework version */
+  version: VERSION,
+};
+
+// Expose boreDOM global in browser environment
+if (typeof window !== "undefined") {
+  (window as any).boreDOM = boreDOM;
+}
 
 /**
  * Queries all `<template>` elements that
@@ -35,13 +88,23 @@ let hasLoggedVersion = false;
  * the `webComponent()` function. This overrides any external file
  * associated with the component.
  *
+ * @param config Optional configuration for debug mode and other settings.
+ * Set `{ debug: false }` for production-lite mode without a build step.
+ *
  * @returns The app initial state.
  */
 export async function inflictBoreDOM<S>(
   state?: S,
   componentsLogic?: { [key: string]: ReturnType<typeof webComponent> },
+  config?: BoreDOMConfig,
 ): Promise<AppState<S>["app"]> {
-  if (!hasLoggedVersion) {
+  // Apply debug configuration if provided
+  if (config?.debug !== undefined) {
+    setDebugConfig(config.debug);
+  }
+
+  // Version logging (respects debug config)
+  if (!hasLoggedVersion && isDebugEnabled("versionLog")) {
     hasLoggedVersion = true;
     if (typeof console !== "undefined" && typeof console.info === "function") {
       console.info(`[boreDOM] v${VERSION}`);
@@ -135,26 +198,96 @@ export function webComponent<S>(
         }
       };
 
-      const userDefinedRenderer = initFunction({
-        detail,
-        state,
-        refs,
-        on,
-        self: c,
-      });
-      // The render function is updated to ensure the `updatedSubscribers `
-      renderFunction = (state) => {
-        userDefinedRenderer({
+      // Initialize the component with error handling
+      let userDefinedRenderer: ReturnType<InitFunction<S | undefined>>;
+      try {
+        userDefinedRenderer = initFunction({
+          detail,
           state,
           refs,
-          slots,
+          on,
           self: c,
-          detail,
-          makeComponent: (tag, opts) => {
-            return createAndRunCode(tag, appState as any, opts?.detail);
-          },
         });
-        updateSubscribers();
+      } catch (error) {
+        const err = error as Error;
+        // Log init error
+        if (isDebugEnabled("console")) {
+          logInitError(detail?.name ?? c.tagName.toLowerCase(), err);
+        }
+        // Return a no-op renderer so the component stays static but doesn't break others
+        userDefinedRenderer = () => {};
+      }
+
+      // The render function is updated to ensure the `updatedSubscribers`
+      // and wrapped with error boundary for Error-Driven Development
+      renderFunction = (renderState) => {
+        const componentName = detail?.name ?? c.tagName.toLowerCase();
+
+        // Check if error boundary is enabled
+        if (isDebugEnabled("errorBoundary")) {
+          try {
+            userDefinedRenderer({
+              state: renderState,
+              refs,
+              slots,
+              self: c,
+              detail,
+              makeComponent: (tag, opts) => {
+                return createAndRunCode(tag, appState as any, opts?.detail);
+              },
+            });
+            updateSubscribers();
+
+            // Clear error state on successful render
+            clearComponentErrorMark(c);
+            clearError(componentName);
+
+          } catch (error) {
+            const err = error as Error;
+
+            // Create error context for debugging
+            const ctx: ErrorContext<S> = {
+              component: componentName,
+              element: c,
+              error: err,
+              state: app as S,  // Write proxy - MUTABLE
+              refs: refs as any,
+              slots: slots as any,
+              timestamp: Date.now(),
+              rerender: () => renderFunction(renderState),
+              stack: err.stack ?? "",
+            };
+
+            // Log error (full or minimal based on config)
+            if (isDebugEnabled("console")) {
+              logError(ctx);
+            } else {
+              logErrorMinimal(componentName, err);
+            }
+
+            // Expose globals for console debugging
+            exposeGlobals(ctx);
+
+            // Store in error history
+            storeError(ctx);
+
+            // Mark component visually
+            markComponentError(c);
+          }
+        } else {
+          // No error boundary - run without catching (original behavior)
+          userDefinedRenderer({
+            state: renderState,
+            refs,
+            slots,
+            self: c,
+            detail,
+            makeComponent: (tag, opts) => {
+              return createAndRunCode(tag, appState as any, opts?.detail);
+            },
+          });
+          updateSubscribers();
+        }
       };
     }
 

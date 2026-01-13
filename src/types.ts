@@ -98,3 +98,58 @@ export type Slots = {
 export type ReadonlyProxy<T extends object> = {
   readonly [P in keyof T]: T[P];
 };
+
+// ============================================================================
+// Debug & Production Configuration Types
+// ============================================================================
+
+/**
+ * Debug configuration options for granular control over debug features.
+ */
+export type DebugOptions = {
+  /** Log errors to console with full context (default: true) */
+  console?: boolean
+  /** Expose $state, $refs, $slots, $self, $error, $rerender to window (default: true) */
+  globals?: boolean
+  /** Catch render errors and prevent cascade (default: true, always recommended) */
+  errorBoundary?: boolean
+  /** Add data-boredom-error attribute to errored components (default: true) */
+  visualIndicators?: boolean
+  /** Store errors in boreDOM.errors map (default: true) */
+  errorHistory?: boolean
+  /** Log version on init (default: true) */
+  versionLog?: boolean
+}
+
+/**
+ * Configuration options for inflictBoreDOM.
+ */
+export type BoreDOMConfig = {
+  /** Debug mode: true for full debug, false to disable, or granular DebugOptions */
+  debug?: boolean | DebugOptions
+}
+
+/**
+ * Context exposed when a component render throws an error.
+ * Available via $state, $refs, etc. globals and boreDOM.errors map.
+ */
+export type ErrorContext<S = any> = {
+  /** Component tag name */
+  component: string
+  /** The DOM element */
+  element: HTMLElement
+  /** The original error */
+  error: Error
+  /** Write proxy - MUTABLE, use this to fix state */
+  state: S
+  /** Refs proxy */
+  refs: Refs
+  /** Slots proxy */
+  slots: Slots
+  /** When the error occurred */
+  timestamp: number
+  /** Function to retry rendering after fixing */
+  rerender: () => void
+  /** Cleaned stack trace */
+  stack: string
+}

@@ -312,7 +312,12 @@ function createSubscribersDispatcher<S>(state: AppState<S>) {
         const fn = fns[j];
         if (notified.has(fn)) continue;
         notified.add(fn);
-        fn(state.app);
+        try {
+          fn(state.app);
+        } catch (error) {
+          // Error handling is done inside renderFunction (in index.ts)
+          // This catch prevents one component's error from stopping other components' updates
+        }
       }
     };
 
