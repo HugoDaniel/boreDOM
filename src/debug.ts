@@ -30,6 +30,16 @@ let lastError: ErrorContext | null = null
 /**
  * Check if a debug feature is enabled.
  * Respects both build-time __DEBUG__ flag and runtime config.
+ *
+ * @param feature - The debug feature to check ('console', 'globals', etc.)
+ * @returns True if the feature is enabled
+ *
+ * @example
+ * ```ts
+ * if (isDebugEnabled('console')) {
+ *   console.log('Debug logging enabled')
+ * }
+ * ```
  */
 export function isDebugEnabled(feature: keyof DebugOptions): boolean {
   // Build-time elimination: if __DEBUG__ is defined and false, always return false
@@ -47,6 +57,21 @@ export function isDebugEnabled(feature: keyof DebugOptions): boolean {
 /**
  * Set debug configuration.
  * Can be called with boolean (enable/disable all) or granular options.
+ *
+ * @param config - Boolean to enable/disable all, or DebugOptions for granular control
+ *
+ * @example
+ * ```ts
+ * // Disable all debug features
+ * setDebugConfig(false)
+ *
+ * // Granular control
+ * setDebugConfig({
+ *   console: true,
+ *   globals: false,
+ *   errorBoundary: true,
+ * })
+ * ```
  */
 export function setDebugConfig(config: boolean | DebugOptions): void {
   if (typeof config === "boolean") {
@@ -65,7 +90,9 @@ export function setDebugConfig(config: boolean | DebugOptions): void {
 }
 
 /**
- * Get current debug configuration (read-only copy)
+ * Get current debug configuration (read-only copy).
+ *
+ * @returns A copy of the current debug configuration
  */
 export function getDebugConfig(): DebugOptions {
   return { ...debugConfig }
@@ -74,8 +101,21 @@ export function getDebugConfig(): DebugOptions {
 /**
  * Expose debug globals to window for console access.
  * Only runs if debug.globals is enabled.
+ *
+ * Sets the following globals:
+ * - `$state` - Mutable state proxy
+ * - `$refs` - Component refs
+ * - `$slots` - Component slots
+ * - `$self` - Component DOM element
+ * - `$error` - The Error object
+ * - `$component` - Component tag name
+ * - `$rerender` - Function to retry render
+ *
+ * @param ctx - The error context containing component state
  */
 export function exposeGlobals<S>(ctx: ErrorContext<S>): void {
+  // Build-time elimination
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return
   if (!isDebugEnabled("globals")) return
   if (typeof window === "undefined") return
 
@@ -93,6 +133,8 @@ export function exposeGlobals<S>(ctx: ErrorContext<S>): void {
  * Clear debug globals from window.
  */
 export function clearGlobals(): void {
+  // Build-time elimination
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return
   if (!isDebugEnabled("globals")) return
   if (typeof window === "undefined") return
 
@@ -109,8 +151,12 @@ export function clearGlobals(): void {
 /**
  * Log error with full debug context to console.
  * Uses styled console output for better visibility.
+ *
+ * @param ctx - The error context to log
  */
 export function logError<S>(ctx: ErrorContext<S>): void {
+  // Build-time elimination
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return
   if (!isDebugEnabled("console")) return
 
   // Header
@@ -145,15 +191,23 @@ export function logError<S>(ctx: ErrorContext<S>): void {
 /**
  * Log minimal error message for production mode.
  * Single line, no context exposure.
+ *
+ * @param component - The component tag name
+ * @param error - The error that occurred
  */
 export function logErrorMinimal(component: string, error: Error): void {
   console.error(`[boreDOM] Render error in <${component}>: ${error.message}`)
 }
 
 /**
- * Log init error to console.
+ * Log component initialization error to console.
+ *
+ * @param component - The component tag name
+ * @param error - The error that occurred during init
  */
 export function logInitError(component: string, error: Error): void {
+  // Build-time elimination
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return
   if (!isDebugEnabled("console")) return
 
   console.log(
@@ -167,9 +221,13 @@ export function logInitError(component: string, error: Error): void {
 }
 
 /**
- * Store error in history map.
+ * Store error in history map for later access via `boreDOM.errors`.
+ *
+ * @param ctx - The error context to store
  */
 export function storeError<S>(ctx: ErrorContext<S>): void {
+  // Build-time elimination
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return
   if (!isDebugEnabled("errorHistory")) return
 
   errors.set(ctx.component, ctx)
@@ -178,6 +236,8 @@ export function storeError<S>(ctx: ErrorContext<S>): void {
 
 /**
  * Clear error from history.
+ *
+ * @param component - Optional component tag name. If omitted, clears the last error.
  */
 export function clearError(component?: string): void {
   if (component) {
@@ -192,15 +252,21 @@ export function clearError(component?: string): void {
 }
 
 /**
- * Mark component with error indicator attribute.
+ * Mark component with error indicator attribute (`data-boredom-error="true"`).
+ *
+ * @param element - The component DOM element to mark
  */
 export function markComponentError(element: HTMLElement): void {
+  // Build-time elimination
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return
   if (!isDebugEnabled("visualIndicators")) return
   element.setAttribute("data-boredom-error", "true")
 }
 
 /**
- * Clear error indicator from component.
+ * Clear error indicator from component (removes `data-boredom-error` attribute).
+ *
+ * @param element - The component DOM element to clear
  */
 export function clearComponentErrorMark(element: HTMLElement): void {
   element.removeAttribute("data-boredom-error")
@@ -209,6 +275,20 @@ export function clearComponentErrorMark(element: HTMLElement): void {
 /**
  * Export state snapshot for a component.
  * Returns JSON-serializable object with component state.
+ *
+ * @param tagName - Optional component tag name. If omitted, exports the last errored component.
+ * @returns JSON-serializable object with component, state, timestamp, and error message, or null if no error found
+ *
+ * @example
+ * ```ts
+ * const snapshot = exportState('my-component')
+ * // {
+ * //   component: 'my-component',
+ * //   state: { count: 0, items: [] },
+ * //   timestamp: '2024-01-01T00:00:00.000Z',
+ * //   error: 'Cannot read property...'
+ * // }
+ * ```
  */
 export function exportState(tagName?: string): object | null {
   const ctx = tagName ? errors.get(tagName) : lastError
@@ -233,7 +313,22 @@ export function exportState(tagName?: string): object | null {
 }
 
 /**
- * Public debug API exposed on window.boreDOM
+ * Public debug API exposed on `window.boreDOM`.
+ *
+ * Provides programmatic access to error history, re-render functionality,
+ * and state export for debugging.
+ *
+ * @example
+ * ```ts
+ * // Access all current errors
+ * boreDOM.errors  // Map<tagName, ErrorContext>
+ *
+ * // Re-render the last errored component
+ * boreDOM.rerender()
+ *
+ * // Export state snapshot
+ * boreDOM.export('my-component')
+ * ```
  */
 export const debugAPI = {
   /** Map of all current errors by component name */

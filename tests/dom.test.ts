@@ -10,7 +10,7 @@ import {
   queryByText,
 } from "@testing-library/dom";
 import "mocha/mocha.js";
-import { inflictBoreDOM, webComponent } from "../src/index";
+import { inflictBoreDOM, webComponent, setDebugConfig } from "../src/index";
 import { flatten } from "../src/utils/flatten";
 import { access } from "../src/utils/access";
 import { isPOJO } from "../src/utils/isPojo";
@@ -45,6 +45,8 @@ export default function () {
       const main = document.querySelector("main");
       if (!main) return;
       main.innerHTML = "";
+      // Reset debug config to defaults for test isolation
+      setDebugConfig(true);
     });
 
     describe("Simple component", () => {

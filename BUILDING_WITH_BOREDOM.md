@@ -450,6 +450,125 @@ state.items.push("x")    // Only Component B re-renders
 
 For deep implementation details, see `ARCHITECTURE.md`.
 
+## Debug & Production Modes
+
+boreDOM supports different deployment modes without requiring a build step.
+
+### Development (Default)
+
+Full debug features enabled — errors expose rich context to the console:
+
+```js
+import { inflictBoreDOM } from "boredom"
+
+await inflictBoreDOM(state, logic)
+// When errors occur:
+// - $state, $refs, $slots, $self available in console
+// - Visual error indicators on components
+// - Full error context logged
+```
+
+When a render error occurs, you'll see:
+
+```
+🔴 boreDOM: Error in <my-component> render
+
+TypeError: Cannot read properties of undefined (reading 'items')
+
+📋 Debug context loaded:
+   $state     → Proxy {items: undefined}
+   $refs      → Proxy {list: ul}
+   $slots     → Proxy {}
+   $self      → <my-component>
+
+💡 Quick fixes:
+   $state.items = []
+   $rerender()
+```
+
+### Production-lite (No Build Required)
+
+Disable debug features at runtime for production without a build step:
+
+```js
+await inflictBoreDOM(state, logic, { debug: false })
+```
+
+This disables:
+- Global debug variables (`$state`, `$refs`, etc.)
+- Visual error indicators
+- Error history storage
+- Verbose console output
+
+Errors are still caught and logged minimally:
+```
+[boreDOM] Render error in <my-component>: Cannot read properties of undefined
+```
+
+### Production-optimized (With Build)
+
+For smallest bundle size, use the production build which eliminates debug code entirely:
+
+```html
+<script type="module">
+  import { inflictBoreDOM } from "@mr_hugo/boredom/prod"
+  await inflictBoreDOM(state, logic)
+</script>
+```
+
+Or import the production file directly:
+```html
+<script type="module" src="./boreDOM.prod.js"></script>
+```
+
+### Granular Debug Control
+
+Fine-tune which debug features are enabled:
+
+```js
+await inflictBoreDOM(state, logic, {
+  debug: {
+    console: true,          // Log errors to console
+    globals: false,         // Don't expose $state, $refs, etc.
+    errorBoundary: true,    // Catch render errors (recommended always)
+    visualIndicators: false, // No data-boredom-error attribute
+    errorHistory: false,    // Don't store in boreDOM.errors
+    versionLog: false,      // Don't log version on init
+  }
+})
+```
+
+### Debug API
+
+Access debug features programmatically via `window.boreDOM`:
+
+```js
+boreDOM.errors          // Map<tagName, ErrorContext> - all current errors
+boreDOM.lastError       // Most recent ErrorContext
+boreDOM.rerender()      // Re-render last errored component
+boreDOM.rerender('my-component')  // Re-render specific component
+boreDOM.clearError()    // Clear last error state
+boreDOM.export()        // Export state snapshot as JSON
+boreDOM.config          // Current debug configuration (read-only)
+boreDOM.version         // Framework version
+```
+
+### Error-Driven Development Workflow
+
+1. **Error occurs** → Context loaded to console
+2. **Fix state** → `$state.items = []`
+3. **Re-render** → `$rerender()` or `boreDOM.rerender()`
+4. **Export fix** → `boreDOM.export('my-component')`
+
+### Build Output Files
+
+| File | Size | Debug | Use Case |
+|------|------|-------|----------|
+| `boreDOM.full.js` | ~32KB | Full, readable | Development, debugging framework |
+| `boreDOM.min.js` | ~13KB | Full, minified | Development, prototyping |
+| `boreDOM.prod.js` | ~11KB | Eliminated | Production deployment |
+| `boreDOM.esm.js` | ~32KB | Full | ES modules for bundlers |
+
 ## Important Rules
 
 ### DO:

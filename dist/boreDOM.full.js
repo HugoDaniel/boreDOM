@@ -711,6 +711,7 @@ function getDebugConfig() {
   return { ...debugConfig };
 }
 function exposeGlobals(ctx) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
   if (!isDebugEnabled("globals")) return;
   if (typeof window === "undefined") return;
   const w = window;
@@ -723,6 +724,7 @@ function exposeGlobals(ctx) {
   w.$rerender = ctx.rerender;
 }
 function clearGlobals() {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
   if (!isDebugEnabled("globals")) return;
   if (typeof window === "undefined") return;
   const w = window;
@@ -735,6 +737,7 @@ function clearGlobals() {
   delete w.$rerender;
 }
 function logError(ctx) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
   if (!isDebugEnabled("console")) return;
   console.log(
     "%c\u{1F534} boreDOM: Error in %c<%s>%c render",
@@ -761,6 +764,7 @@ function logErrorMinimal(component2, error) {
   console.error(`[boreDOM] Render error in <${component2}>: ${error.message}`);
 }
 function logInitError(component2, error) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
   if (!isDebugEnabled("console")) return;
   console.log(
     "%c\u{1F534} boreDOM: Error in %c<%s>%c init",
@@ -772,6 +776,7 @@ function logInitError(component2, error) {
   console.error(error);
 }
 function storeError(ctx) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
   if (!isDebugEnabled("errorHistory")) return;
   errors.set(ctx.component, ctx);
   lastError = ctx;
@@ -788,6 +793,7 @@ function clearError(component2) {
   }
 }
 function markComponentError(element) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
   if (!isDebugEnabled("visualIndicators")) return;
   element.setAttribute("data-boredom-error", "true");
 }

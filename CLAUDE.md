@@ -98,9 +98,11 @@ Tests include: mutation batching, read-only state enforcement, Symbol key bypass
 ## Build Pipeline
 
 1. `build_decls` - Generate .d.ts with dts-bundle-generator
-2. `build_module` - Minified bundle via esbuild
-3. `build_full_module` - Full (unminified) bundle
-4. `bundle_cli` - CLI binary with embedded framework (base64)
+2. `build_module` - Minified bundle via esbuild (boreDOM.min.js)
+3. `build_full_module` - Full (unminified) bundle (boreDOM.full.js)
+4. `build_prod` - Production bundle with debug eliminated (boreDOM.prod.js)
+5. `build_esm` - ES module format bundle (boreDOM.esm.js)
+6. `bundle_cli` - CLI binary with embedded framework (base64)
 
 ## Reference Project
 

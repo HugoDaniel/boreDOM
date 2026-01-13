@@ -120,11 +120,36 @@ declare abstract class Bored extends HTMLElement {
 /**
  * Check if a debug feature is enabled.
  * Respects both build-time __DEBUG__ flag and runtime config.
+ *
+ * @param feature - The debug feature to check ('console', 'globals', etc.)
+ * @returns True if the feature is enabled
+ *
+ * @example
+ * ```ts
+ * if (isDebugEnabled('console')) {
+ *   console.log('Debug logging enabled')
+ * }
+ * ```
  */
 export declare function isDebugEnabled(feature: keyof DebugOptions): boolean;
 /**
  * Set debug configuration.
  * Can be called with boolean (enable/disable all) or granular options.
+ *
+ * @param config - Boolean to enable/disable all, or DebugOptions for granular control
+ *
+ * @example
+ * ```ts
+ * // Disable all debug features
+ * setDebugConfig(false)
+ *
+ * // Granular control
+ * setDebugConfig({
+ *   console: true,
+ *   globals: false,
+ *   errorBoundary: true,
+ * })
+ * ```
  */
 export declare function setDebugConfig(config: boolean | DebugOptions): void;
 /**

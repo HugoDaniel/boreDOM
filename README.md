@@ -100,22 +100,86 @@ The CLI will:
 - Serve your app with hot reloading
 - Copy static files to the build directory
 
+## Production Deployment
+
+boreDOM supports multiple deployment modes without requiring a build step.
+
+### Development (Default)
+
+```html
+<script type="module" src="boreDOM.min.js"></script>
+```
+
+Full debug features: error context in console, `$state`/`$refs` globals, visual indicators.
+
+### Production (No Build)
+
+Disable debug at runtime:
+
+```js
+await inflictBoreDOM(state, logic, { debug: false });
+```
+
+### Production (Optimized Build)
+
+Use the production bundle for smallest size (~13KB, debug code eliminated):
+
+```html
+<script type="module">
+  import { inflictBoreDOM } from "@mr_hugo/boredom/prod";
+  await inflictBoreDOM(state, logic);
+</script>
+```
+
+### Debug API
+
+When errors occur in development mode:
+
+```js
+// Console globals (auto-loaded on error)
+$state     // Mutable state proxy
+$refs      // Component refs
+$rerender()// Retry render after fixing
+
+// Programmatic access
+boreDOM.errors      // Map of all errors
+boreDOM.lastError   // Most recent error
+boreDOM.rerender()  // Re-render errored component
+boreDOM.export()    // Export state snapshot
+```
+
+See `BUILDING_WITH_BOREDOM.md` for full debug documentation.
+
 ## API Reference
 
 ### Core Functions
 
-#### `inflictBoreDOM(initialState, componentsLogic?)`
+#### `inflictBoreDOM(initialState, componentsLogic?, config?)`
 
 Initializes the boreDOM framework and creates reactive state.
 
 - **`initialState`** - Initial application state object
 - **`componentsLogic`** - Optional inline component definitions
+- **`config`** - Optional configuration (`{ debug: boolean | DebugOptions }`)
 - **Returns** - Proxified reactive state object
 
 ```javascript
+// Development (default)
 const state = await inflictBoreDOM({
   users: [],
   selectedUser: null,
+});
+
+// Production-lite (no build required)
+const state = await inflictBoreDOM({ count: 0 }, logic, { debug: false });
+
+// Granular control
+const state = await inflictBoreDOM({ count: 0 }, logic, {
+  debug: {
+    console: true,        // Log errors
+    globals: false,       // Don't expose $state etc.
+    errorBoundary: true,  // Always catch errors
+  }
 });
 ```
 
