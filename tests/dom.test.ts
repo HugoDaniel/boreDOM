@@ -715,6 +715,61 @@ export default function () {
       });
     });
 
+    describe("Multi-hyphen component names", () => {
+      it("should correctly match scripts when component names share prefixes", async () => {
+        // This test verifies that multi-hyphen-component loads multi-hyphen-component.js
+        // and multi-hyphen-component-extra loads multi-hyphen-component-extra.js
+        // The bug: script[src*="multi-hyphen-component"] matches BOTH scripts
+        const container = await renderHTMLFrame(`
+          <multi-hyphen-component></multi-hyphen-component>
+          <multi-hyphen-component-extra></multi-hyphen-component-extra>
+
+          <template data-component="multi-hyphen-component">
+            <p>Short name component</p>
+          </template>
+
+          <template data-component="multi-hyphen-component-extra">
+            <p>Long name component</p>
+          </template>
+
+          <!-- Order matters for reproducing the bug - longer name first -->
+          <script src="/tests/multi-hyphen-component-extra.js"></script>
+          <script src="/tests/multi-hyphen-component.js"></script>
+        `);
+
+        await inflictBoreDOM();
+
+        const shortComponent = container.querySelector("multi-hyphen-component");
+        const longComponent = container.querySelector("multi-hyphen-component-extra");
+
+        // Each component should have loaded its OWN script, not the other's
+        expect(shortComponent?.getAttribute("data-loaded")).to.equal(
+          "multi-hyphen-component",
+          "multi-hyphen-component should load multi-hyphen-component.js, not the -extra version"
+        );
+        expect(longComponent?.getAttribute("data-loaded")).to.equal(
+          "multi-hyphen-component-extra",
+          "multi-hyphen-component-extra should load multi-hyphen-component-extra.js"
+        );
+      });
+
+      it("should handle three-hyphen component names", async () => {
+        const container = await renderHTMLFrame(`
+          <my-super-cool-component></my-super-cool-component>
+
+          <template data-component="my-super-cool-component">
+            <p>Three hyphen component</p>
+          </template>
+        `);
+
+        await inflictBoreDOM();
+
+        const elem = container.querySelector("my-super-cool-component");
+        expect(elem).to.be.an.instanceof(HTMLElement);
+        expect(elem?.querySelector("p")?.textContent).to.equal("Three hyphen component");
+      });
+    });
+
     describe("Lists of components in <script> code", () => {
       it("should be able to dynamically create a component with a detail object", async () => {
         // The following code is accompanied by the `list-component1.js` file.

@@ -45,9 +45,17 @@ export const dynamicImportScripts = async (names: string[]) => {
 
   for (let i = 0; i < names.length; ++i) {
     // Load the associated script if it exists
-    const scriptLocation = query(`script[src*="${names[i]}"]`)?.getAttribute(
-      "src",
-    );
+    // Find the script whose filename matches exactly "{name}.js"
+    // Using querySelectorAll + filter to avoid substring matches
+    // e.g., "my-component" should NOT match "my-component-extra.js"
+    const scripts = Array.from(queryAll("script[src]"));
+    const matchingScript = scripts.find((script) => {
+      const src = script.getAttribute("src") ?? "";
+      // Extract filename from path (handles both /path/name.js and name.js)
+      const filename = src.split("/").pop() ?? "";
+      return filename === `${names[i]}.js`;
+    });
+    const scriptLocation = matchingScript?.getAttribute("src");
     let f: null | LoadedFunction = null;
     if (scriptLocation) {
       // Dynamic import it and get the default export
