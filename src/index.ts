@@ -33,6 +33,12 @@ import {
   consoleAPI,
   WEB_COMPONENT_MARKER,
 } from "./console-api";
+import {
+  createRenderHelpers,
+  observeUndefinedElements,
+  insideOutAPI,
+} from "./inside-out";
+import { llmAPI } from "./llm";
 // Re-export debug utilities for testing and advanced usage
 export { setDebugConfig, isDebugEnabled, clearGlobals } from "./debug";
 // Re-export for console-api dynamic import
@@ -82,6 +88,34 @@ export const boreDOM = {
   operate: consoleAPI.operate,
   /** Export component state and template */
   exportComponent: consoleAPI.exportComponent,
+  // Inside-Out API (Phase 3)
+  /** Map of missing function calls by function name */
+  get missingFunctions() {
+    return insideOutAPI.missingFunctions;
+  },
+  /** Most recent missing function context */
+  get lastMissing() {
+    return insideOutAPI.lastMissing;
+  },
+  /** Define a helper function available to all render functions */
+  defineHelper: insideOutAPI.defineHelper,
+  /** Get all defined helpers */
+  get helpers() {
+    return insideOutAPI.helpers;
+  },
+  /** Clear a helper definition */
+  clearHelper: insideOutAPI.clearHelper,
+  /** Clear all missing function records */
+  clearMissingFunctions: insideOutAPI.clearMissingFunctions,
+  /** Map of inferred templates by tag name */
+  get inferredTemplates() {
+    return insideOutAPI.inferredTemplates;
+  },
+  /** Manually infer template for a tag */
+  inferTemplate: insideOutAPI.inferTemplate,
+  // LLM Integration API (Phase 4)
+  /** LLM context and output utilities */
+  llm: llmAPI,
 };
 
 // Expose boreDOM global in browser environment
@@ -166,6 +200,9 @@ export async function inflictBoreDOM<S>(
   // Call the code from the corresponding .js file of each component:
   runComponentsInitializer(proxifiedState);
 
+  // Start observing for undefined custom elements (Phase 3 template inference)
+  observeUndefinedElements();
+
   // When no initial state is provided, return undefined. This still
   // initializes components, event wiring, and subscriptions.
   return proxifiedState.app;
@@ -243,6 +280,13 @@ export function webComponent<S>(
       renderFunction = (renderState) => {
         const componentName = detail?.name ?? c.tagName.toLowerCase();
 
+        // Create helpers proxy for method-missing (Phase 3)
+        const helpers = createRenderHelpers(
+          componentName,
+          c,
+          () => renderFunction(renderState)
+        );
+
         // Check if error boundary is enabled
         if (isDebugEnabled("errorBoundary")) {
           try {
@@ -255,6 +299,7 @@ export function webComponent<S>(
               makeComponent: (tag, opts) => {
                 return createAndRunCode(tag, appState as any, opts?.detail);
               },
+              helpers,
             });
             updateSubscribers();
 
@@ -305,6 +350,7 @@ export function webComponent<S>(
             makeComponent: (tag, opts) => {
               return createAndRunCode(tag, appState as any, opts?.detail);
             },
+            helpers,
           });
           updateSubscribers();
         }

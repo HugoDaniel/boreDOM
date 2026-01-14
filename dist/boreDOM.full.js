@@ -1,3 +1,1248 @@
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// src/console-api.ts
+function setCurrentAppState(state, webComponentFn, registerComponentFn) {
+  currentAppState = state;
+  if (webComponentFn) storedWebComponent = webComponentFn;
+  if (registerComponentFn) storedRegisterComponent = registerComponentFn;
+}
+function getCurrentAppState() {
+  return currentAppState;
+}
+function storeComponentContext(element, context2) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("api")) return;
+  componentContexts.set(element, context2);
+}
+function isWebComponentResult(fn) {
+  return typeof fn === "function" && fn[WEB_COMPONENT_MARKER] === true;
+}
+function define(tagName, template, logic) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    console.warn("[boreDOM] define() is not available in production build");
+    return false;
+  }
+  if (!isDebugEnabled("api")) {
+    console.warn("[boreDOM] define() is disabled (debug.api is false)");
+    return false;
+  }
+  if (!currentAppState) {
+    throw new Error("[boreDOM] Cannot define component before inflictBoreDOM()");
+  }
+  if (!tagName.includes("-")) {
+    throw new Error(`[boreDOM] Invalid tag name "${tagName}": must contain a hyphen`);
+  }
+  if (customElements.get(tagName)) {
+    throw new Error(`[boreDOM] Component "${tagName}" is already defined`);
+  }
+  if (!storedWebComponent || !storedRegisterComponent) {
+    throw new Error("[boreDOM] Console API not initialized. Call inflictBoreDOM() first.");
+  }
+  const appState = currentAppState;
+  const webComponentFn = storedWebComponent;
+  const registerComponentFn = storedRegisterComponent;
+  const templateEl = document.createElement("template");
+  templateEl.innerHTML = template;
+  templateEl.setAttribute("data-component", tagName);
+  document.body.appendChild(templateEl);
+  const componentLogic = isWebComponentResult(logic) ? logic : webComponentFn(logic);
+  appState.internal.components.set(tagName, componentLogic);
+  appState.internal.customTags.push(tagName);
+  registerComponentFn(tagName);
+  initializeExistingElements(tagName, componentLogic);
+  if (isDebugEnabled("console")) {
+    console.log(
+      "%c\u2705 boreDOM: Defined %c<%s>",
+      "color: #27ae60; font-weight: bold",
+      "color: #4ecdc4; font-weight: bold",
+      tagName
+    );
+  }
+  return true;
+}
+function initializeExistingElements(tagName, logic) {
+  if (!currentAppState) return;
+  const elements = Array.from(document.querySelectorAll(tagName));
+  const failedCount = { count: 0 };
+  elements.forEach((elem, index) => {
+    if (elem instanceof HTMLElement && "renderCallback" in elem) {
+      try {
+        const detail = { index, name: tagName, data: void 0 };
+        const renderCallback = logic(currentAppState, detail);
+        elem.renderCallback = renderCallback;
+        renderCallback(elem);
+      } catch (error) {
+        failedCount.count++;
+        if (isDebugEnabled("console")) {
+          console.error(
+            `[boreDOM] Failed to initialize <${tagName}> instance ${index}:`,
+            error
+          );
+        }
+      }
+    }
+  });
+  if (failedCount.count > 0 && isDebugEnabled("console")) {
+    console.warn(
+      `[boreDOM] ${failedCount.count} of ${elements.length} <${tagName}> instances failed to initialize`
+    );
+  }
+}
+function operate(selectorOrElement, index = 0) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    console.warn("[boreDOM] operate() is not available in production build");
+    return void 0;
+  }
+  if (!isDebugEnabled("api")) {
+    console.warn("[boreDOM] operate() is disabled (debug.api is false)");
+    return void 0;
+  }
+  let element = null;
+  if (typeof selectorOrElement === "string") {
+    const elements = Array.from(document.querySelectorAll(selectorOrElement)).filter((el) => el instanceof HTMLElement);
+    element = elements[index] ?? null;
+  } else {
+    element = selectorOrElement;
+  }
+  if (!element) {
+    if (isDebugEnabled("console")) {
+      console.warn(`[boreDOM] operate(): No element found for "${selectorOrElement}"`);
+    }
+    return void 0;
+  }
+  const context2 = componentContexts.get(element);
+  if (!context2) {
+    if (isDebugEnabled("console")) {
+      console.warn(`[boreDOM] operate(): Element is not a boreDOM component or not initialized`);
+    }
+    return void 0;
+  }
+  return context2;
+}
+function exportComponent(selector) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    console.warn("[boreDOM] exportComponent() is not available in production build");
+    return null;
+  }
+  if (!isDebugEnabled("api")) {
+    console.warn("[boreDOM] exportComponent() is disabled (debug.api is false)");
+    return null;
+  }
+  const ctx = operate(selector);
+  if (!ctx) return null;
+  const templateEl = document.querySelector(`template[data-component="${ctx.detail.name}"]`);
+  const templateHtml = templateEl?.innerHTML ?? void 0;
+  try {
+    return {
+      component: ctx.detail.name,
+      state: JSON.parse(JSON.stringify(ctx.state)),
+      template: templateHtml,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  } catch (e) {
+    if (isDebugEnabled("console")) {
+      console.warn(
+        `[boreDOM] exportComponent: Unable to serialize state for <${ctx.detail.name}>:`,
+        e instanceof Error ? e.message : e
+      );
+    }
+    return {
+      component: ctx.detail.name,
+      state: "[Unable to serialize - contains circular references or functions]",
+      template: templateHtml,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+}
+var WEB_COMPONENT_MARKER, currentAppState, storedWebComponent, storedRegisterComponent, componentContexts, consoleAPI;
+var init_console_api = __esm({
+  "src/console-api.ts"() {
+    "use strict";
+    init_debug();
+    WEB_COMPONENT_MARKER = Symbol("boreDOM.webComponent");
+    currentAppState = null;
+    storedWebComponent = null;
+    storedRegisterComponent = null;
+    componentContexts = /* @__PURE__ */ new WeakMap();
+    consoleAPI = {
+      define,
+      operate,
+      exportComponent
+    };
+  }
+});
+
+// src/inside-out.ts
+function createRenderHelpers(componentName, element, rerender) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    return {};
+  }
+  if (!isDebugEnabled("methodMissing")) {
+    return {};
+  }
+  return new Proxy({}, {
+    get(_target, prop) {
+      if (typeof prop === "symbol" || prop === "then" || prop === "toJSON") {
+        return void 0;
+      }
+      if (userDefinedHelpers.has(prop)) {
+        return userDefinedHelpers.get(prop);
+      }
+      return (...args) => {
+        const ctx = {
+          name: prop,
+          args,
+          component: componentName,
+          element,
+          timestamp: Date.now(),
+          define: (impl) => {
+            defineHelper(prop, impl);
+            rerender();
+          }
+        };
+        logMissingFunction(ctx);
+        storeMissingFunction(ctx);
+        exposeMissingGlobals(ctx);
+        return void 0;
+      };
+    },
+    has(_target, prop) {
+      return typeof prop === "string" && userDefinedHelpers.has(prop);
+    }
+  });
+}
+function defineHelper(name, implementation) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("methodMissing")) return;
+  userDefinedHelpers.set(name, implementation);
+  if (isDebugEnabled("console")) {
+    console.log(
+      "%c\u2705 boreDOM: Defined helper %c%s",
+      "color: #27ae60; font-weight: bold",
+      "color: #9b59b6; font-weight: bold",
+      name
+    );
+  }
+}
+function clearHelper(name) {
+  userDefinedHelpers.delete(name);
+}
+function clearMissingFunctions() {
+  missingFunctions.clear();
+  lastMissing = null;
+}
+function logMissingFunction(ctx) {
+  if (!isDebugEnabled("console")) return;
+  console.log(
+    "%c\u26A0\uFE0F boreDOM: Missing function %c%s%c in <%s>",
+    "color: #f39c12; font-weight: bold",
+    "color: #9b59b6; font-weight: bold",
+    ctx.name,
+    "color: #f39c12",
+    ctx.component
+  );
+  if (ctx.args.length > 0) {
+    console.log("   Arguments:", ctx.args);
+  }
+  console.log("%c\u{1F4A1} Define it:", "color: #3498db; font-weight: bold");
+  console.log(`   $defineMissing((${generateArgNames(ctx.args)}) => { ... })`);
+  console.log(
+    `   boreDOM.defineHelper('${ctx.name}', (${generateArgNames(ctx.args)}) => { ... })`
+  );
+}
+function generateArgNames(args) {
+  if (args.length === 0) return "";
+  return args.map((arg, i) => {
+    if (arg === null || arg === void 0) return `arg${i}`;
+    if (Array.isArray(arg)) return "items";
+    if (typeof arg === "object") {
+      if ("name" in arg && "email" in arg) return "user";
+      if ("id" in arg && "title" in arg) return "item";
+      if ("id" in arg) return "record";
+      return "data";
+    }
+    if (typeof arg === "string") return "text";
+    if (typeof arg === "number") return "count";
+    if (typeof arg === "boolean") return "flag";
+    return `arg${i}`;
+  }).join(", ");
+}
+function storeMissingFunction(ctx) {
+  if (!isDebugEnabled("errorHistory")) return;
+  const existing = missingFunctions.get(ctx.name) || [];
+  if (existing.length >= 10) {
+    existing.shift();
+  }
+  existing.push(ctx);
+  missingFunctions.set(ctx.name, existing);
+  lastMissing = ctx;
+}
+function exposeMissingGlobals(ctx) {
+  if (!isDebugEnabled("globals")) return;
+  if (typeof window === "undefined") return;
+  const w = window;
+  w.$missingName = ctx.name;
+  w.$missingArgs = ctx.args;
+  w.$missingComponent = ctx.component;
+  w.$defineMissing = ctx.define;
+}
+function inferTemplate(tagName, element) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return null;
+  if (!isDebugEnabled("templateInference")) return null;
+  if (isDebugEnabled("strict")) return null;
+  const props = {};
+  const slots = [];
+  if (element) {
+    for (const attr of Array.from(element.attributes)) {
+      if (attr.name.startsWith("data-")) continue;
+      if (["class", "id", "style"].includes(attr.name)) continue;
+      const camelName = kebabToCamel(attr.name);
+      props[camelName] = parseAttributeValue(attr.value);
+    }
+    for (const child of Array.from(element.children)) {
+      const slotName = child.getAttribute("slot");
+      if (slotName && !slots.includes(slotName)) {
+        slots.push(slotName);
+      }
+    }
+  }
+  const propsSlots = Object.keys(props).map((p) => `    <slot name="${camelToKebab(p)}">${formatValue(props[p])}</slot>`).join("\n");
+  const defaultSlot = slots.length === 0 && Object.keys(props).length === 0 ? '    <slot name="content">Loading...</slot>' : "";
+  const template = `<div class="${tagName}-skeleton" data-inferred>
+${propsSlots || defaultSlot}
+  </div>`;
+  return { tagName, template, props, slots };
+}
+function registerInferredComponent(tagName, element) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return false;
+  if (!isDebugEnabled("templateInference")) return false;
+  if (customElements.get(tagName)) return false;
+  if (!getCurrentAppState()) return false;
+  const inference = inferTemplate(tagName, element);
+  if (!inference) return false;
+  const { template, props } = inference;
+  inferredTemplates.set(tagName, inference);
+  logInferredComponent(tagName, props);
+  try {
+    define(
+      tagName,
+      template,
+      // Stub render that logs what it receives
+      ({ state }) => ({ slots }) => {
+        if (isDebugEnabled("console")) {
+          console.log(
+            "%c\u{1F52E} boreDOM: Inferred <%s> rendering",
+            "color: #9b59b6; font-weight: bold",
+            tagName
+          );
+          console.log("   Inferred props:", props);
+          console.log("   App state:", state);
+        }
+        for (const [key, value] of Object.entries(props)) {
+          const slotKey = camelToKebab(key);
+          if (slots[slotKey]) {
+            slots[slotKey] = String(value);
+          }
+        }
+      }
+    );
+    return true;
+  } catch (e) {
+    if (isDebugEnabled("console")) {
+      console.warn(`[boreDOM] Failed to register inferred <${tagName}>:`, e);
+    }
+    return false;
+  }
+}
+function logInferredComponent(tagName, props) {
+  if (!isDebugEnabled("console")) return;
+  console.log(
+    "%c\u{1F52E} boreDOM: Inferring template for %c<%s>",
+    "color: #9b59b6; font-weight: bold",
+    "color: #4ecdc4; font-weight: bold",
+    tagName
+  );
+  if (Object.keys(props).length > 0) {
+    console.log("%c\u{1F4CB} Inferred props from attributes:", "color: #95a5a6");
+    for (const [key, value] of Object.entries(props)) {
+      console.log(`   ${key}: ${JSON.stringify(value)}`);
+    }
+  }
+  console.log("%c\u{1F4A1} Define properly with:", "color: #3498db; font-weight: bold");
+  console.log(
+    `   boreDOM.define('${tagName}', '<your template>', ({ state }) => ({ slots }) => { ... })`
+  );
+}
+function observeUndefinedElements() {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("templateInference")) return;
+  if (typeof window === "undefined") return;
+  if (templateObserver) return;
+  templateObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of Array.from(mutation.addedNodes)) {
+        if (node instanceof HTMLElement && node.tagName.includes("-")) {
+          const tagName = node.tagName.toLowerCase();
+          if (!customElements.get(tagName)) {
+            const template = document.querySelector(
+              `template[data-component="${tagName}"]`
+            );
+            if (!template) {
+              queueMicrotask(() => {
+                if (!customElements.get(tagName)) {
+                  registerInferredComponent(tagName, node);
+                }
+              });
+            }
+          }
+        }
+      }
+    }
+  });
+  templateObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
+function kebabToCamel(str) {
+  return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+function camelToKebab(str) {
+  return str.replace(/([A-Z])/g, "-$1").toLowerCase();
+}
+function parseAttributeValue(value) {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  const num = Number(value);
+  if (!isNaN(num) && value !== "") return num;
+  if (value.startsWith("{") || value.startsWith("[")) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+function formatValue(value) {
+  if (value === null || value === void 0) return "";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+var userDefinedHelpers, missingFunctions, lastMissing, inferredTemplates, templateObserver, insideOutAPI;
+var init_inside_out = __esm({
+  "src/inside-out.ts"() {
+    "use strict";
+    init_debug();
+    init_console_api();
+    userDefinedHelpers = /* @__PURE__ */ new Map();
+    missingFunctions = /* @__PURE__ */ new Map();
+    lastMissing = null;
+    inferredTemplates = /* @__PURE__ */ new Map();
+    templateObserver = null;
+    insideOutAPI = {
+      /** Map of missing function calls by function name */
+      get missingFunctions() {
+        return missingFunctions;
+      },
+      /** Most recent missing function context */
+      get lastMissing() {
+        return lastMissing;
+      },
+      /** Define a helper function available to all render functions */
+      defineHelper,
+      /** Get all defined helpers */
+      get helpers() {
+        return new Map(userDefinedHelpers);
+      },
+      /** Clear a helper definition */
+      clearHelper,
+      /** Clear all missing function records */
+      clearMissingFunctions,
+      /** Map of inferred templates by tag name */
+      get inferredTemplates() {
+        return inferredTemplates;
+      },
+      /** Manually infer template for a tag (useful for testing) */
+      inferTemplate
+    };
+  }
+});
+
+// src/version.ts
+var VERSION;
+var init_version = __esm({
+  "src/version.ts"() {
+    "use strict";
+    VERSION = "0.25.25";
+  }
+});
+
+// src/llm.ts
+var llm_exports = {};
+__export(llm_exports, {
+  clearAttempts: () => clearAttempts,
+  context: () => context,
+  copy: () => copy,
+  focus: () => focus,
+  formatErrorForLLM: () => formatErrorForLLM,
+  getAttempts: () => getAttempts,
+  isLLMOutputFormat: () => isLLMOutputFormat,
+  llmAPI: () => llmAPI,
+  llmLog: () => llmLog,
+  recordAttempt: () => recordAttempt
+});
+function isSameObject(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (typeof a !== "object" || typeof b !== "object") return false;
+  try {
+    const marker = Date.now() + Math.random();
+    a[CIRCULAR_CHECK] = marker;
+    const same = b[CIRCULAR_CHECK] === marker;
+    delete a[CIRCULAR_CHECK];
+    return same;
+  } catch {
+    return false;
+  }
+}
+function getStatePaths(obj, prefix = "", seen = /* @__PURE__ */ new WeakSet()) {
+  const paths = [];
+  if (obj === null || obj === void 0) return paths;
+  if (typeof obj !== "object") return paths;
+  if (seen.has(obj)) return paths;
+  seen.add(obj);
+  for (const key of Object.keys(obj)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    paths.push(path);
+    const value = obj[key];
+    if (Array.isArray(value)) {
+      paths.push(`${path}[]`);
+      if (value.length > 0 && typeof value[0] === "object" && value[0] !== null) {
+        paths.push(...getStatePaths(value[0], `${path}[0]`, seen));
+      }
+    } else if (value && typeof value === "object") {
+      paths.push(...getStatePaths(value, path, seen));
+    }
+  }
+  return paths;
+}
+function inferTypeShape(obj, seen = /* @__PURE__ */ new WeakSet()) {
+  if (obj === null) return "null";
+  if (obj === void 0) return "undefined";
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) return "any[]";
+    const elemType = inferTypeShape(obj[0], seen);
+    return `${elemType}[]`;
+  }
+  if (typeof obj === "object") {
+    if (seen.has(obj)) return "/* circular */";
+    seen.add(obj);
+    const props = Object.entries(obj).map(([k, v]) => `  ${k}: ${inferTypeShape(v, seen)}`).join("\n");
+    return `{
+${props}
+}`;
+  }
+  return typeof obj;
+}
+function sanitizeState(state, seen = /* @__PURE__ */ new WeakSet(), root) {
+  if (state === null || state === void 0) return state;
+  if (typeof state !== "object") return state;
+  if (typeof state === "function") return "[Function]";
+  if (typeof state === "symbol") return "[Symbol]";
+  if (state instanceof Date) return state.toISOString();
+  if (state instanceof RegExp) return state.toString();
+  if (state instanceof Map) return "[Map]";
+  if (state instanceof Set) return "[Set]";
+  if (root === void 0) root = state;
+  if (seen.has(state)) return "[Circular]";
+  seen.add(state);
+  const sanitized = Array.isArray(state) ? [] : {};
+  for (const [key, value] of Object.entries(state)) {
+    const isSensitive = SENSITIVE_KEYS.some(
+      (s) => key.toLowerCase().includes(s.toLowerCase())
+    );
+    if (isSensitive) {
+      sanitized[key] = "[REDACTED]";
+    } else if (value && typeof value === "object") {
+      if (isSameObject(value, root)) {
+        sanitized[key] = "[Circular]";
+      } else if (seen.has(value)) {
+        sanitized[key] = "[Circular]";
+      } else {
+        sanitized[key] = sanitizeState(value, seen, root);
+      }
+    } else if (typeof value === "function") {
+      sanitized[key] = "[Function]";
+    } else if (typeof value === "symbol") {
+      sanitized[key] = "[Symbol]";
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+function generateSuggestion(ctx) {
+  const msg = ctx.error.message.toLowerCase();
+  if (msg.includes("undefined") && msg.includes("reading")) {
+    const match = msg.match(/reading '(\w+)'/);
+    if (match) {
+      return `Property access on null/undefined. Add null check before accessing '${match[1]}' or initialize the value.`;
+    }
+  }
+  if (msg.includes("is not a function")) {
+    const match = msg.match(/(\w+) is not a function/);
+    if (match) {
+      return `'${match[1]}' is not a function. Check if it's defined, imported, or if the object exists.`;
+    }
+  }
+  if (msg.includes("map") || msg.includes("filter") || msg.includes("foreach")) {
+    return "Array method called on non-array. Initialize as empty array or add type check.";
+  }
+  if (msg.includes("null") || msg.includes("undefined")) {
+    return "Null/undefined value encountered. Add defensive checks or initialize data.";
+  }
+  return "Check the error message and component state for the root cause.";
+}
+function getErrorMap() {
+  return debugAPI.errors;
+}
+function getMissingFunctionsMap() {
+  return insideOutAPI.missingFunctions;
+}
+function getDefinedHelpersMap() {
+  return insideOutAPI.helpers;
+}
+function getMissingComponents() {
+  if (typeof document === "undefined") return [];
+  const missing = [];
+  const all = document.querySelectorAll("*");
+  for (const el of Array.from(all)) {
+    const tag = el.tagName.toLowerCase();
+    if (tag.includes("-") && !customElements.get(tag)) {
+      if (!missing.includes(tag)) {
+        missing.push(tag);
+      }
+    }
+  }
+  return missing;
+}
+function getRegisteredComponents() {
+  const appState = getCurrentAppState();
+  if (!appState) return [];
+  return appState.internal.customTags || [];
+}
+function getComponentTemplate(tagName) {
+  if (typeof document === "undefined") return null;
+  const template = document.querySelector(`template[data-component="${tagName}"]`);
+  return template?.innerHTML ?? null;
+}
+function countComponentInstances(tagName) {
+  if (typeof document === "undefined") return 0;
+  return document.querySelectorAll(tagName).length;
+}
+function buildComponentInfo(tagName) {
+  const appState = getCurrentAppState();
+  const hasLogic = appState?.internal.components.has(tagName) ?? false;
+  const template = getComponentTemplate(tagName);
+  const instanceCount = countComponentInstances(tagName);
+  const errors2 = getErrorMap();
+  const hasError = errors2.has(tagName);
+  const refs = [];
+  const slots = [];
+  if (template) {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = template;
+    tempDiv.querySelectorAll("[data-ref]").forEach((el) => {
+      const refName = el.getAttribute("data-ref");
+      if (refName) refs.push(refName);
+    });
+    tempDiv.querySelectorAll("[data-slot], slot[name]").forEach((el) => {
+      const slotName = el.getAttribute("data-slot") || el.getAttribute("name");
+      if (slotName) slots.push(slotName);
+    });
+  }
+  return {
+    tagName,
+    template,
+    hasLogic,
+    refs,
+    slots,
+    events: [],
+    // Would need to track from on() calls
+    stateAccess: [],
+    // Would need to track from state access
+    hasError,
+    instanceCount
+  };
+}
+function buildComponentMap() {
+  const tags = getRegisteredComponents();
+  const map = {};
+  for (const tag of tags) {
+    map[tag] = buildComponentInfo(tag);
+  }
+  return map;
+}
+function getCapabilities() {
+  const capabilities = ["reactive-state", "web-components", "event-handling"];
+  const config = getDebugConfig();
+  if (config.errorBoundary) capabilities.push("error-boundary");
+  if (config.globals) capabilities.push("debug-globals");
+  if (config.api) capabilities.push("runtime-define");
+  if (config.methodMissing) capabilities.push("method-missing");
+  if (config.templateInference) capabilities.push("template-inference");
+  return capabilities;
+}
+function detectPatterns() {
+  const tags = getRegisteredComponents();
+  const componentNaming = tags.length > 0 ? tags.every((t) => t.match(/^[a-z]+-[a-z]+(-[a-z]+)*$/)) ? "kebab-case (e.g., user-profile, todo-list)" : "mixed" : "unknown";
+  return {
+    eventNaming: "unknown",
+    // Would need to track events
+    stateStructure: "unknown",
+    // Would need to analyze state shape
+    componentNaming
+  };
+}
+function inferSignature(name, args) {
+  if (args.length === 0) return `${name}(): any`;
+  const argTypes = args.map((arg, i) => {
+    if (arg === null) return `arg${i}: null`;
+    if (arg === void 0) return `arg${i}: undefined`;
+    if (Array.isArray(arg)) return `items: any[]`;
+    if (typeof arg === "object") return `data: object`;
+    return `arg${i}: ${typeof arg}`;
+  });
+  return `${name}(${argTypes.join(", ")}): any`;
+}
+function getEmptyContext() {
+  return {
+    framework: {
+      name: "boreDOM",
+      version: VERSION,
+      capabilities: []
+    },
+    state: {
+      shape: "{}",
+      paths: [],
+      sample: {}
+    },
+    components: {},
+    issues: {
+      errors: [],
+      missingFunctions: [],
+      missingComponents: []
+    },
+    helpers: {
+      defined: {},
+      missing: {}
+    },
+    patterns: {
+      eventNaming: "unknown",
+      stateStructure: "unknown",
+      componentNaming: "unknown"
+    }
+  };
+}
+function getEmptyFocusedContext() {
+  return {
+    issue: {
+      type: "none",
+      description: "LLM features disabled or unavailable"
+    },
+    relevantState: {}
+  };
+}
+function context() {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    return getEmptyContext();
+  }
+  if (!isDebugEnabled("llm")) {
+    return getEmptyContext();
+  }
+  const appState = getCurrentAppState();
+  const state = appState?.app ?? {};
+  const errors2 = getErrorMap();
+  const missingFns = getMissingFunctionsMap();
+  const definedHelpers = getDefinedHelpersMap();
+  const errorInfos = Array.from(errors2.values()).map((ctx) => ({
+    component: ctx.component,
+    error: ctx.error.message,
+    stack: ctx.stack,
+    state: sanitizeState(ctx.state),
+    timestamp: ctx.timestamp
+  }));
+  const missingFnInfos = [];
+  const missingCallInfos = {};
+  for (const [name, calls] of missingFns.entries()) {
+    const allArgs = calls.map((c) => c.args);
+    const components = [...new Set(calls.map((c) => c.component))];
+    const lastCall = Math.max(...calls.map((c) => c.timestamp));
+    missingFnInfos.push({
+      name,
+      args: calls[0]?.args ?? [],
+      component: calls[0]?.component ?? "unknown",
+      inferredSignature: inferSignature(name, calls[0]?.args ?? []),
+      callCount: calls.length
+    });
+    missingCallInfos[name] = {
+      args: allArgs,
+      components,
+      lastCall
+    };
+  }
+  const definedHelperSignatures = {};
+  for (const [name, fn] of definedHelpers.entries()) {
+    definedHelperSignatures[name] = `${name}(${fn.length > 0 ? "..." : ""}): any`;
+  }
+  return {
+    framework: {
+      name: "boreDOM",
+      version: VERSION,
+      capabilities: getCapabilities()
+    },
+    state: {
+      shape: inferTypeShape(state),
+      paths: getStatePaths(state),
+      sample: sanitizeState(state)
+    },
+    components: buildComponentMap(),
+    issues: {
+      errors: errorInfos,
+      missingFunctions: missingFnInfos,
+      missingComponents: getMissingComponents()
+    },
+    helpers: {
+      defined: definedHelperSignatures,
+      missing: missingCallInfos
+    },
+    patterns: detectPatterns()
+  };
+}
+function focus() {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    return getEmptyFocusedContext();
+  }
+  if (!isDebugEnabled("llm")) {
+    return getEmptyFocusedContext();
+  }
+  const errors2 = getErrorMap();
+  if (errors2.size > 0) {
+    const errorList = Array.from(errors2.values());
+    const latest = errorList[errorList.length - 1];
+    return {
+      issue: {
+        type: "error",
+        description: latest.error.message,
+        component: latest.component,
+        suggestion: generateSuggestion(latest)
+      },
+      component: {
+        ...buildComponentInfo(latest.component),
+        currentState: sanitizeState(latest.state)
+      },
+      relevantState: sanitizeState(latest.state),
+      previousAttempts: getRecentAttempts()
+    };
+  }
+  const missingFns = getMissingFunctionsMap();
+  if (missingFns.size > 0) {
+    const entries = Array.from(missingFns.entries());
+    const [name, calls] = entries[entries.length - 1];
+    const lastCall = calls[calls.length - 1];
+    return {
+      issue: {
+        type: "missing_function",
+        description: `Undefined function '${name}' called`,
+        component: lastCall?.component,
+        suggestion: `Define helper: boreDOM.defineHelper("${name}", (${inferSignature(name, lastCall?.args ?? []).split("(")[1]?.split(")")[0] || ""}) => { /* implementation */ })`
+      },
+      component: lastCall?.component ? {
+        ...buildComponentInfo(lastCall.component),
+        currentState: sanitizeState(getCurrentAppState()?.app)
+      } : void 0,
+      relevantState: sanitizeState(getCurrentAppState()?.app),
+      previousAttempts: getRecentAttempts()
+    };
+  }
+  const missingComponents = getMissingComponents();
+  if (missingComponents.length > 0) {
+    const tagName = missingComponents[0];
+    return {
+      issue: {
+        type: "missing_component",
+        description: `Custom element <${tagName}> used but not defined`,
+        suggestion: `Define component: boreDOM.define("${tagName}", "<template-html>", ({ state }) => ({ slots }) => { /* render */ })`
+      },
+      relevantState: sanitizeState(getCurrentAppState()?.app),
+      previousAttempts: getRecentAttempts()
+    };
+  }
+  return {
+    issue: {
+      type: "none",
+      description: "No current issues detected"
+    },
+    relevantState: sanitizeState(getCurrentAppState()?.app)
+  };
+}
+function copy() {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    return "{}";
+  }
+  if (!isDebugEnabled("llm")) {
+    return "{}";
+  }
+  const ctx = focus();
+  const json = JSON.stringify(ctx, null, 2);
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    navigator.clipboard.writeText(json).then(() => {
+      if (isDebugEnabled("console")) {
+        console.log(
+          "%c\u{1F4CB} boreDOM: LLM context copied to clipboard",
+          "color: #27ae60; font-weight: bold"
+        );
+      }
+    }).catch(() => {
+      if (isDebugEnabled("console")) {
+        console.log(
+          "%c\u{1F4CB} boreDOM: Clipboard access failed, context logged below:",
+          "color: #f39c12; font-weight: bold"
+        );
+        console.log(json);
+      }
+    });
+  } else if (isDebugEnabled("console")) {
+    console.log(
+      "%c\u{1F4CB} boreDOM: Clipboard unavailable, context logged below:",
+      "color: #f39c12; font-weight: bold"
+    );
+    console.log(json);
+  }
+  return json;
+}
+function recordAttempt(code, result, error) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("llm")) return;
+  attempts.push({
+    code,
+    result,
+    error,
+    timestamp: Date.now()
+  });
+  if (attempts.length > 10) {
+    attempts = attempts.slice(-10);
+  }
+}
+function getRecentAttempts() {
+  return [...attempts];
+}
+function getAttempts() {
+  return [...attempts];
+}
+function clearAttempts() {
+  attempts = [];
+}
+function formatErrorForLLM(ctx) {
+  return JSON.stringify({
+    type: "error",
+    component: ctx.component,
+    error: ctx.error.message,
+    stack: ctx.stack,
+    state: sanitizeState(ctx.state),
+    refs: Object.keys(ctx.refs),
+    slots: Object.keys(ctx.slots),
+    suggestion: generateSuggestion(ctx),
+    timestamp: ctx.timestamp
+  });
+}
+function llmLog(type, data) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  const config = getDebugConfig();
+  if (config.outputFormat === "llm") {
+    console.log(JSON.stringify({ type, ...data }));
+  }
+}
+function isLLMOutputFormat() {
+  const config = getDebugConfig();
+  return config.outputFormat === "llm";
+}
+var attempts, SENSITIVE_KEYS, CIRCULAR_CHECK, llmAPI;
+var init_llm = __esm({
+  "src/llm.ts"() {
+    "use strict";
+    init_debug();
+    init_console_api();
+    init_inside_out();
+    init_version();
+    attempts = [];
+    SENSITIVE_KEYS = [
+      "password",
+      "token",
+      "secret",
+      "apiKey",
+      "api_key",
+      "auth",
+      "credential",
+      "private",
+      "key",
+      "pass"
+    ];
+    CIRCULAR_CHECK = Symbol("__llm_circular_check__");
+    llmAPI = {
+      /** Get complete session context */
+      context,
+      /** Get focused context for current issue */
+      focus,
+      /** Copy context to clipboard */
+      copy,
+      /** Get all recorded attempts */
+      get attempts() {
+        return getAttempts();
+      },
+      /** Clear recorded attempts */
+      clearAttempts,
+      /** @internal Record an attempt */
+      _recordAttempt: recordAttempt
+    };
+  }
+});
+
+// src/debug.ts
+function isDebugEnabled(feature) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    if (feature === "errorBoundary") {
+      return debugConfig.errorBoundary ?? true;
+    }
+    return false;
+  }
+  const value = debugConfig[feature];
+  if (feature === "strict") {
+    return value ?? false;
+  }
+  return value ?? true;
+}
+function setDebugConfig(config) {
+  if (typeof config === "boolean") {
+    const enabled = config;
+    debugConfig = {
+      console: enabled,
+      globals: enabled,
+      errorBoundary: true,
+      // Always keep error boundary for safety
+      visualIndicators: enabled,
+      errorHistory: enabled,
+      versionLog: enabled,
+      api: enabled,
+      methodMissing: enabled,
+      templateInference: enabled,
+      strict: false,
+      // Strict mode only enabled explicitly
+      outputFormat: "human",
+      // Always human format by default
+      llm: enabled
+      // LLM API follows debug mode
+    };
+  } else {
+    debugConfig = { ...debugConfig, ...config };
+  }
+}
+function getDebugConfig() {
+  return { ...debugConfig };
+}
+function exposeGlobals(ctx) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("globals")) return;
+  if (typeof window === "undefined") return;
+  const w = window;
+  w.$state = ctx.state;
+  w.$refs = ctx.refs;
+  w.$slots = ctx.slots;
+  w.$self = ctx.element;
+  w.$error = ctx.error;
+  w.$component = ctx.component;
+  w.$rerender = ctx.rerender;
+}
+function clearGlobals() {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("globals")) return;
+  if (typeof window === "undefined") return;
+  const w = window;
+  delete w.$state;
+  delete w.$refs;
+  delete w.$slots;
+  delete w.$self;
+  delete w.$error;
+  delete w.$component;
+  delete w.$rerender;
+}
+function logError(ctx) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("console")) return;
+  if (debugConfig.outputFormat === "llm") {
+    Promise.resolve().then(() => (init_llm(), llm_exports)).then(({ formatErrorForLLM: formatErrorForLLM2 }) => {
+      console.log(formatErrorForLLM2(ctx));
+    });
+    return;
+  }
+  console.log(
+    "%c\u{1F534} boreDOM: Error in %c<%s>%c render",
+    "color: #ff6b6b; font-weight: bold",
+    "color: #4ecdc4; font-weight: bold",
+    ctx.component,
+    "color: #ff6b6b"
+  );
+  console.error(ctx.error);
+  if (isDebugEnabled("globals")) {
+    console.log("%c\u{1F4CB} Debug context loaded:", "color: #95a5a6; font-weight: bold");
+    console.log("   $state     \u2192", ctx.state);
+    console.log("   $refs      \u2192", ctx.refs);
+    console.log("   $slots     \u2192", ctx.slots);
+    console.log("   $self      \u2192", ctx.element);
+    console.log("%c\u{1F4A1} Quick fixes:", "color: #f39c12; font-weight: bold");
+    console.log("   $state.propertyName = value");
+    console.log("   $rerender()");
+    console.log("%c\u{1F4E4} When fixed:", "color: #27ae60; font-weight: bold");
+    console.log(`   boreDOM.export('${ctx.component}')`);
+  }
+}
+function logErrorMinimal(component2, error) {
+  console.error(`[boreDOM] Render error in <${component2}>: ${error.message}`);
+}
+function logInitError(component2, error) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("console")) return;
+  console.log(
+    "%c\u{1F534} boreDOM: Error in %c<%s>%c init",
+    "color: #ff6b6b; font-weight: bold",
+    "color: #4ecdc4; font-weight: bold",
+    component2,
+    "color: #ff6b6b"
+  );
+  console.error(error);
+}
+function storeError(ctx) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("errorHistory")) return;
+  errors.set(ctx.component, ctx);
+  lastError = ctx;
+}
+function clearError(component2) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("errorHistory")) return;
+  if (component2) {
+    errors.delete(component2);
+    if (lastError?.component === component2) {
+      lastError = null;
+    }
+  } else if (lastError) {
+    errors.delete(lastError.component);
+    lastError = null;
+  }
+}
+function markComponentError(element) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("visualIndicators")) return;
+  element.setAttribute("data-boredom-error", "true");
+}
+function clearComponentErrorMark(element) {
+  element.removeAttribute("data-boredom-error");
+}
+function exportState(tagName) {
+  const ctx = tagName ? errors.get(tagName) : lastError;
+  if (!ctx) return null;
+  try {
+    return {
+      component: ctx.component,
+      state: JSON.parse(JSON.stringify(ctx.state)),
+      timestamp: new Date(ctx.timestamp).toISOString(),
+      error: ctx.error.message
+    };
+  } catch (e) {
+    if (isDebugEnabled("console")) {
+      console.warn(
+        `[boreDOM] exportState: Unable to serialize state for <${ctx.component}>:`,
+        e instanceof Error ? e.message : e
+      );
+    }
+    return {
+      component: ctx.component,
+      state: "[Unable to serialize - contains circular references or functions]",
+      timestamp: new Date(ctx.timestamp).toISOString(),
+      error: ctx.error.message
+    };
+  }
+}
+var debugConfig, errors, lastError, debugAPI;
+var init_debug = __esm({
+  "src/debug.ts"() {
+    "use strict";
+    debugConfig = {
+      console: true,
+      globals: true,
+      errorBoundary: true,
+      visualIndicators: true,
+      errorHistory: true,
+      versionLog: true,
+      api: true,
+      methodMissing: true,
+      templateInference: true,
+      strict: false,
+      outputFormat: "human",
+      llm: true
+    };
+    errors = /* @__PURE__ */ new Map();
+    lastError = null;
+    debugAPI = {
+      /** Map of all current errors by component name */
+      get errors() {
+        return errors;
+      },
+      /** Most recent error context */
+      get lastError() {
+        return lastError;
+      },
+      /** Re-render a specific component or the last errored one */
+      rerender(tagName) {
+        const ctx = tagName ? errors.get(tagName) : lastError;
+        if (ctx) {
+          ctx.rerender();
+        } else {
+          console.warn("[boreDOM] No error context found to rerender");
+        }
+      },
+      /** Clear error state for a component */
+      clearError(tagName) {
+        const ctx = tagName ? errors.get(tagName) : lastError;
+        if (ctx) {
+          clearComponentErrorMark(ctx.element);
+          clearError(tagName);
+          clearGlobals();
+        } else if (isDebugEnabled("console")) {
+          console.warn(
+            tagName ? `[boreDOM] clearError: No error found for <${tagName}>` : "[boreDOM] clearError: No error to clear"
+          );
+        }
+      },
+      /** Export state snapshot */
+      export: exportState,
+      /** Current debug configuration (read-only) */
+      get config() {
+        return getDebugConfig();
+      }
+    };
+  }
+});
+
 // src/dom.ts
 var dynamicImportScripts = async (names) => {
   const result = /* @__PURE__ */ new Map();
@@ -677,369 +1922,14 @@ function createAndRunCode(name, state, detail) {
   return createComponent(name);
 }
 
-// src/debug.ts
-var debugConfig = {
-  console: true,
-  globals: true,
-  errorBoundary: true,
-  visualIndicators: true,
-  errorHistory: true,
-  versionLog: true,
-  api: true
-};
-var errors = /* @__PURE__ */ new Map();
-var lastError = null;
-function isDebugEnabled(feature) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-    if (feature === "errorBoundary") {
-      return debugConfig.errorBoundary ?? true;
-    }
-    return false;
-  }
-  return debugConfig[feature] ?? true;
-}
-function setDebugConfig(config) {
-  if (typeof config === "boolean") {
-    const enabled = config;
-    debugConfig = {
-      console: enabled,
-      globals: enabled,
-      errorBoundary: true,
-      // Always keep error boundary for safety
-      visualIndicators: enabled,
-      errorHistory: enabled,
-      versionLog: enabled,
-      api: enabled
-    };
-  } else {
-    debugConfig = { ...debugConfig, ...config };
-  }
-}
-function getDebugConfig() {
-  return { ...debugConfig };
-}
-function exposeGlobals(ctx) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-  if (!isDebugEnabled("globals")) return;
-  if (typeof window === "undefined") return;
-  const w = window;
-  w.$state = ctx.state;
-  w.$refs = ctx.refs;
-  w.$slots = ctx.slots;
-  w.$self = ctx.element;
-  w.$error = ctx.error;
-  w.$component = ctx.component;
-  w.$rerender = ctx.rerender;
-}
-function clearGlobals() {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-  if (!isDebugEnabled("globals")) return;
-  if (typeof window === "undefined") return;
-  const w = window;
-  delete w.$state;
-  delete w.$refs;
-  delete w.$slots;
-  delete w.$self;
-  delete w.$error;
-  delete w.$component;
-  delete w.$rerender;
-}
-function logError(ctx) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-  if (!isDebugEnabled("console")) return;
-  console.log(
-    "%c\u{1F534} boreDOM: Error in %c<%s>%c render",
-    "color: #ff6b6b; font-weight: bold",
-    "color: #4ecdc4; font-weight: bold",
-    ctx.component,
-    "color: #ff6b6b"
-  );
-  console.error(ctx.error);
-  if (isDebugEnabled("globals")) {
-    console.log("%c\u{1F4CB} Debug context loaded:", "color: #95a5a6; font-weight: bold");
-    console.log("   $state     \u2192", ctx.state);
-    console.log("   $refs      \u2192", ctx.refs);
-    console.log("   $slots     \u2192", ctx.slots);
-    console.log("   $self      \u2192", ctx.element);
-    console.log("%c\u{1F4A1} Quick fixes:", "color: #f39c12; font-weight: bold");
-    console.log("   $state.propertyName = value");
-    console.log("   $rerender()");
-    console.log("%c\u{1F4E4} When fixed:", "color: #27ae60; font-weight: bold");
-    console.log(`   boreDOM.export('${ctx.component}')`);
-  }
-}
-function logErrorMinimal(component2, error) {
-  console.error(`[boreDOM] Render error in <${component2}>: ${error.message}`);
-}
-function logInitError(component2, error) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-  if (!isDebugEnabled("console")) return;
-  console.log(
-    "%c\u{1F534} boreDOM: Error in %c<%s>%c init",
-    "color: #ff6b6b; font-weight: bold",
-    "color: #4ecdc4; font-weight: bold",
-    component2,
-    "color: #ff6b6b"
-  );
-  console.error(error);
-}
-function storeError(ctx) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-  if (!isDebugEnabled("errorHistory")) return;
-  errors.set(ctx.component, ctx);
-  lastError = ctx;
-}
-function clearError(component2) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-  if (!isDebugEnabled("errorHistory")) return;
-  if (component2) {
-    errors.delete(component2);
-    if (lastError?.component === component2) {
-      lastError = null;
-    }
-  } else if (lastError) {
-    errors.delete(lastError.component);
-    lastError = null;
-  }
-}
-function markComponentError(element) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-  if (!isDebugEnabled("visualIndicators")) return;
-  element.setAttribute("data-boredom-error", "true");
-}
-function clearComponentErrorMark(element) {
-  element.removeAttribute("data-boredom-error");
-}
-function exportState(tagName) {
-  const ctx = tagName ? errors.get(tagName) : lastError;
-  if (!ctx) return null;
-  try {
-    return {
-      component: ctx.component,
-      state: JSON.parse(JSON.stringify(ctx.state)),
-      timestamp: new Date(ctx.timestamp).toISOString(),
-      error: ctx.error.message
-    };
-  } catch (e) {
-    if (isDebugEnabled("console")) {
-      console.warn(
-        `[boreDOM] exportState: Unable to serialize state for <${ctx.component}>:`,
-        e instanceof Error ? e.message : e
-      );
-    }
-    return {
-      component: ctx.component,
-      state: "[Unable to serialize - contains circular references or functions]",
-      timestamp: new Date(ctx.timestamp).toISOString(),
-      error: ctx.error.message
-    };
-  }
-}
-var debugAPI = {
-  /** Map of all current errors by component name */
-  get errors() {
-    return errors;
-  },
-  /** Most recent error context */
-  get lastError() {
-    return lastError;
-  },
-  /** Re-render a specific component or the last errored one */
-  rerender(tagName) {
-    const ctx = tagName ? errors.get(tagName) : lastError;
-    if (ctx) {
-      ctx.rerender();
-    } else {
-      console.warn("[boreDOM] No error context found to rerender");
-    }
-  },
-  /** Clear error state for a component */
-  clearError(tagName) {
-    const ctx = tagName ? errors.get(tagName) : lastError;
-    if (ctx) {
-      clearComponentErrorMark(ctx.element);
-      clearError(tagName);
-      clearGlobals();
-    } else if (isDebugEnabled("console")) {
-      console.warn(
-        tagName ? `[boreDOM] clearError: No error found for <${tagName}>` : "[boreDOM] clearError: No error to clear"
-      );
-    }
-  },
-  /** Export state snapshot */
-  export: exportState,
-  /** Current debug configuration (read-only) */
-  get config() {
-    return getDebugConfig();
-  }
-};
-
-// src/console-api.ts
-var WEB_COMPONENT_MARKER = Symbol("boreDOM.webComponent");
-var currentAppState = null;
-var storedWebComponent = null;
-var storedRegisterComponent = null;
-var componentContexts = /* @__PURE__ */ new WeakMap();
-function setCurrentAppState(state, webComponentFn, registerComponentFn) {
-  currentAppState = state;
-  if (webComponentFn) storedWebComponent = webComponentFn;
-  if (registerComponentFn) storedRegisterComponent = registerComponentFn;
-}
-function storeComponentContext(element, context) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-  if (!isDebugEnabled("api")) return;
-  componentContexts.set(element, context);
-}
-function isWebComponentResult(fn) {
-  return typeof fn === "function" && fn[WEB_COMPONENT_MARKER] === true;
-}
-function define(tagName, template, logic) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-    console.warn("[boreDOM] define() is not available in production build");
-    return false;
-  }
-  if (!isDebugEnabled("api")) {
-    console.warn("[boreDOM] define() is disabled (debug.api is false)");
-    return false;
-  }
-  if (!currentAppState) {
-    throw new Error("[boreDOM] Cannot define component before inflictBoreDOM()");
-  }
-  if (!tagName.includes("-")) {
-    throw new Error(`[boreDOM] Invalid tag name "${tagName}": must contain a hyphen`);
-  }
-  if (customElements.get(tagName)) {
-    throw new Error(`[boreDOM] Component "${tagName}" is already defined`);
-  }
-  if (!storedWebComponent || !storedRegisterComponent) {
-    throw new Error("[boreDOM] Console API not initialized. Call inflictBoreDOM() first.");
-  }
-  const appState = currentAppState;
-  const webComponentFn = storedWebComponent;
-  const registerComponentFn = storedRegisterComponent;
-  const templateEl = document.createElement("template");
-  templateEl.innerHTML = template;
-  templateEl.setAttribute("data-component", tagName);
-  document.body.appendChild(templateEl);
-  const componentLogic = isWebComponentResult(logic) ? logic : webComponentFn(logic);
-  appState.internal.components.set(tagName, componentLogic);
-  appState.internal.customTags.push(tagName);
-  registerComponentFn(tagName);
-  initializeExistingElements(tagName, componentLogic);
-  if (isDebugEnabled("console")) {
-    console.log(
-      "%c\u2705 boreDOM: Defined %c<%s>",
-      "color: #27ae60; font-weight: bold",
-      "color: #4ecdc4; font-weight: bold",
-      tagName
-    );
-  }
-  return true;
-}
-function initializeExistingElements(tagName, logic) {
-  if (!currentAppState) return;
-  const elements = Array.from(document.querySelectorAll(tagName));
-  const failedCount = { count: 0 };
-  elements.forEach((elem, index) => {
-    if (elem instanceof HTMLElement && "renderCallback" in elem) {
-      try {
-        const detail = { index, name: tagName, data: void 0 };
-        const renderCallback = logic(currentAppState, detail);
-        elem.renderCallback = renderCallback;
-        renderCallback(elem);
-      } catch (error) {
-        failedCount.count++;
-        if (isDebugEnabled("console")) {
-          console.error(
-            `[boreDOM] Failed to initialize <${tagName}> instance ${index}:`,
-            error
-          );
-        }
-      }
-    }
-  });
-  if (failedCount.count > 0 && isDebugEnabled("console")) {
-    console.warn(
-      `[boreDOM] ${failedCount.count} of ${elements.length} <${tagName}> instances failed to initialize`
-    );
-  }
-}
-function operate(selectorOrElement, index = 0) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-    console.warn("[boreDOM] operate() is not available in production build");
-    return void 0;
-  }
-  if (!isDebugEnabled("api")) {
-    console.warn("[boreDOM] operate() is disabled (debug.api is false)");
-    return void 0;
-  }
-  let element = null;
-  if (typeof selectorOrElement === "string") {
-    const elements = Array.from(document.querySelectorAll(selectorOrElement)).filter((el) => el instanceof HTMLElement);
-    element = elements[index] ?? null;
-  } else {
-    element = selectorOrElement;
-  }
-  if (!element) {
-    if (isDebugEnabled("console")) {
-      console.warn(`[boreDOM] operate(): No element found for "${selectorOrElement}"`);
-    }
-    return void 0;
-  }
-  const context = componentContexts.get(element);
-  if (!context) {
-    if (isDebugEnabled("console")) {
-      console.warn(`[boreDOM] operate(): Element is not a boreDOM component or not initialized`);
-    }
-    return void 0;
-  }
-  return context;
-}
-function exportComponent(selector) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-    console.warn("[boreDOM] exportComponent() is not available in production build");
-    return null;
-  }
-  if (!isDebugEnabled("api")) {
-    console.warn("[boreDOM] exportComponent() is disabled (debug.api is false)");
-    return null;
-  }
-  const ctx = operate(selector);
-  if (!ctx) return null;
-  const templateEl = document.querySelector(`template[data-component="${ctx.detail.name}"]`);
-  const templateHtml = templateEl?.innerHTML ?? void 0;
-  try {
-    return {
-      component: ctx.detail.name,
-      state: JSON.parse(JSON.stringify(ctx.state)),
-      template: templateHtml,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    };
-  } catch (e) {
-    if (isDebugEnabled("console")) {
-      console.warn(
-        `[boreDOM] exportComponent: Unable to serialize state for <${ctx.detail.name}>:`,
-        e instanceof Error ? e.message : e
-      );
-    }
-    return {
-      component: ctx.detail.name,
-      state: "[Unable to serialize - contains circular references or functions]",
-      template: templateHtml,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    };
-  }
-}
-var consoleAPI = {
-  define,
-  operate,
-  exportComponent
-};
-
-// src/version.ts
-var VERSION = "0.25.25";
-
 // src/index.ts
+init_debug();
+init_console_api();
+init_inside_out();
+init_llm();
+init_debug();
+init_version();
+init_version();
 var hasLoggedVersion = false;
 var boreDOM = {
   /** Map of all current errors by component name */
@@ -1068,7 +1958,35 @@ var boreDOM = {
   /** Get live access to a component's internals */
   operate: consoleAPI.operate,
   /** Export component state and template */
-  exportComponent: consoleAPI.exportComponent
+  exportComponent: consoleAPI.exportComponent,
+  // Inside-Out API (Phase 3)
+  /** Map of missing function calls by function name */
+  get missingFunctions() {
+    return insideOutAPI.missingFunctions;
+  },
+  /** Most recent missing function context */
+  get lastMissing() {
+    return insideOutAPI.lastMissing;
+  },
+  /** Define a helper function available to all render functions */
+  defineHelper: insideOutAPI.defineHelper,
+  /** Get all defined helpers */
+  get helpers() {
+    return insideOutAPI.helpers;
+  },
+  /** Clear a helper definition */
+  clearHelper: insideOutAPI.clearHelper,
+  /** Clear all missing function records */
+  clearMissingFunctions: insideOutAPI.clearMissingFunctions,
+  /** Map of inferred templates by tag name */
+  get inferredTemplates() {
+    return insideOutAPI.inferredTemplates;
+  },
+  /** Manually infer template for a tag */
+  inferTemplate: insideOutAPI.inferTemplate,
+  // LLM Integration API (Phase 4)
+  /** LLM context and output utilities */
+  llm: llmAPI
 };
 if (typeof window !== "undefined") {
   window.boreDOM = boreDOM;
@@ -1112,6 +2030,7 @@ async function inflictBoreDOM(state, componentsLogic, config) {
   }
   setCurrentAppState(proxifiedState, webComponent, registerComponent);
   runComponentsInitializer(proxifiedState);
+  observeUndefinedElements();
   return proxifiedState.app;
 }
 function webComponent(initFunction) {
@@ -1157,6 +2076,11 @@ function webComponent(initFunction) {
       }
       renderFunction = (renderState) => {
         const componentName = detail?.name ?? c.tagName.toLowerCase();
+        const helpers = createRenderHelpers(
+          componentName,
+          c,
+          () => renderFunction(renderState)
+        );
         if (isDebugEnabled("errorBoundary")) {
           try {
             userDefinedRenderer({
@@ -1167,7 +2091,8 @@ function webComponent(initFunction) {
               detail,
               makeComponent: (tag, opts) => {
                 return createAndRunCode(tag, appState, opts?.detail);
-              }
+              },
+              helpers
             });
             updateSubscribers();
             clearComponentErrorMark(c);
@@ -1204,7 +2129,8 @@ function webComponent(initFunction) {
             detail,
             makeComponent: (tag, opts) => {
               return createAndRunCode(tag, appState, opts?.detail);
-            }
+            },
+            helpers
           });
           updateSubscribers();
         }

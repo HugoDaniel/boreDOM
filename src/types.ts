@@ -31,6 +31,8 @@ export type WebComponentRenderParams<S> = {
     tag: string,
     options?: { detail?: WebComponentDetail },
   ) => Bored;
+  /** Proxy-wrapped helpers - undefined functions are intercepted for inside-out development */
+  helpers: Record<string, Function>;
 };
 
 // A boreDOM component life is made of these functions:
@@ -121,6 +123,16 @@ export type DebugOptions = {
   versionLog?: boolean
   /** Enable console API (define, operate) (default: true) */
   api?: boolean
+  /** Enable method-missing interception via helpers proxy (default: true) */
+  methodMissing?: boolean
+  /** Auto-generate skeleton templates for undefined components (default: true) */
+  templateInference?: boolean
+  /** Strict mode: throw instead of inferring (default: false) */
+  strict?: boolean
+  /** Output format: "human" for formatted console, "llm" for JSON (default: "human") */
+  outputFormat?: "human" | "llm"
+  /** Enable LLM integration API (context, focus, copy) (default: true) */
+  llm?: boolean
 }
 
 /**
@@ -169,4 +181,37 @@ export type ExportedState = {
   timestamp: string
   /** Original error message (for errored components) */
   error: string
+}
+
+/**
+ * Context captured when an undefined function is called via the helpers proxy.
+ * Available via $missingName, $missingArgs, etc. globals and boreDOM.missingFunctions map.
+ */
+export type MissingFunctionContext = {
+  /** The function name that was called */
+  name: string
+  /** Arguments passed to the function */
+  args: any[]
+  /** Component where the call occurred */
+  component: string
+  /** Component DOM element */
+  element: HTMLElement
+  /** When the call occurred */
+  timestamp: number
+  /** Function to define the missing function and re-render */
+  define: (implementation: Function) => void
+}
+
+/**
+ * Inferred template data generated for undefined custom elements.
+ */
+export type InferredTemplate = {
+  /** The custom element tag name */
+  tagName: string
+  /** Generated HTML template string */
+  template: string
+  /** Props inferred from element attributes (kebab-case converted to camelCase) */
+  props: Record<string, any>
+  /** Slot names inferred from child elements */
+  slots: string[]
 }

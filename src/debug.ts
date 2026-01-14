@@ -22,11 +22,19 @@ let debugConfig: DebugOptions = {
   errorHistory: true,
   versionLog: true,
   api: true,
+  methodMissing: true,
+  templateInference: true,
+  strict: false,
+  outputFormat: "human",
+  llm: true,
 }
 
 // Error storage
 const errors = new Map<string, ErrorContext>()
 let lastError: ErrorContext | null = null
+
+/** Boolean-type debug features */
+type BooleanDebugFeature = Exclude<keyof DebugOptions, "outputFormat">
 
 /**
  * Check if a debug feature is enabled.
@@ -42,7 +50,7 @@ let lastError: ErrorContext | null = null
  * }
  * ```
  */
-export function isDebugEnabled(feature: keyof DebugOptions): boolean {
+export function isDebugEnabled(feature: BooleanDebugFeature): boolean {
   // Build-time elimination: if __DEBUG__ is defined and false, always return false
   if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
     // In production build, only error boundary can be enabled
@@ -51,8 +59,13 @@ export function isDebugEnabled(feature: keyof DebugOptions): boolean {
     }
     return false
   }
-  // Runtime config check
-  return debugConfig[feature] ?? true
+  // Runtime config check - all boolean features default to true except strict
+  // Type assertion is safe because BooleanDebugFeature excludes outputFormat
+  const value = debugConfig[feature] as boolean | undefined
+  if (feature === "strict") {
+    return value ?? false
+  }
+  return value ?? true
 }
 
 /**
@@ -85,6 +98,11 @@ export function setDebugConfig(config: boolean | DebugOptions): void {
       errorHistory: enabled,
       versionLog: enabled,
       api: enabled,
+      methodMissing: enabled,
+      templateInference: enabled,
+      strict: false, // Strict mode only enabled explicitly
+      outputFormat: "human", // Always human format by default
+      llm: enabled, // LLM API follows debug mode
     }
   } else {
     debugConfig = { ...debugConfig, ...config }
@@ -152,7 +170,7 @@ export function clearGlobals(): void {
 
 /**
  * Log error with full debug context to console.
- * Uses styled console output for better visibility.
+ * Uses styled console output for better visibility, or JSON for LLM mode.
  *
  * @param ctx - The error context to log
  */
@@ -161,6 +179,16 @@ export function logError<S>(ctx: ErrorContext<S>): void {
   if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return
   if (!isDebugEnabled("console")) return
 
+  // LLM output mode: single-line JSON
+  if (debugConfig.outputFormat === "llm") {
+    // Import is dynamic to avoid circular dependency at module load time
+    import("./llm").then(({ formatErrorForLLM }) => {
+      console.log(formatErrorForLLM(ctx))
+    })
+    return
+  }
+
+  // Human output mode: styled console
   // Header
   console.log(
     "%c🔴 boreDOM: Error in %c<%s>%c render",

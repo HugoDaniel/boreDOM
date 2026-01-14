@@ -25,6 +25,8 @@ export type WebComponentRenderParams<S> = {
 	makeComponent: (tag: string, options?: {
 		detail?: WebComponentDetail;
 	}) => Bored;
+	/** Proxy-wrapped helpers - undefined functions are intercepted for inside-out development */
+	helpers: Record<string, Function>;
 };
 /** The function returned by `webComponent`, used to create subscribers and call the initialize function */
 export type LoadedFunction = ReturnType<typeof webComponent>;
@@ -70,6 +72,16 @@ export type DebugOptions = {
 	versionLog?: boolean;
 	/** Enable console API (define, operate) (default: true) */
 	api?: boolean;
+	/** Enable method-missing interception via helpers proxy (default: true) */
+	methodMissing?: boolean;
+	/** Auto-generate skeleton templates for undefined components (default: true) */
+	templateInference?: boolean;
+	/** Strict mode: throw instead of inferring (default: false) */
+	strict?: boolean;
+	/** Output format: "human" for formatted console, "llm" for JSON (default: "human") */
+	outputFormat?: "human" | "llm";
+	/** Enable LLM integration API (context, focus, copy) (default: true) */
+	llm?: boolean;
 };
 /**
  * Configuration options for inflictBoreDOM.
@@ -117,6 +129,37 @@ export type ExportedState = {
 	error: string;
 };
 /**
+ * Context captured when an undefined function is called via the helpers proxy.
+ * Available via $missingName, $missingArgs, etc. globals and boreDOM.missingFunctions map.
+ */
+export type MissingFunctionContext = {
+	/** The function name that was called */
+	name: string;
+	/** Arguments passed to the function */
+	args: any[];
+	/** Component where the call occurred */
+	component: string;
+	/** Component DOM element */
+	element: HTMLElement;
+	/** When the call occurred */
+	timestamp: number;
+	/** Function to define the missing function and re-render */
+	define: (implementation: Function) => void;
+};
+/**
+ * Inferred template data generated for undefined custom elements.
+ */
+export type InferredTemplate = {
+	/** The custom element tag name */
+	tagName: string;
+	/** Generated HTML template string */
+	template: string;
+	/** Props inferred from element attributes (kebab-case converted to camelCase) */
+	props: Record<string, any>;
+	/** Slot names inferred from child elements */
+	slots: string[];
+};
+/**
  * Queries for the component tag name in the DOM. Throws error if not found.
  */
 /**
@@ -140,6 +183,8 @@ declare abstract class Bored extends HTMLElement {
  * @param tagName - The custom element tag name to register
  */
 export declare const registerComponent: (tagName: string) => void;
+/** Boolean-type debug features */
+export type BooleanDebugFeature = Exclude<keyof DebugOptions, "outputFormat">;
 /**
  * Check if a debug feature is enabled.
  * Respects both build-time __DEBUG__ flag and runtime config.
@@ -154,7 +199,7 @@ export declare const registerComponent: (tagName: string) => void;
  * }
  * ```
  */
-export declare function isDebugEnabled(feature: keyof DebugOptions): boolean;
+export declare function isDebugEnabled(feature: BooleanDebugFeature): boolean;
 /**
  * Set debug configuration.
  * Can be called with boolean (enable/disable all) or granular options.
@@ -216,6 +261,169 @@ export interface ExportedComponent {
 declare function define<S>(tagName: string, template: string, logic: InitFunction<S> | ((appState: AppState<S>, detail?: any) => (c: any) => void)): boolean;
 declare function operate<S = any>(selectorOrElement: string | HTMLElement, index?: number): ComponentContext<S> | undefined;
 declare function exportComponent(selector: string): ExportedComponent | null;
+declare function defineHelper(name: string, implementation: Function): void;
+declare function clearHelper(name: string): void;
+declare function clearMissingFunctions(): void;
+declare function inferTemplate(tagName: string, element?: HTMLElement): InferredTemplate | null;
+/**
+ * Component information for LLM context.
+ */
+export interface LLMComponentInfo {
+	/** Component tag name */
+	tagName: string;
+	/** HTML template string */
+	template: string | null;
+	/** Whether component has logic attached */
+	hasLogic: boolean;
+	/** Named refs in the component */
+	refs: string[];
+	/** Named slots in the component */
+	slots: string[];
+	/** Event handlers registered */
+	events: string[];
+	/** State paths this component accesses */
+	stateAccess: string[];
+	/** Whether component is in error state */
+	hasError: boolean;
+	/** Number of instances in DOM */
+	instanceCount: number;
+}
+/**
+ * Error information for LLM context.
+ */
+export interface LLMErrorInfo {
+	/** Component tag name */
+	component: string;
+	/** Error message */
+	error: string;
+	/** Stack trace */
+	stack: string;
+	/** State at time of error */
+	state: any;
+	/** When error occurred */
+	timestamp: number;
+}
+/**
+ * Missing function information for LLM context.
+ */
+export interface LLMMissingFunctionInfo {
+	/** Function name */
+	name: string;
+	/** Arguments passed */
+	args: any[];
+	/** Component where called */
+	component: string;
+	/** Inferred function signature */
+	inferredSignature: string;
+	/** Number of times called */
+	callCount: number;
+}
+/**
+ * Information about a missing function's calls.
+ */
+export interface LLMMissingCallInfo {
+	/** All argument sets passed */
+	args: any[][];
+	/** Components that called this function */
+	components: string[];
+	/** Last call timestamp */
+	lastCall: number;
+}
+/**
+ * Detected patterns in the codebase.
+ */
+export interface LLMPatternInfo {
+	/** Event naming convention */
+	eventNaming: "kebab-case" | "camelCase" | "mixed" | "unknown";
+	/** State structure style */
+	stateStructure: "flat" | "nested" | "mixed" | "unknown";
+	/** Component naming pattern */
+	componentNaming: string;
+}
+/**
+ * Attempt tracking for LLM workflow.
+ */
+export interface LLMAttemptInfo {
+	/** Code that was attempted */
+	code: string;
+	/** Result of the attempt */
+	result: "success" | "error";
+	/** Error message if failed */
+	error?: string;
+	/** When attempt was made */
+	timestamp: number;
+}
+/**
+ * Example code for LLM context.
+ */
+export interface LLMExampleInfo {
+	/** Description of what the example shows */
+	description: string;
+	/** The code */
+	code: string;
+}
+/**
+ * Complete session context for LLM consumption.
+ */
+export interface LLMContext {
+	/** Framework identification */
+	framework: {
+		name: "boreDOM";
+		version: string;
+		capabilities: string[];
+	};
+	/** Application state info */
+	state: {
+		/** Inferred TypeScript interface */
+		shape: string;
+		/** All state paths */
+		paths: string[];
+		/** Sanitized sample data */
+		sample: any;
+	};
+	/** Registered components */
+	components: Record<string, LLMComponentInfo>;
+	/** Current issues */
+	issues: {
+		errors: LLMErrorInfo[];
+		missingFunctions: LLMMissingFunctionInfo[];
+		missingComponents: string[];
+	};
+	/** Helper functions */
+	helpers: {
+		defined: Record<string, string>;
+		missing: Record<string, LLMMissingCallInfo>;
+	};
+	/** Detected patterns */
+	patterns: LLMPatternInfo;
+}
+/**
+ * Focused context for current issue.
+ */
+export interface LLMFocusedContext {
+	/** Current issue description */
+	issue: {
+		type: "error" | "missing_function" | "missing_component" | "none";
+		description: string;
+		component?: string;
+		suggestion?: string;
+	};
+	/** Relevant component info */
+	component?: LLMComponentInfo & {
+		currentState: any;
+	};
+	/** Only state relevant to the issue */
+	relevantState: any;
+	/** Previous fix attempts */
+	previousAttempts?: LLMAttemptInfo[];
+	/** Similar working examples */
+	examples?: LLMExampleInfo[];
+}
+declare function context$1(): LLMContext;
+declare function focus$1(): LLMFocusedContext;
+declare function copy(): string;
+declare function recordAttempt(code: string, result: "success" | "error", error?: string): void;
+declare function clearAttempts(): void;
 /**
  * Global boreDOM object for debugging and programmatic access.
  * Exposed on window.boreDOM when running in browser.
@@ -246,6 +454,31 @@ export declare const boreDOM: {
 	operate: typeof operate;
 	/** Export component state and template */
 	exportComponent: typeof exportComponent;
+	/** Map of missing function calls by function name */
+	readonly missingFunctions: Map<string, MissingFunctionContext[]>;
+	/** Most recent missing function context */
+	readonly lastMissing: MissingFunctionContext | null;
+	/** Define a helper function available to all render functions */
+	defineHelper: typeof defineHelper;
+	/** Get all defined helpers */
+	readonly helpers: Map<string, Function>;
+	/** Clear a helper definition */
+	clearHelper: typeof clearHelper;
+	/** Clear all missing function records */
+	clearMissingFunctions: typeof clearMissingFunctions;
+	/** Map of inferred templates by tag name */
+	readonly inferredTemplates: Map<string, InferredTemplate>;
+	/** Manually infer template for a tag */
+	inferTemplate: typeof inferTemplate;
+	/** LLM context and output utilities */
+	llm: {
+		context: typeof context$1;
+		focus: typeof focus$1;
+		copy: typeof copy;
+		readonly attempts: LLMAttemptInfo[];
+		clearAttempts: typeof clearAttempts;
+		_recordAttempt: typeof recordAttempt;
+	};
 };
 /**
  * Queries all `<template>` elements that
