@@ -103,6 +103,20 @@ export type ErrorContext<S = any> = {
 	stack: string;
 };
 /**
+ * Exported state snapshot returned by boreDOM.export().
+ * Contains JSON-serializable component state for debugging.
+ */
+export type ExportedState = {
+	/** Component tag name */
+	component: string;
+	/** JSON-serializable state snapshot, or error message if serialization failed */
+	state: any;
+	/** ISO timestamp of export */
+	timestamp: string;
+	/** Original error message (for errored components) */
+	error: string;
+};
+/**
  * Queries for the component tag name in the DOM. Throws error if not found.
  */
 /**
@@ -165,7 +179,7 @@ export declare function setDebugConfig(config: boolean | DebugOptions): void;
  * Clear debug globals from window.
  */
 export declare function clearGlobals(): void;
-declare function exportState(tagName?: string): object | null;
+declare function exportState(tagName?: string): ExportedState | null;
 export declare const VERSION = "0.25.25";
 /**
  * Context for a running component, accessible via operate()
@@ -199,7 +213,7 @@ export interface ExportedComponent {
 	/** Error message if component errored */
 	error?: string;
 }
-declare function define<S>(tagName: string, template: string, logic: InitFunction<S> | ((appState: AppState<S>, detail?: any) => (c: any) => void)): void;
+declare function define<S>(tagName: string, template: string, logic: InitFunction<S> | ((appState: AppState<S>, detail?: any) => (c: any) => void)): boolean;
 declare function operate<S = any>(selectorOrElement: string | HTMLElement, index?: number): ComponentContext<S> | undefined;
 declare function exportComponent(selector: string): ExportedComponent | null;
 /**

@@ -790,6 +790,8 @@ function storeError(ctx) {
   lastError = ctx;
 }
 function clearError(component2) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("errorHistory")) return;
   if (component2) {
     errors.delete(component2);
     if (lastError?.component === component2) {
@@ -819,6 +821,12 @@ function exportState(tagName) {
       error: ctx.error.message
     };
   } catch (e) {
+    if (isDebugEnabled("console")) {
+      console.warn(
+        `[boreDOM] exportState: Unable to serialize state for <${ctx.component}>:`,
+        e instanceof Error ? e.message : e
+      );
+    }
     return {
       component: ctx.component,
       state: "[Unable to serialize - contains circular references or functions]",
@@ -852,6 +860,10 @@ var debugAPI = {
       clearComponentErrorMark(ctx.element);
       clearError(tagName);
       clearGlobals();
+    } else if (isDebugEnabled("console")) {
+      console.warn(
+        tagName ? `[boreDOM] clearError: No error found for <${tagName}>` : "[boreDOM] clearError: No error to clear"
+      );
     }
   },
   /** Export state snapshot */
@@ -884,11 +896,11 @@ function isWebComponentResult(fn) {
 function define(tagName, template, logic) {
   if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
     console.warn("[boreDOM] define() is not available in production build");
-    return;
+    return false;
   }
   if (!isDebugEnabled("api")) {
     console.warn("[boreDOM] define() is disabled (debug.api is false)");
-    return;
+    return false;
   }
   if (!currentAppState) {
     throw new Error("[boreDOM] Cannot define component before inflictBoreDOM()");
@@ -902,14 +914,17 @@ function define(tagName, template, logic) {
   if (!storedWebComponent || !storedRegisterComponent) {
     throw new Error("[boreDOM] Console API not initialized. Call inflictBoreDOM() first.");
   }
+  const appState = currentAppState;
+  const webComponentFn = storedWebComponent;
+  const registerComponentFn = storedRegisterComponent;
   const templateEl = document.createElement("template");
   templateEl.innerHTML = template;
   templateEl.setAttribute("data-component", tagName);
   document.body.appendChild(templateEl);
-  const componentLogic = isWebComponentResult(logic) ? logic : storedWebComponent(logic);
-  currentAppState.internal.components.set(tagName, componentLogic);
-  currentAppState.internal.customTags.push(tagName);
-  storedRegisterComponent(tagName);
+  const componentLogic = isWebComponentResult(logic) ? logic : webComponentFn(logic);
+  appState.internal.components.set(tagName, componentLogic);
+  appState.internal.customTags.push(tagName);
+  registerComponentFn(tagName);
   initializeExistingElements(tagName, componentLogic);
   if (isDebugEnabled("console")) {
     console.log(
@@ -919,22 +934,45 @@ function define(tagName, template, logic) {
       tagName
     );
   }
+  return true;
 }
 function initializeExistingElements(tagName, logic) {
   if (!currentAppState) return;
   const elements = Array.from(document.querySelectorAll(tagName));
+  const failedCount = { count: 0 };
   elements.forEach((elem, index) => {
     if (elem instanceof HTMLElement && "renderCallback" in elem) {
-      const detail = { index, name: tagName, data: void 0 };
-      const renderCallback = logic(currentAppState, detail);
-      elem.renderCallback = renderCallback;
-      renderCallback(elem);
+      try {
+        const detail = { index, name: tagName, data: void 0 };
+        const renderCallback = logic(currentAppState, detail);
+        elem.renderCallback = renderCallback;
+        renderCallback(elem);
+      } catch (error) {
+        failedCount.count++;
+        if (isDebugEnabled("console")) {
+          console.error(
+            `[boreDOM] Failed to initialize <${tagName}> instance ${index}:`,
+            error
+          );
+        }
+      }
     }
   });
+  if (failedCount.count > 0 && isDebugEnabled("console")) {
+    console.warn(
+      `[boreDOM] ${failedCount.count} of ${elements.length} <${tagName}> instances failed to initialize`
+    );
+  }
 }
 function operate(selectorOrElement, index = 0) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return void 0;
-  if (!isDebugEnabled("api")) return void 0;
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    console.warn("[boreDOM] operate() is not available in production build");
+    return void 0;
+  }
+  if (!isDebugEnabled("api")) {
+    console.warn("[boreDOM] operate() is disabled (debug.api is false)");
+    return void 0;
+  }
   let element = null;
   if (typeof selectorOrElement === "string") {
     const elements = Array.from(document.querySelectorAll(selectorOrElement)).filter((el) => el instanceof HTMLElement);
@@ -958,8 +996,14 @@ function operate(selectorOrElement, index = 0) {
   return context;
 }
 function exportComponent(selector) {
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return null;
-  if (!isDebugEnabled("api")) return null;
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    console.warn("[boreDOM] exportComponent() is not available in production build");
+    return null;
+  }
+  if (!isDebugEnabled("api")) {
+    console.warn("[boreDOM] exportComponent() is disabled (debug.api is false)");
+    return null;
+  }
   const ctx = operate(selector);
   if (!ctx) return null;
   const templateEl = document.querySelector(`template[data-component="${ctx.detail.name}"]`);
@@ -972,6 +1016,12 @@ function exportComponent(selector) {
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     };
   } catch (e) {
+    if (isDebugEnabled("console")) {
+      console.warn(
+        `[boreDOM] exportComponent: Unable to serialize state for <${ctx.detail.name}>:`,
+        e instanceof Error ? e.message : e
+      );
+    }
     return {
       component: ctx.detail.name,
       state: "[Unable to serialize - contains circular references or functions]",

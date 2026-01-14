@@ -32,9 +32,11 @@ function captureConsole() {
   const logs: any[][] = [];
   const errors: any[][] = [];
   const infos: any[][] = [];
+  const warns: any[][] = [];
   const originalLog = console.log;
   const originalError = console.error;
   const originalInfo = console.info;
+  const originalWarn = console.warn;
 
   console.log = (...args: any[]) => {
     logs.push(args);
@@ -45,15 +47,20 @@ function captureConsole() {
   console.info = (...args: any[]) => {
     infos.push(args);
   };
+  console.warn = (...args: any[]) => {
+    warns.push(args);
+  };
 
   return {
     logs,
     errors,
     infos,
+    warns,
     restore: () => {
       console.log = originalLog;
       console.error = originalError;
       console.info = originalInfo;
+      console.warn = originalWarn;
     },
   };
 }
@@ -1035,6 +1042,52 @@ export default function () {
 
         // Error should have been thrown (not caught)
         expect(errorThrown).to.be.true;
+      });
+    });
+
+    describe("Serialization Error Logging (code review fixes)", () => {
+      it("boreDOM.export() should warn when serialization fails", async () => {
+        const container = await renderHTMLFrame(`
+          <export-serialize-warn-test></export-serialize-warn-test>
+
+          <template data-component="export-serialize-warn-test">
+            <p>Serialize test</p>
+          </template>
+        `);
+
+        // Create state with circular reference
+        const circularState: any = { name: "circular" };
+        circularState.self = circularState;
+
+        const capture = captureConsole();
+
+        await inflictBoreDOM(circularState, {
+          "export-serialize-warn-test": webComponent(() => {
+            return ({ state }: any) => {
+              // Throw error so it gets stored in errors map
+              throw new Error("Serialization test error");
+            };
+          }),
+        });
+
+        // Now export should try to serialize the circular state
+        const exported = boreDOM.export("export-serialize-warn-test");
+
+        capture.restore();
+
+        expect(exported).to.not.be.null;
+        // State should indicate serialization issue
+        expect((exported as any).state).to.be.a("string");
+        expect((exported as any).state).to.include("circular");
+
+        // Should have warned about serialization failure
+        const warnLogs = capture.warns.filter(
+          (w) => w[0]?.includes?.("serialize") || w[0]?.includes?.("Unable")
+        );
+        expect(warnLogs.length).to.be.greaterThan(0);
+
+        // Clean up globals
+        clearWindowGlobals();
       });
     });
   });

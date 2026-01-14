@@ -155,3 +155,18 @@ export type ErrorContext<S = any> = {
   /** Cleaned stack trace */
   stack: string
 }
+
+/**
+ * Exported state snapshot returned by boreDOM.export().
+ * Contains JSON-serializable component state for debugging.
+ */
+export type ExportedState = {
+  /** Component tag name */
+  component: string
+  /** JSON-serializable state snapshot, or error message if serialization failed */
+  state: any
+  /** ISO timestamp of export */
+  timestamp: string
+  /** Original error message (for errored components) */
+  error: string
+}

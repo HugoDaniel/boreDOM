@@ -133,31 +133,33 @@ function isWebComponentResult(fn: any): boolean {
  * @param tagName - Custom element tag name (must contain hyphen)
  * @param template - HTML template string
  * @param logic - Init function or webComponent() result
+ * @returns true if component was successfully defined, false if disabled/unavailable
  * @throws If called before inflictBoreDOM() or tag already exists
  *
  * @example
  * ```ts
- * boreDOM.define('hello-world',
+ * const success = boreDOM.define('hello-world',
  *   '<p data-slot="msg">Loading...</p>',
  *   ({ state }) => ({ slots }) => {
  *     slots.msg = state?.greeting || 'Hello!';
  *   }
  * );
+ * if (!success) console.log('Define failed or unavailable');
  * ```
  */
 export function define<S>(
   tagName: string,
   template: string,
   logic: InitFunction<S> | ((appState: AppState<S>, detail?: any) => (c: any) => void)
-): void {
+): boolean {
   // Build-time elimination
   if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
     console.warn("[boreDOM] define() is not available in production build")
-    return
+    return false
   }
   if (!isDebugEnabled("api")) {
     console.warn("[boreDOM] define() is disabled (debug.api is false)")
-    return
+    return false
   }
 
   // Validation
@@ -176,6 +178,11 @@ export function define<S>(
     throw new Error("[boreDOM] Console API not initialized. Call inflictBoreDOM() first.")
   }
 
+  // Store validated references to avoid non-null assertions
+  const appState = currentAppState
+  const webComponentFn = storedWebComponent
+  const registerComponentFn = storedRegisterComponent
+
   // Create template element and append to document
   const templateEl = document.createElement("template")
   templateEl.innerHTML = template
@@ -185,14 +192,14 @@ export function define<S>(
   // Normalize logic: if raw function (1 arg), wrap with webComponent
   const componentLogic = isWebComponentResult(logic)
     ? logic as (appState: AppState<S>, detail?: any) => (c: any) => void
-    : storedWebComponent(logic as InitFunction<S | undefined>)
+    : webComponentFn(logic as InitFunction<S | undefined>)
 
   // Register in component map
-  currentAppState!.internal.components.set(tagName, componentLogic as any)
-  currentAppState!.internal.customTags.push(tagName)
+  appState.internal.components.set(tagName, componentLogic as any)
+  appState.internal.customTags.push(tagName)
 
   // Register the custom element
-  storedRegisterComponent(tagName)
+  registerComponentFn(tagName)
 
   // Initialize any existing elements in DOM
   initializeExistingElements(tagName, componentLogic)
@@ -205,10 +212,13 @@ export function define<S>(
       tagName
     )
   }
+
+  return true
 }
 
 /**
  * Initialize any existing elements of the defined component in the DOM.
+ * Each element is wrapped in try-catch to prevent one failure from stopping others.
  */
 function initializeExistingElements<S>(
   tagName: string,
@@ -217,14 +227,32 @@ function initializeExistingElements<S>(
   if (!currentAppState) return
 
   const elements = Array.from(document.querySelectorAll(tagName))
+  const failedCount = { count: 0 }
+
   elements.forEach((elem, index) => {
     if (elem instanceof HTMLElement && "renderCallback" in elem) {
-      const detail: WebComponentDetail = { index, name: tagName, data: undefined }
-      const renderCallback = logic(currentAppState as AppState<S>, detail)
-      ;(elem as any).renderCallback = renderCallback
-      renderCallback(elem as any)
+      try {
+        const detail: WebComponentDetail = { index, name: tagName, data: undefined }
+        const renderCallback = logic(currentAppState as AppState<S>, detail)
+        ;(elem as any).renderCallback = renderCallback
+        renderCallback(elem as any)
+      } catch (error) {
+        failedCount.count++
+        if (isDebugEnabled("console")) {
+          console.error(
+            `[boreDOM] Failed to initialize <${tagName}> instance ${index}:`,
+            error
+          )
+        }
+      }
     }
   })
+
+  if (failedCount.count > 0 && isDebugEnabled("console")) {
+    console.warn(
+      `[boreDOM] ${failedCount.count} of ${elements.length} <${tagName}> instances failed to initialize`
+    )
+  }
 }
 
 /**
@@ -246,8 +274,14 @@ export function operate<S = any>(
   index: number = 0
 ): ComponentContext<S> | undefined {
   // Build-time elimination
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return undefined
-  if (!isDebugEnabled("api")) return undefined
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    console.warn("[boreDOM] operate() is not available in production build")
+    return undefined
+  }
+  if (!isDebugEnabled("api")) {
+    console.warn("[boreDOM] operate() is disabled (debug.api is false)")
+    return undefined
+  }
 
   let element: HTMLElement | null = null
 
@@ -286,8 +320,14 @@ export function operate<S = any>(
  */
 export function exportComponent(selector: string): ExportedComponent | null {
   // Build-time elimination for enhanced export
-  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return null
-  if (!isDebugEnabled("api")) return null
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    console.warn("[boreDOM] exportComponent() is not available in production build")
+    return null
+  }
+  if (!isDebugEnabled("api")) {
+    console.warn("[boreDOM] exportComponent() is disabled (debug.api is false)")
+    return null
+  }
 
   const ctx = operate(selector)
   if (!ctx) return null
@@ -304,6 +344,12 @@ export function exportComponent(selector: string): ExportedComponent | null {
       timestamp: new Date().toISOString(),
     }
   } catch (e) {
+    if (isDebugEnabled("console")) {
+      console.warn(
+        `[boreDOM] exportComponent: Unable to serialize state for <${ctx.detail.name}>:`,
+        e instanceof Error ? e.message : e
+      )
+    }
     return {
       component: ctx.detail.name,
       state: "[Unable to serialize - contains circular references or functions]",

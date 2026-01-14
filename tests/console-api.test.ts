@@ -558,5 +558,155 @@ export default function () {
         expect(isDebugEnabled("console")).to.be.true;
       });
     });
+
+    describe("Error handling improvements (code review fixes)", () => {
+      it("define() should return true on success", async () => {
+        await renderHTMLFrame(`<p>Test</p>`);
+        await inflictBoreDOM({ value: "test" });
+
+        const result = boreDOM.define(
+          "define-return-test",
+          "<p>Test</p>",
+          () => () => {}
+        );
+
+        expect(result).to.equal(true);
+      });
+
+      it("define() should return false when api disabled", async () => {
+        await renderHTMLFrame(`<p>Test</p>`);
+        await inflictBoreDOM(undefined, undefined, { debug: { api: false } });
+
+        const capture = captureConsole();
+        const result = boreDOM.define(
+          "define-disabled-return",
+          "<p>Test</p>",
+          () => () => {}
+        );
+        capture.restore();
+
+        expect(result).to.equal(false);
+        // Should have warned
+        const warnLogs = capture.warns.filter(
+          (w) => w[0]?.includes?.("disabled") || w[0]?.includes?.("api")
+        );
+        expect(warnLogs.length).to.be.greaterThan(0);
+      });
+
+      it("operate() should warn when api disabled", async () => {
+        const container = await renderHTMLFrame(`
+          <operate-warn-test></operate-warn-test>
+
+          <template data-component="operate-warn-test">
+            <p>Warn test</p>
+          </template>
+        `);
+
+        await inflictBoreDOM({ value: "test" }, {
+          "operate-warn-test": webComponent(() => () => {}),
+        }, { debug: { api: false } });
+
+        const capture = captureConsole();
+        const ctx = boreDOM.operate("operate-warn-test");
+        capture.restore();
+
+        expect(ctx).to.be.undefined;
+        // Should have warned about disabled API
+        const warnLogs = capture.warns.filter(
+          (w) => w[0]?.includes?.("disabled") || w[0]?.includes?.("api")
+        );
+        expect(warnLogs.length).to.be.greaterThan(0);
+      });
+
+      it("exportComponent() should warn when api disabled", async () => {
+        const container = await renderHTMLFrame(`
+          <export-warn-test></export-warn-test>
+
+          <template data-component="export-warn-test">
+            <p>Export warn test</p>
+          </template>
+        `);
+
+        await inflictBoreDOM({ value: "test" }, {
+          "export-warn-test": webComponent(() => () => {}),
+        }, { debug: { api: false } });
+
+        const capture = captureConsole();
+        const exported = boreDOM.exportComponent("export-warn-test");
+        capture.restore();
+
+        expect(exported).to.be.null;
+        // Should have warned about disabled API
+        const warnLogs = capture.warns.filter(
+          (w) => w[0]?.includes?.("disabled") || w[0]?.includes?.("api")
+        );
+        expect(warnLogs.length).to.be.greaterThan(0);
+      });
+
+      it("exportComponent() should warn when serialization fails", async () => {
+        const container = await renderHTMLFrame(`
+          <export-serialize-warn></export-serialize-warn>
+
+          <template data-component="export-serialize-warn">
+            <p>Serialize warn test</p>
+          </template>
+        `);
+
+        // Create state with circular reference
+        const circularState: any = { name: "circular" };
+        circularState.self = circularState;
+
+        await inflictBoreDOM(circularState, {
+          "export-serialize-warn": webComponent(() => () => {}),
+        });
+
+        const capture = captureConsole();
+        const exported = boreDOM.exportComponent("export-serialize-warn");
+        capture.restore();
+
+        expect(exported).to.not.be.null;
+        // Should have warned about serialization failure
+        const warnLogs = capture.warns.filter(
+          (w) => w[0]?.includes?.("serialize") || w[0]?.includes?.("Unable")
+        );
+        expect(warnLogs.length).to.be.greaterThan(0);
+      });
+
+      it("clearError() should warn when component not found", async () => {
+        await renderHTMLFrame(`<p>Test</p>`);
+        await inflictBoreDOM();
+
+        const capture = captureConsole();
+        boreDOM.clearError("non-existent-component");
+        capture.restore();
+
+        // Should have warned about no error found
+        const warnLogs = capture.warns.filter(
+          (w) => w[0]?.includes?.("No error found") || w[0]?.includes?.("clearError")
+        );
+        expect(warnLogs.length).to.be.greaterThan(0);
+      });
+
+      it("clearError() should warn when no error to clear", async () => {
+        await renderHTMLFrame(`<p>Test</p>`);
+        await inflictBoreDOM();
+
+        // Make sure there's no lastError
+        const errorKeys = [...boreDOM.errors.keys()];
+        for (const tagName of errorKeys) {
+          boreDOM.errors.delete(tagName);
+        }
+
+        const capture = captureConsole();
+        boreDOM.clearError(); // No argument - should try to clear lastError
+        capture.restore();
+
+        // Should have warned about no error to clear
+        const warnLogs = capture.warns.filter(
+          (w) => w[0]?.includes?.("No error") || w[0]?.includes?.("clearError")
+        );
+        expect(warnLogs.length).to.be.greaterThan(0);
+      });
+    });
   });
 }

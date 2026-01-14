@@ -8,7 +8,7 @@
  * - Enable build-time elimination of debug code via __DEBUG__ flag
  */
 
-import type { DebugOptions, ErrorContext } from "./types"
+import type { DebugOptions, ErrorContext, ExportedState } from "./types"
 
 // Build-time flag (replaced by esbuild in prod builds with --define:__DEBUG__=false)
 declare const __DEBUG__: boolean
@@ -242,6 +242,10 @@ export function storeError<S>(ctx: ErrorContext<S>): void {
  * @param component - Optional component tag name. If omitted, clears the last error.
  */
 export function clearError(component?: string): void {
+  // Build-time elimination
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return
+  if (!isDebugEnabled("errorHistory")) return
+
   if (component) {
     errors.delete(component)
     if (lastError?.component === component) {
@@ -292,7 +296,7 @@ export function clearComponentErrorMark(element: HTMLElement): void {
  * // }
  * ```
  */
-export function exportState(tagName?: string): object | null {
+export function exportState(tagName?: string): ExportedState | null {
   const ctx = tagName ? errors.get(tagName) : lastError
   if (!ctx) return null
 
@@ -305,6 +309,12 @@ export function exportState(tagName?: string): object | null {
     }
   } catch (e) {
     // State might have circular references or non-serializable values
+    if (isDebugEnabled("console")) {
+      console.warn(
+        `[boreDOM] exportState: Unable to serialize state for <${ctx.component}>:`,
+        e instanceof Error ? e.message : e
+      )
+    }
     return {
       component: ctx.component,
       state: "[Unable to serialize - contains circular references or functions]",
@@ -360,6 +370,12 @@ export const debugAPI = {
       clearComponentErrorMark(ctx.element)
       clearError(tagName)
       clearGlobals()
+    } else if (isDebugEnabled("console")) {
+      console.warn(
+        tagName
+          ? `[boreDOM] clearError: No error found for <${tagName}>`
+          : "[boreDOM] clearError: No error to clear"
+      )
     }
   },
 
