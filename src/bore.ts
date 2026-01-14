@@ -1,6 +1,12 @@
 /**
  * bore.ts — state and component runtime utilities
  *
+ * Build-time flag for debug elimination in production builds.
+ * When __DEBUG__ is false (prod build), all debug code is tree-shaken.
+ */
+declare const __DEBUG__: boolean;
+
+/**
  * Responsibilities:
  * - Provide per-instance event scoping for custom events
  * - Expose refs/slots accessors for component templates
@@ -19,6 +25,7 @@ import {
 import { access } from "./utils/access";
 import { flatten } from "./utils/flatten";
 import { isPOJO } from "./utils/isPojo";
+import { trackStateAccess } from "./type-inference";
 
 /**
  * Called during initialization. This function sets
@@ -294,6 +301,14 @@ export function createStateAccessor<S>(
       }
       current.path.length = 0;
       current.path.push(path);
+
+      // Track state access for type inference (Phase 5)
+      if (typeof __DEBUG__ === "undefined" || __DEBUG__) {
+        if (typeof path === "string" && path !== "") {
+          trackStateAccess(path, value);
+        }
+      }
+
       return value;
     },
   });

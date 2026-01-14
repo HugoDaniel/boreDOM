@@ -13,6 +13,7 @@ import { isDebugEnabled, getDebugConfig, debugAPI } from "./debug"
 import { getCurrentAppState } from "./console-api"
 import { insideOutAPI } from "./inside-out"
 import { VERSION } from "./version"
+import { inferTypes, typeOf, clearTypeTracking } from "./type-inference"
 
 // Build-time flag (replaced by esbuild in prod builds with --define:__DEBUG__=false)
 declare const __DEBUG__: boolean
@@ -959,4 +960,11 @@ export const llmAPI = {
   clearAttempts,
   /** @internal Record an attempt */
   _recordAttempt: recordAttempt,
+  // Type inference (Phase 5)
+  /** Infer TypeScript types from runtime usage */
+  inferTypes,
+  /** Get inferred type for a specific path */
+  typeOf,
+  /** Clear type tracking data (for testing) */
+  _clearTypes: clearTypeTracking,
 }

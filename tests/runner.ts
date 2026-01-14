@@ -6,6 +6,7 @@ import debugTests from "./debug.test";
 import consoleApiTests from "./console-api.test";
 import insideOutTests from "./inside-out.test";
 import llmTests from "./llm.test";
+import typeInferenceTests from "./type-inference.test";
 
 mocha.setup("bdd");
 
@@ -22,6 +23,7 @@ debugTests();
 consoleApiTests();
 insideOutTests();
 llmTests();
+typeInferenceTests();
 
 mocha.checkLeaks();
 mocha.run();
