@@ -863,6 +863,7 @@ var debugAPI = {
 };
 
 // src/console-api.ts
+var WEB_COMPONENT_MARKER = Symbol("boreDOM.webComponent");
 var currentAppState = null;
 var storedWebComponent = null;
 var storedRegisterComponent = null;
@@ -878,7 +879,7 @@ function storeComponentContext(element, context) {
   componentContexts.set(element, context);
 }
 function isWebComponentResult(fn) {
-  return typeof fn === "function" && fn.length === 2;
+  return typeof fn === "function" && fn[WEB_COMPONENT_MARKER] === true;
 }
 function define(tagName, template, logic) {
   if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
@@ -1066,7 +1067,7 @@ async function inflictBoreDOM(state, componentsLogic, config) {
 function webComponent(initFunction) {
   let isInitialized = null;
   let renderFunction;
-  return (appState, detail) => (c) => {
+  const result = (appState, detail) => (c) => {
     const { internal, app } = appState;
     let log = [];
     const state = createStateAccessor(app, log);
@@ -1170,6 +1171,8 @@ function webComponent(initFunction) {
     renderFunction(state);
     isInitialized = c;
   };
+  result[WEB_COMPONENT_MARKER] = true;
+  return result;
 }
 export {
   VERSION,

@@ -20,6 +20,13 @@ import { isDebugEnabled } from "./debug"
 // Build-time flag (replaced by esbuild in prod builds with --define:__DEBUG__=false)
 declare const __DEBUG__: boolean
 
+/**
+ * Symbol marker to identify functions created by webComponent().
+ * Used to distinguish webComponent results from raw InitFunctions.
+ * Exported for use by index.ts when marking webComponent results.
+ */
+export const WEB_COMPONENT_MARKER = Symbol("boreDOM.webComponent")
+
 // Module-level storage for appState (set by inflictBoreDOM)
 let currentAppState: AppState<any> | null = null
 
@@ -113,14 +120,10 @@ export function clearComponentContext(element: HTMLElement): void {
 
 /**
  * Check if a function is a webComponent() result vs raw InitFunction.
- * webComponent() returns a function with signature (appState, detail) => (c) => void
- * Raw InitFunction has signature (options) => RenderFunction
+ * Uses the WEB_COMPONENT_MARKER symbol for reliable detection.
  */
 function isWebComponentResult(fn: any): boolean {
-  // webComponent returns a curried function that takes 2 args
-  // InitFunction takes 1 arg (the options object)
-  // This heuristic checks if it looks like the curried form
-  return typeof fn === "function" && fn.length === 2
+  return typeof fn === "function" && fn[WEB_COMPONENT_MARKER] === true
 }
 
 /**

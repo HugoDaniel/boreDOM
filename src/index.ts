@@ -31,6 +31,7 @@ import {
   setCurrentAppState,
   storeComponentContext,
   consoleAPI,
+  WEB_COMPONENT_MARKER,
 } from "./console-api";
 // Re-export debug utilities for testing and advanced usage
 export { setDebugConfig, isDebugEnabled, clearGlobals } from "./debug";
@@ -183,7 +184,7 @@ export function webComponent<S>(
   let isInitialized: null | Bored = null;
 
   let renderFunction: (state?: S) => void;
-  return (appState: AppState<S>, detail: any) => (c: Bored) => {
+  const result = (appState: AppState<S>, detail: any) => (c: Bored) => {
     const { internal, app } = appState;
     let log: string[] | string = [];
     const state = createStateAccessor(app, log);
@@ -328,4 +329,8 @@ export function webComponent<S>(
     // This is a common scenario in lists of components, such as menu items, etc
     isInitialized = c;
   };
+
+  // Mark with symbol so console-api can identify webComponent results
+  (result as any)[WEB_COMPONENT_MARKER] = true;
+  return result;
 }
