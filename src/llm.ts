@@ -978,4 +978,6 @@ export const llmAPI = {
   apply,
   /** Apply multiple code blocks atomically */
   applyBatch,
+  /** @internal Set validation app state (used by inflictBoreDOM) */
+  _setValidationAppState: setValidationAppState,
 }

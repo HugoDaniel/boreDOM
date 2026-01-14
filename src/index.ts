@@ -40,7 +40,7 @@ import {
 } from "./inside-out";
 import { llmAPI, setValidationAppState } from "./llm";
 // Re-export debug utilities for testing and advanced usage
-export { setDebugConfig, isDebugEnabled, clearGlobals } from "./debug";
+export { setDebugConfig, isDebugEnabled, clearGlobals, getDebugConfig } from "./debug";
 // Re-export for console-api dynamic import
 export { registerComponent } from "./dom";
 import type { AppState, InitFunction, BoreDOMConfig, ErrorContext } from "./types";
@@ -79,6 +79,8 @@ export const boreDOM = {
   get config() {
     return debugAPI.config;
   },
+  /** @internal Set debug configuration (used by tests with multiple bundles) */
+  _setDebugConfig: setDebugConfig,
   /** Framework version */
   version: VERSION,
   // Console API (Phase 2)
@@ -199,6 +201,10 @@ export async function inflictBoreDOM<S>(
 
   // Store appState for validation API (Phase 6)
   setValidationAppState(proxifiedState);
+  // Also set on window.boreDOM if it exists (handles multiple bundle instances)
+  if (typeof window !== "undefined" && (window as any).boreDOM?.llm?._setValidationAppState) {
+    (window as any).boreDOM.llm._setValidationAppState(proxifiedState);
+  }
 
   // Call the code from the corresponding .js file of each component:
   runComponentsInitializer(proxifiedState);

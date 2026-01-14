@@ -537,10 +537,12 @@ function deepClone(obj, seen = /* @__PURE__ */ new WeakMap()) {
     return clonedSet;
   }
   if (Array.isArray(obj)) {
-    const clonedArr = [];
+    const clonedArr = new Array(obj.length);
     seen.set(obj, clonedArr);
-    for (const item of obj) {
-      clonedArr.push(deepClone(item, seen));
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        clonedArr[key] = deepClone(obj[key], seen);
+      }
     }
     return clonedArr;
   }
@@ -610,7 +612,12 @@ function extractStateReferences(code) {
   const regex = /state\.([\w.[\]]+)/g;
   let match;
   while ((match = regex.exec(code)) !== null) {
-    refs.push(`state.${match[1]}`);
+    let path = match[1];
+    const methodPattern = /\.(push|pop|shift|unshift|map|filter|reduce|forEach|find|findIndex|some|every|indexOf|includes|splice|slice|concat|join|reverse|sort|flat|flatMap|at|fill|copyWithin|entries|keys|values|length|size|get|set|has|delete|add|clear|toString|valueOf|toJSON)$/;
+    path = path.replace(methodPattern, "");
+    if (path) {
+      refs.push(`state.${path}`);
+    }
   }
   return [...new Set(refs)];
 }
@@ -1487,7 +1494,9 @@ var init_llm = __esm({
       /** Execute code with automatic rollback on error */
       apply,
       /** Apply multiple code blocks atomically */
-      applyBatch
+      applyBatch,
+      /** @internal Set validation app state (used by inflictBoreDOM) */
+      _setValidationAppState: setValidationAppState
     };
   }
 });
@@ -2859,6 +2868,8 @@ var boreDOM = {
   get config() {
     return debugAPI.config;
   },
+  /** @internal Set debug configuration (used by tests with multiple bundles) */
+  _setDebugConfig: setDebugConfig,
   /** Framework version */
   version: VERSION,
   // Console API (Phase 2)
@@ -2939,6 +2950,9 @@ async function inflictBoreDOM(state, componentsLogic, config) {
   }
   setCurrentAppState(proxifiedState, webComponent, registerComponent);
   setValidationAppState(proxifiedState);
+  if (typeof window !== "undefined" && window.boreDOM?.llm?._setValidationAppState) {
+    window.boreDOM.llm._setValidationAppState(proxifiedState);
+  }
   runComponentsInitializer(proxifiedState);
   observeUndefinedElements();
   return proxifiedState.app;
@@ -3064,6 +3078,7 @@ export {
   VERSION,
   boreDOM,
   clearGlobals,
+  getDebugConfig,
   inflictBoreDOM,
   isDebugEnabled,
   queryComponent,

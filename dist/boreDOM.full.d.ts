@@ -286,50 +286,16 @@ export declare function isDebugEnabled(feature: BooleanDebugFeature): boolean;
  */
 export declare function setDebugConfig(config: boolean | DebugOptions): void;
 /**
+ * Get current debug configuration (read-only copy).
+ *
+ * @returns A copy of the current debug configuration
+ */
+export declare function getDebugConfig(): DebugOptions;
+/**
  * Clear debug globals from window.
  */
 export declare function clearGlobals(): void;
 declare function exportState(tagName?: string): ExportedState | null;
-export declare const VERSION = "0.25.25";
-/**
- * Context for a running component, accessible via operate()
- */
-export interface ComponentContext<S = any> {
-	/** Mutable state proxy */
-	state: S;
-	/** Component refs */
-	refs: Refs;
-	/** Component slots */
-	slots: Slots;
-	/** DOM element */
-	self: HTMLElement;
-	/** Component detail */
-	detail: WebComponentDetail;
-	/** Force re-render */
-	rerender: () => void;
-}
-/**
- * Exported component data structure
- */
-export interface ExportedComponent {
-	/** Component tag name */
-	component: string;
-	/** Current state snapshot (JSON-serializable) */
-	state: any;
-	/** Template HTML (if available) */
-	template?: string;
-	/** Timestamp of export */
-	timestamp: string;
-	/** Error message if component errored */
-	error?: string;
-}
-declare function define<S>(tagName: string, template: string, logic: InitFunction<S> | ((appState: AppState<S>, detail?: any) => (c: any) => void)): boolean;
-declare function operate<S = any>(selectorOrElement: string | HTMLElement, index?: number): ComponentContext<S> | undefined;
-declare function exportComponent(selector: string): ExportedComponent | null;
-declare function defineHelper(name: string, implementation: Function): void;
-declare function clearHelper(name: string): void;
-declare function clearMissingFunctions(): void;
-declare function inferTemplate(tagName: string, element?: HTMLElement): InferredTemplate | null;
 declare function inferTypes(): TypeDefinitions;
 declare function typeOf(path: string): string;
 declare function clearTypeTracking(): void;
@@ -363,6 +329,7 @@ export interface BatchApplyResult {
 	error?: string;
 	failedIndex?: number;
 }
+declare function setValidationAppState(state: AppState<any>): void;
 declare function validate(code: string): ValidationResult;
 declare function apply(code: string): ApplyResult;
 declare function applyBatch(codeBlocks: string[]): BatchApplyResult;
@@ -525,6 +492,46 @@ declare function focus$1(): LLMFocusedContext;
 declare function copy(): string;
 declare function recordAttempt(code: string, result: "success" | "error", error?: string): void;
 declare function clearAttempts(): void;
+export declare const VERSION = "0.25.25";
+/**
+ * Context for a running component, accessible via operate()
+ */
+export interface ComponentContext<S = any> {
+	/** Mutable state proxy */
+	state: S;
+	/** Component refs */
+	refs: Refs;
+	/** Component slots */
+	slots: Slots;
+	/** DOM element */
+	self: HTMLElement;
+	/** Component detail */
+	detail: WebComponentDetail;
+	/** Force re-render */
+	rerender: () => void;
+}
+/**
+ * Exported component data structure
+ */
+export interface ExportedComponent {
+	/** Component tag name */
+	component: string;
+	/** Current state snapshot (JSON-serializable) */
+	state: any;
+	/** Template HTML (if available) */
+	template?: string;
+	/** Timestamp of export */
+	timestamp: string;
+	/** Error message if component errored */
+	error?: string;
+}
+declare function define<S>(tagName: string, template: string, logic: InitFunction<S> | ((appState: AppState<S>, detail?: any) => (c: any) => void)): boolean;
+declare function operate<S = any>(selectorOrElement: string | HTMLElement, index?: number): ComponentContext<S> | undefined;
+declare function exportComponent(selector: string): ExportedComponent | null;
+declare function defineHelper(name: string, implementation: Function): void;
+declare function clearHelper(name: string): void;
+declare function clearMissingFunctions(): void;
+declare function inferTemplate(tagName: string, element?: HTMLElement): InferredTemplate | null;
 /**
  * Global boreDOM object for debugging and programmatic access.
  * Exposed on window.boreDOM when running in browser.
@@ -547,6 +554,8 @@ export declare const boreDOM: {
 	export: typeof exportState;
 	/** Current debug configuration (read-only) */
 	readonly config: DebugOptions;
+	/** @internal Set debug configuration (used by tests with multiple bundles) */
+	_setDebugConfig: typeof setDebugConfig;
 	/** Framework version */
 	version: string;
 	/** Define a new component at runtime */
@@ -585,6 +594,7 @@ export declare const boreDOM: {
 		validate: typeof validate;
 		apply: typeof apply;
 		applyBatch: typeof applyBatch;
+		_setValidationAppState: typeof setValidationAppState;
 	};
 };
 /**

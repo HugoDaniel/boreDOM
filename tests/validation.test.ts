@@ -477,7 +477,9 @@ describe("Phase 6: Validation & Apply", () => {
 
   describe("Config options", () => {
     it("should respect llm: false config", async () => {
+      // Set config on BOTH bundles (runner.js and dist bundle via window.boreDOM)
       setDebugConfig({ llm: false })
+      getBoreDOM()._setDebugConfig({ llm: false })
       await inflictBoreDOM({ count: 0 }, {})
 
       // validate should return valid but do nothing
@@ -489,7 +491,9 @@ describe("Phase 6: Validation & Apply", () => {
       expect(applyResult.success).to.be.false
       expect(applyResult.error).to.include("disabled")
 
-      setDebugConfig(true) // Reset
+      // Reset both bundles
+      setDebugConfig(true)
+      getBoreDOM()._setDebugConfig(true)
     })
 
     it("should work with all debug features enabled", async () => {
