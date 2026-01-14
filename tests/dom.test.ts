@@ -987,6 +987,249 @@ export default function () {
         });
       });
 
+      describe("Multiple access chain path tracking", () => {
+        it("should correctly track paths when accessing multiple state properties", async () => {
+          // This tests the fix for stale path tracking when accessing multiple state properties
+          const container = await renderHTMLFrame(`
+            <multi-access-component></multi-access-component>
+
+            <template data-component="multi-access-component">
+              <p>Multi-access test</p>
+            </template>
+          `);
+
+          let renderCount = 0;
+          const state = await inflictBoreDOM({
+            currentView: 'clients',
+            clients: [{ id: 1, name: 'Alice', rate: 100 }]
+          }, {
+            "multi-access-component": webComponent(() => {
+              return ({ self, state }: any) => {
+                renderCount++;
+                // Access currentView first
+                const view = state.currentView;
+                // Then access clients array and iterate
+                const names = state.clients.map((c: any) => c.name);
+                self.setAttribute("data-render-count", String(renderCount));
+                self.setAttribute("data-view", view);
+                self.setAttribute("data-names", names.join(","));
+              };
+            }),
+          });
+
+          const elem = container.querySelector("multi-access-component") as HTMLElement;
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+          expect(elem.getAttribute("data-view")).to.equal("clients");
+          expect(elem.getAttribute("data-names")).to.equal("Alice");
+
+          // Mutate the array - should trigger re-render
+          state.clients[0].name = "Bob";
+
+          await frame();
+
+          // Should have re-rendered with updated data
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-names")).to.equal("Bob");
+        });
+
+        it("should re-render when array is mutated after accessing other properties", async () => {
+          const container = await renderHTMLFrame(`
+            <array-after-prop-component></array-after-prop-component>
+
+            <template data-component="array-after-prop-component">
+              <p>Array after prop test</p>
+            </template>
+          `);
+
+          let renderCount = 0;
+          const state = await inflictBoreDOM({
+            title: 'My App',
+            items: ['a', 'b', 'c']
+          }, {
+            "array-after-prop-component": webComponent(() => {
+              return ({ self, state }: any) => {
+                renderCount++;
+                const title = state.title;
+                const items = state.items;
+                self.setAttribute("data-render-count", String(renderCount));
+                self.setAttribute("data-title", title);
+                self.setAttribute("data-items", items.join(","));
+              };
+            }),
+          });
+
+          const elem = container.querySelector("array-after-prop-component") as HTMLElement;
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+
+          // Push to array - should trigger re-render
+          state.items.push("d");
+
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-items")).to.equal("a,b,c,d");
+        });
+
+        it("should handle nested array iteration correctly", async () => {
+          const container = await renderHTMLFrame(`
+            <nested-array-iter-component></nested-array-iter-component>
+
+            <template data-component="nested-array-iter-component">
+              <p>Nested array iteration test</p>
+            </template>
+          `);
+
+          let renderCount = 0;
+          const state = await inflictBoreDOM({
+            config: { enabled: true },
+            users: [
+              { id: 1, profile: { name: 'Alice', email: 'alice@test.com' } },
+              { id: 2, profile: { name: 'Bob', email: 'bob@test.com' } }
+            ]
+          }, {
+            "nested-array-iter-component": webComponent(() => {
+              return ({ self, state }: any) => {
+                renderCount++;
+                const enabled = state.config.enabled;
+                // Deep iteration accessing nested properties
+                const emails = state.users.map((u: any) => u.profile.email);
+                self.setAttribute("data-render-count", String(renderCount));
+                self.setAttribute("data-enabled", String(enabled));
+                self.setAttribute("data-emails", emails.join(","));
+              };
+            }),
+          });
+
+          const elem = container.querySelector("nested-array-iter-component") as HTMLElement;
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+          expect(elem.getAttribute("data-emails")).to.equal("alice@test.com,bob@test.com");
+
+          // Mutate nested property in array item
+          state.users[0].profile.email = "alice.updated@test.com";
+
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-emails")).to.equal("alice.updated@test.com,bob@test.com");
+        });
+
+        it("should handle multiple array iterations in same render", async () => {
+          const container = await renderHTMLFrame(`
+            <multi-array-iter-component></multi-array-iter-component>
+
+            <template data-component="multi-array-iter-component">
+              <p>Multi array iteration test</p>
+            </template>
+          `);
+
+          let renderCount = 0;
+          const state = await inflictBoreDOM({
+            clients: [{ name: 'Client A' }, { name: 'Client B' }],
+            projects: [{ title: 'Project 1' }, { title: 'Project 2' }]
+          }, {
+            "multi-array-iter-component": webComponent(() => {
+              return ({ self, state }: any) => {
+                renderCount++;
+                const clientNames = state.clients.map((c: any) => c.name);
+                const projectTitles = state.projects.map((p: any) => p.title);
+                self.setAttribute("data-render-count", String(renderCount));
+                self.setAttribute("data-clients", clientNames.join(","));
+                self.setAttribute("data-projects", projectTitles.join(","));
+              };
+            }),
+          });
+
+          const elem = container.querySelector("multi-array-iter-component") as HTMLElement;
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+          expect(elem.getAttribute("data-clients")).to.equal("Client A,Client B");
+          expect(elem.getAttribute("data-projects")).to.equal("Project 1,Project 2");
+
+          // Mutate first array
+          state.clients.push({ name: 'Client C' });
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-clients")).to.equal("Client A,Client B,Client C");
+
+          // Mutate second array
+          state.projects[0].title = "Updated Project 1";
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("3");
+          expect(elem.getAttribute("data-projects")).to.equal("Updated Project 1,Project 2");
+        });
+
+        it("should work with complex time-tracker-like state", async () => {
+          // This is a regression test for the original time-tracker bug
+          const container = await renderHTMLFrame(`
+            <time-tracker-like-component></time-tracker-like-component>
+
+            <template data-component="time-tracker-like-component">
+              <p>Time tracker like test</p>
+            </template>
+          `);
+
+          let renderCount = 0;
+          const state = await inflictBoreDOM({
+            currentView: 'clients',
+            clients: [
+              { id: 1, name: 'Acme Corp', rate: 150 },
+              { id: 2, name: 'Tech Inc', rate: 200 }
+            ],
+            entries: [
+              { id: 1, clientId: 1, hours: 8, note: 'Development' },
+              { id: 2, clientId: 2, hours: 4, note: 'Meeting' }
+            ]
+          }, {
+            "time-tracker-like-component": webComponent(() => {
+              return ({ self, state }: any) => {
+                renderCount++;
+                const view = state.currentView;
+                const clients = state.clients;
+                const entries = state.entries;
+
+                // Calculate totals like time-tracker does
+                const clientSummary = clients.map((client: any) => {
+                  const clientEntries = entries.filter((e: any) => e.clientId === client.id);
+                  const totalHours = clientEntries.reduce((sum: number, e: any) => sum + e.hours, 0);
+                  return `${client.name}:${totalHours}h`;
+                });
+
+                self.setAttribute("data-render-count", String(renderCount));
+                self.setAttribute("data-view", view);
+                self.setAttribute("data-summary", clientSummary.join(";"));
+              };
+            }),
+          });
+
+          const elem = container.querySelector("time-tracker-like-component") as HTMLElement;
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
+          expect(elem.getAttribute("data-view")).to.equal("clients");
+          expect(elem.getAttribute("data-summary")).to.equal("Acme Corp:8h;Tech Inc:4h");
+
+          // Add a new client
+          state.clients.push({ id: 3, name: 'New Co', rate: 175 });
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
+          expect(elem.getAttribute("data-summary")).to.equal("Acme Corp:8h;Tech Inc:4h;New Co:0h");
+
+          // Add an entry for the new client
+          state.entries.push({ id: 3, clientId: 3, hours: 2, note: 'Onboarding' });
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("3");
+          expect(elem.getAttribute("data-summary")).to.equal("Acme Corp:8h;Tech Inc:4h;New Co:2h");
+
+          // Update an existing entry
+          state.entries[0].hours = 10;
+          await frame();
+
+          expect(elem.getAttribute("data-render-count")).to.equal("4");
+          expect(elem.getAttribute("data-summary")).to.equal("Acme Corp:10h;Tech Inc:4h;New Co:2h");
+        });
+      });
+
       describe("Hierarchical subscription matching", () => {
         it("should re-render parent subscriber when child path changes", async () => {
           const container = await renderHTMLFrame(`

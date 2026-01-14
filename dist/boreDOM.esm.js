@@ -2669,10 +2669,18 @@ function createStateAccessor(state, log, accum) {
       if (typeof prop === "string" && !isProto) {
         if (!current.targets.has(target)) {
           current.targets.set(target, current.path.join("."));
-          current.path.push(prop);
         }
+        const targetPath = current.targets.get(target);
+        current.path.length = 0;
+        if (typeof targetPath === "string" && targetPath !== "") {
+          current.path.push(...targetPath.split("."));
+        }
+        current.path.push(prop);
       }
       if (isProto || Array.isArray(value) || isPOJO(value)) {
+        if (!current.targets.has(value) && typeof prop === "string") {
+          current.targets.set(value, current.path.join("."));
+        }
         return createStateAccessor(value, log, current);
       }
       let path = current.targets.get(target) ?? "";

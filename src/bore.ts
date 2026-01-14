@@ -275,12 +275,24 @@ export function createStateAccessor<S>(
       if (typeof prop === "string" && !isProto) {
         if (!current.targets.has(target)) {
           current.targets.set(target, current.path.join("."));
-          current.path.push(prop);
         }
+        // Always rebuild current.path based on target's known path + current prop
+        // This fixes stale path data when accessing the same root from multiple chains
+        const targetPath = current.targets.get(target);
+        current.path.length = 0;
+        if (typeof targetPath === "string" && targetPath !== "") {
+          current.path.push(...targetPath.split("."));
+        }
+        current.path.push(prop);
       }
 
       // Go recursive when the value is a nested object:
       if (isProto || Array.isArray(value) || isPOJO(value)) {
+        // Record the path for this nested object so it can be found later
+        // even when accessed from a different context (e.g., inside a map callback)
+        if (!current.targets.has(value) && typeof prop === "string") {
+          current.targets.set(value, current.path.join("."));
+        }
         return createStateAccessor(value, log, current);
       }
 
