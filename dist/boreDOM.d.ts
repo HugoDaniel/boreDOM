@@ -160,6 +160,71 @@ export type InferredTemplate = {
 	slots: string[];
 };
 /**
+ * Type node representing an inferred type.
+ * Uses discriminated union for different type kinds.
+ */
+export type TypeNode = {
+	kind: "primitive";
+	value: "string" | "number" | "boolean" | "null" | "undefined";
+} | {
+	kind: "literal";
+	value: string | number | boolean;
+} | {
+	kind: "array";
+	elementType: TypeNode;
+} | {
+	kind: "object";
+	properties: Record<string, TypeNode>;
+} | {
+	kind: "union";
+	types: TypeNode[];
+} | {
+	kind: "function";
+	params: ParamType[];
+	returnType: TypeNode;
+} | {
+	kind: "date";
+} | {
+	kind: "unknown";
+};
+/**
+ * Parameter type for function signatures.
+ */
+export type ParamType = {
+	name: string;
+	type: TypeNode;
+	/** Whether the parameter is optional (defaults to false) */
+	optional?: boolean;
+};
+/**
+ * Tracked function type info.
+ */
+export type FunctionType = {
+	params: ParamType[];
+	returnType: TypeNode;
+	callCount: number;
+};
+/**
+ * Output structure for type inference.
+ */
+export type TypeDefinitions = {
+	/** Generated TypeScript interface for app state */
+	state: string;
+	/** Inferred helper function signatures */
+	helpers: Record<string, string>;
+	/** Component prop types inferred from attributes */
+	components: Record<string, string>;
+	/** Event payload types */
+	events: Record<string, string>;
+	/** Raw type data for further processing */
+	raw: {
+		state: TypeNode;
+		helpers: Record<string, FunctionType>;
+		components: Record<string, TypeNode>;
+		events: Record<string, TypeNode>;
+	};
+};
+/**
  * Queries for the component tag name in the DOM. Throws error if not found.
  */
 /**
@@ -265,6 +330,42 @@ declare function defineHelper(name: string, implementation: Function): void;
 declare function clearHelper(name: string): void;
 declare function clearMissingFunctions(): void;
 declare function inferTemplate(tagName: string, element?: HTMLElement): InferredTemplate | null;
+declare function inferTypes(): TypeDefinitions;
+declare function typeOf(path: string): string;
+declare function clearTypeTracking(): void;
+export interface ValidationResult {
+	valid: boolean;
+	issues: ValidationIssue[];
+}
+export interface ValidationIssue {
+	type: "syntax" | "reference" | "type" | "logic" | "warning";
+	message: string;
+	location?: string;
+	suggestion?: string;
+	severity: "error" | "warning";
+}
+export interface ApplyResult {
+	success: boolean;
+	error?: string;
+	rollback: () => void;
+	componentsAffected: string[];
+	stateChanges: StateChange[];
+}
+export interface StateChange {
+	path: string;
+	before: any;
+	after: any;
+}
+export interface BatchApplyResult {
+	success: boolean;
+	results: ApplyResult[];
+	rollbackAll: () => void;
+	error?: string;
+	failedIndex?: number;
+}
+declare function validate(code: string): ValidationResult;
+declare function apply(code: string): ApplyResult;
+declare function applyBatch(codeBlocks: string[]): BatchApplyResult;
 /**
  * Component information for LLM context.
  */
@@ -478,6 +579,12 @@ export declare const boreDOM: {
 		readonly attempts: LLMAttemptInfo[];
 		clearAttempts: typeof clearAttempts;
 		_recordAttempt: typeof recordAttempt;
+		inferTypes: typeof inferTypes;
+		typeOf: typeof typeOf;
+		_clearTypes: typeof clearTypeTracking;
+		validate: typeof validate;
+		apply: typeof apply;
+		applyBatch: typeof applyBatch;
 	};
 };
 /**

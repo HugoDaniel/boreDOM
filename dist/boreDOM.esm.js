@@ -194,7 +194,14 @@ function createRenderHelpers(componentName, element, rerender) {
         return void 0;
       }
       if (userDefinedHelpers.has(prop)) {
-        return userDefinedHelpers.get(prop);
+        const helper = userDefinedHelpers.get(prop);
+        return (...args) => {
+          const result = helper(...args);
+          if (typeof __DEBUG__ === "undefined" || __DEBUG__) {
+            trackFunctionCall(prop, args, result);
+          }
+          return result;
+        };
       }
       return (...args) => {
         const ctx = {
@@ -443,6 +450,7 @@ var init_inside_out = __esm({
     "use strict";
     init_debug();
     init_console_api();
+    init_type_inference();
     userDefinedHelpers = /* @__PURE__ */ new Map();
     missingFunctions = /* @__PURE__ */ new Map();
     lastMissing = null;
@@ -486,6 +494,456 @@ var init_version = __esm({
   }
 });
 
+// src/validation.ts
+function setValidationAppState(state) {
+  currentAppState2 = state;
+}
+function createStateSnapshot() {
+  if (!currentAppState2) return null;
+  return deepClone(currentAppState2.app);
+}
+function restoreStateSnapshot(snapshot) {
+  if (!currentAppState2 || !snapshot) return;
+  const current = currentAppState2.app;
+  if (!current) return;
+  for (const key of Object.keys(current)) {
+    if (!(key in snapshot)) {
+      delete current[key];
+    }
+  }
+  for (const [key, value] of Object.entries(snapshot)) {
+    current[key] = deepClone(value);
+  }
+}
+function deepClone(obj, seen = /* @__PURE__ */ new WeakMap()) {
+  if (obj === null || typeof obj !== "object") return obj;
+  if (seen.has(obj)) return seen.get(obj);
+  if (obj instanceof Date) return new Date(obj);
+  if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags);
+  if (obj instanceof Map) {
+    const clonedMap = /* @__PURE__ */ new Map();
+    seen.set(obj, clonedMap);
+    for (const [key, value] of obj.entries()) {
+      clonedMap.set(deepClone(key, seen), deepClone(value, seen));
+    }
+    return clonedMap;
+  }
+  if (obj instanceof Set) {
+    const clonedSet = /* @__PURE__ */ new Set();
+    seen.set(obj, clonedSet);
+    for (const value of obj) {
+      clonedSet.add(deepClone(value, seen));
+    }
+    return clonedSet;
+  }
+  if (Array.isArray(obj)) {
+    const clonedArr = [];
+    seen.set(obj, clonedArr);
+    for (const item of obj) {
+      clonedArr.push(deepClone(item, seen));
+    }
+    return clonedArr;
+  }
+  const cloned = {};
+  seen.set(obj, cloned);
+  for (const [key, value] of Object.entries(obj)) {
+    cloned[key] = deepClone(value, seen);
+  }
+  return cloned;
+}
+function validateSyntax(code) {
+  const issues = [];
+  try {
+    new Function("state", "boreDOM", code);
+  } catch (e) {
+    const error = e;
+    issues.push({
+      type: "syntax",
+      message: error.message,
+      location: extractLocation(error),
+      severity: "error"
+    });
+  }
+  return issues;
+}
+function extractLocation(error) {
+  const posMatch = error.message.match(/at position (\d+)/);
+  if (posMatch) return `position ${posMatch[1]}`;
+  const lineMatch = error.message.match(/line (\d+)/);
+  if (lineMatch) return `line ${lineMatch[1]}`;
+  return void 0;
+}
+function validateReferences(code) {
+  const issues = [];
+  if (!currentAppState2) return issues;
+  const state = currentAppState2.app;
+  const knownPaths = getKnownStatePaths(state);
+  const knownHelpers = getKnownHelpers();
+  const stateRefs = extractStateReferences(code);
+  for (const ref of stateRefs) {
+    if (!isValidPath(ref, knownPaths)) {
+      const suggestion = findSimilarPath(ref, knownPaths);
+      issues.push({
+        type: "reference",
+        message: `${ref} is undefined`,
+        suggestion: suggestion ? `Did you mean ${suggestion}?` : void 0,
+        severity: "error"
+      });
+    }
+  }
+  const helperRefs = extractHelperReferences(code);
+  for (const ref of helperRefs) {
+    if (!knownHelpers.includes(ref)) {
+      const suggestion = findSimilar(ref, knownHelpers);
+      issues.push({
+        type: "reference",
+        message: `Helper '${ref}' is not defined`,
+        suggestion: suggestion ? `Did you mean '${suggestion}'?` : void 0,
+        severity: "error"
+      });
+    }
+  }
+  return issues;
+}
+function extractStateReferences(code) {
+  const refs = [];
+  const regex = /state\.([\w.[\]]+)/g;
+  let match;
+  while ((match = regex.exec(code)) !== null) {
+    refs.push(`state.${match[1]}`);
+  }
+  return [...new Set(refs)];
+}
+function extractHelperReferences(code) {
+  const refs = [];
+  const regex = /helpers\.(\w+)\s*\(/g;
+  let match;
+  while ((match = regex.exec(code)) !== null) {
+    refs.push(match[1]);
+  }
+  return [...new Set(refs)];
+}
+function getKnownStatePaths(state, prefix = "state", seen = /* @__PURE__ */ new WeakSet()) {
+  const paths = [prefix];
+  if (state === null || state === void 0) return paths;
+  if (typeof state !== "object") return paths;
+  if (seen.has(state)) return paths;
+  seen.add(state);
+  for (const key of Object.keys(state)) {
+    const path = `${prefix}.${key}`;
+    paths.push(path);
+    const value = state[key];
+    if (Array.isArray(value)) {
+      paths.push(path);
+      if (value.length > 0 && value[0] && typeof value[0] === "object") {
+        paths.push(...getKnownStatePaths(value[0], `${path}[0]`, seen));
+      }
+    } else if (value && typeof value === "object") {
+      paths.push(...getKnownStatePaths(value, path, seen));
+    }
+  }
+  return paths;
+}
+function isValidPath(ref, knownPaths) {
+  if (knownPaths.includes(ref)) return true;
+  const basePath = ref.replace(/\[\d+\]/g, "");
+  if (knownPaths.includes(basePath)) return true;
+  const arrayBasePath = ref.replace(/\[\d+\]\.[\w.]+$/, "");
+  if (knownPaths.includes(arrayBasePath) || knownPaths.includes(`${arrayBasePath}[0]`)) return true;
+  return false;
+}
+function findSimilarPath(ref, knownPaths) {
+  let best;
+  let bestScore = Infinity;
+  for (const path of knownPaths) {
+    const score = levenshtein(ref, path);
+    if (score < bestScore && score < ref.length / 2) {
+      bestScore = score;
+      best = path;
+    }
+  }
+  return best;
+}
+function findSimilar(name, known) {
+  for (const k of known) {
+    if (levenshtein(name, k) <= 2) return k;
+  }
+  return void 0;
+}
+function levenshtein(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          // substitution
+          matrix[i][j - 1] + 1,
+          // insertion
+          matrix[i - 1][j] + 1
+          // deletion
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+function getKnownHelpers() {
+  if (typeof window === "undefined") return [];
+  const boredom = window.boreDOM;
+  if (!boredom?.helpers) return [];
+  return Array.from(boredom.helpers.keys());
+}
+function validateTypes(code) {
+  const issues = [];
+  const arrayMethodPatterns = [
+    { pattern: /\.map\s*\(/, method: "map" },
+    { pattern: /\.filter\s*\(/, method: "filter" },
+    { pattern: /\.forEach\s*\(/, method: "forEach" },
+    { pattern: /\.reduce\s*\(/, method: "reduce" },
+    { pattern: /\.find\s*\(/, method: "find" },
+    { pattern: /\.some\s*\(/, method: "some" },
+    { pattern: /\.every\s*\(/, method: "every" }
+  ];
+  for (const { pattern, method } of arrayMethodPatterns) {
+    if (pattern.test(code)) {
+      const regex = new RegExp(`(state\\.[\\w.]+)\\.${method}\\s*\\(`);
+      const match2 = code.match(regex);
+      if (match2) {
+        const path = match2[1];
+        const value = getStateValue(path);
+        if (value === null || value === void 0) {
+          issues.push({
+            type: "type",
+            message: `${path} is ${value}, cannot call .${method}()`,
+            suggestion: `Add null check: ${path}?.${method}(...) or initialize ${path} first`,
+            severity: "error"
+          });
+        } else if (!Array.isArray(value)) {
+          issues.push({
+            type: "type",
+            message: `${path} is not an array, cannot call .${method}()`,
+            suggestion: `Ensure ${path} is an array before calling .${method}()`,
+            severity: "error"
+          });
+        }
+      }
+    }
+  }
+  const propAccessRegex = /state\.([\w.]+)\.([\w]+)/g;
+  let match;
+  while ((match = propAccessRegex.exec(code)) !== null) {
+    const basePath = `state.${match[1]}`;
+    const value = getStateValue(basePath);
+    if (value === null || value === void 0) {
+      issues.push({
+        type: "type",
+        message: `${basePath} is ${value}, cannot read property '${match[2]}'`,
+        suggestion: `Add null check: ${basePath}?.${match[2]} or initialize ${basePath} first`,
+        severity: "warning"
+      });
+    }
+  }
+  if (code.includes("await ") || code.includes("async ")) {
+    issues.push({
+      type: "warning",
+      message: "Async code detected - apply() executes synchronously",
+      suggestion: "Use regular synchronous code or handle async separately",
+      severity: "warning"
+    });
+  }
+  return issues;
+}
+function getStateValue(path) {
+  if (!currentAppState2) return void 0;
+  const parts = path.replace("state.", "").split(".");
+  let current = currentAppState2.app;
+  for (const part of parts) {
+    if (current === null || current === void 0) return current;
+    const arrayMatch = part.match(/^(\w+)\[(\d+)\]$/);
+    if (arrayMatch) {
+      current = current[arrayMatch[1]];
+      if (Array.isArray(current)) {
+        current = current[parseInt(arrayMatch[2], 10)];
+      } else {
+        return void 0;
+      }
+    } else {
+      current = current[part];
+    }
+  }
+  return current;
+}
+function calculateStateChanges(before, after, path = "state") {
+  const changes = [];
+  if (before === after) return changes;
+  if (typeof before !== typeof after) {
+    changes.push({ path, before, after });
+    return changes;
+  }
+  if (Array.isArray(before) && Array.isArray(after)) {
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      changes.push({ path, before, after });
+    }
+    return changes;
+  }
+  if (typeof before === "object" && before !== null && after !== null) {
+    const allKeys = /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)]);
+    for (const key of allKeys) {
+      changes.push(...calculateStateChanges(before[key], after[key], `${path}.${key}`));
+    }
+    return changes;
+  }
+  if (before !== after) {
+    changes.push({ path, before, after });
+  }
+  return changes;
+}
+function getAffectedComponents(_changes) {
+  return [];
+}
+function validate(code) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    return { valid: true, issues: [] };
+  }
+  if (!isDebugEnabled("llm")) {
+    return { valid: true, issues: [] };
+  }
+  const issues = [
+    ...validateSyntax(code),
+    ...validateReferences(code),
+    ...validateTypes(code)
+  ];
+  const errors2 = issues.filter((i) => i.severity === "error");
+  return {
+    valid: errors2.length === 0,
+    issues
+  };
+}
+function apply(code) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    return {
+      success: false,
+      error: "apply() not available in production",
+      rollback: () => {
+      },
+      componentsAffected: [],
+      stateChanges: []
+    };
+  }
+  if (!isDebugEnabled("llm")) {
+    return {
+      success: false,
+      error: "LLM API is disabled",
+      rollback: () => {
+      },
+      componentsAffected: [],
+      stateChanges: []
+    };
+  }
+  const snapshot = createStateSnapshot();
+  const stateBefore = deepClone(snapshot);
+  const validation = validate(code);
+  if (!validation.valid) {
+    const errorMsg = validation.issues.filter((i) => i.severity === "error").map((i) => i.message).join("; ");
+    recordAttempt(code, "error", errorMsg);
+    return {
+      success: false,
+      error: `Validation failed: ${errorMsg}`,
+      rollback: () => {
+      },
+      componentsAffected: [],
+      stateChanges: []
+    };
+  }
+  try {
+    const execFn = new Function("state", "boreDOM", code);
+    execFn(currentAppState2?.app, typeof window !== "undefined" ? window.boreDOM : void 0);
+    const stateAfter = createStateSnapshot();
+    const stateChanges = calculateStateChanges(stateBefore, stateAfter);
+    recordAttempt(code, "success");
+    return {
+      success: true,
+      rollback: () => restoreStateSnapshot(snapshot),
+      componentsAffected: getAffectedComponents(stateChanges),
+      stateChanges
+    };
+  } catch (e) {
+    restoreStateSnapshot(snapshot);
+    const error = e;
+    recordAttempt(code, "error", error.message);
+    return {
+      success: false,
+      error: error.message,
+      rollback: () => {
+      },
+      // Already rolled back
+      componentsAffected: [],
+      stateChanges: []
+    };
+  }
+}
+function applyBatch(codeBlocks) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    return {
+      success: false,
+      results: [],
+      rollbackAll: () => {
+      },
+      error: "applyBatch() not available in production"
+    };
+  }
+  if (!isDebugEnabled("llm")) {
+    return {
+      success: false,
+      results: [],
+      rollbackAll: () => {
+      },
+      error: "LLM API is disabled"
+    };
+  }
+  const initialSnapshot = createStateSnapshot();
+  const results = [];
+  for (let i = 0; i < codeBlocks.length; i++) {
+    const result = apply(codeBlocks[i]);
+    results.push(result);
+    if (!result.success) {
+      restoreStateSnapshot(initialSnapshot);
+      return {
+        success: false,
+        results,
+        rollbackAll: () => {
+        },
+        // Already rolled back
+        error: result.error,
+        failedIndex: i
+      };
+    }
+  }
+  return {
+    success: true,
+    results,
+    rollbackAll: () => restoreStateSnapshot(initialSnapshot)
+  };
+}
+var currentAppState2;
+var init_validation = __esm({
+  "src/validation.ts"() {
+    "use strict";
+    init_debug();
+    init_llm();
+    currentAppState2 = null;
+  }
+});
+
 // src/llm.ts
 var llm_exports = {};
 __export(llm_exports, {
@@ -498,7 +956,8 @@ __export(llm_exports, {
   isLLMOutputFormat: () => isLLMOutputFormat,
   llmAPI: () => llmAPI,
   llmLog: () => llmLog,
-  recordAttempt: () => recordAttempt
+  recordAttempt: () => recordAttempt,
+  setValidationAppState: () => setValidationAppState
 });
 function isSameObject(a, b) {
   if (a === b) return true;
@@ -984,6 +1443,8 @@ var init_llm = __esm({
     init_console_api();
     init_inside_out();
     init_version();
+    init_type_inference();
+    init_validation();
     attempts = [];
     SENSITIVE_KEYS = [
       "password",
@@ -1012,7 +1473,21 @@ var init_llm = __esm({
       /** Clear recorded attempts */
       clearAttempts,
       /** @internal Record an attempt */
-      _recordAttempt: recordAttempt
+      _recordAttempt: recordAttempt,
+      // Type inference (Phase 5)
+      /** Infer TypeScript types from runtime usage */
+      inferTypes,
+      /** Get inferred type for a specific path */
+      typeOf,
+      /** Clear type tracking data (for testing) */
+      _clearTypes: clearTypeTracking,
+      // Validation & Apply (Phase 6)
+      /** Validate code without executing */
+      validate,
+      /** Execute code with automatic rollback on error */
+      apply,
+      /** Apply multiple code blocks atomically */
+      applyBatch
     };
   }
 });
@@ -1240,6 +1715,434 @@ var init_debug = __esm({
         return getDebugConfig();
       }
     };
+  }
+});
+
+// src/type-inference.ts
+function inferTypeFromValue(value, seen = /* @__PURE__ */ new WeakSet()) {
+  if (value === null) return { kind: "primitive", value: "null" };
+  if (value === void 0) return { kind: "primitive", value: "undefined" };
+  const type = typeof value;
+  if (type === "string") return { kind: "primitive", value: "string" };
+  if (type === "number") return { kind: "primitive", value: "number" };
+  if (type === "boolean") return { kind: "primitive", value: "boolean" };
+  if (type === "function") {
+    return { kind: "function", params: [], returnType: { kind: "unknown" } };
+  }
+  if (value instanceof Date) return { kind: "date" };
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return { kind: "array", elementType: { kind: "unknown" } };
+    }
+    const sampleSize = Math.min(5, value.length);
+    const elementTypes = [];
+    for (let i = 0; i < sampleSize; i++) {
+      elementTypes.push(inferTypeFromValue(value[i], seen));
+    }
+    return { kind: "array", elementType: mergeTypes(elementTypes) };
+  }
+  if (type === "object") {
+    if (seen.has(value)) {
+      return { kind: "unknown" };
+    }
+    seen.add(value);
+    const properties = {};
+    for (const [key, val] of Object.entries(value)) {
+      if (typeof key === "symbol") continue;
+      properties[key] = inferTypeFromValue(val, seen);
+    }
+    return { kind: "object", properties };
+  }
+  return { kind: "unknown" };
+}
+function mergeTypes(types) {
+  const known = types.filter((t) => t.kind !== "unknown");
+  if (known.length === 0) return { kind: "unknown" };
+  if (known.length === 1) return known[0];
+  if (known.every((t) => t.kind === "primitive")) {
+    const primitives = known;
+    const unique = [...new Set(primitives.map((p) => p.value))];
+    if (unique.length === 1) return known[0];
+    return {
+      kind: "union",
+      types: unique.map((v) => ({ kind: "primitive", value: v }))
+    };
+  }
+  if (known.every((t) => t.kind === "object")) {
+    const objects = known;
+    const mergedProps = {};
+    for (const obj of objects) {
+      for (const [key, type] of Object.entries(obj.properties)) {
+        if (mergedProps[key]) {
+          mergedProps[key] = mergeTypes([mergedProps[key], type]);
+        } else {
+          mergedProps[key] = type;
+        }
+      }
+    }
+    return { kind: "object", properties: mergedProps };
+  }
+  if (known.every((t) => t.kind === "array")) {
+    const arrays = known;
+    const elementTypes = arrays.map((a) => a.elementType);
+    return { kind: "array", elementType: mergeTypes(elementTypes) };
+  }
+  const deduped = deduplicateTypes(known);
+  if (deduped.length === 1) return deduped[0];
+  return { kind: "union", types: deduped };
+}
+function deduplicateTypes(types) {
+  const seen = /* @__PURE__ */ new Set();
+  const result = [];
+  for (const type of types) {
+    const key = typeNodeToKey(type);
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(type);
+    }
+  }
+  return result;
+}
+function typeNodeToKey(node) {
+  switch (node.kind) {
+    case "primitive":
+      return `p:${node.value}`;
+    case "literal":
+      return `l:${typeof node.value}:${node.value}`;
+    case "array":
+      return `a:${typeNodeToKey(node.elementType)}`;
+    case "object":
+      const props = Object.entries(node.properties).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}:${typeNodeToKey(v)}`).join(",");
+      return `o:{${props}}`;
+    case "union":
+      return `u:[${node.types.map(typeNodeToKey).sort().join("|")}]`;
+    case "function":
+      const params = node.params.map((p) => `${p.name}:${typeNodeToKey(p.type)}`).join(",");
+      return `f:(${params})=>${typeNodeToKey(node.returnType)}`;
+    case "date":
+      return "date";
+    case "unknown":
+      return "unknown";
+  }
+}
+function mergeParamTypes(a, b) {
+  const maxLen = Math.max(a.length, b.length);
+  const result = [];
+  for (let i = 0; i < maxLen; i++) {
+    const paramA = a[i];
+    const paramB = b[i];
+    if (paramA && paramB) {
+      result.push({
+        name: paramA.name,
+        type: mergeTypes([paramA.type, paramB.type]),
+        optional: paramA.optional || paramB.optional
+      });
+    } else if (paramA) {
+      result.push({ ...paramA, optional: true });
+    } else if (paramB) {
+      result.push({ ...paramB, optional: true });
+    }
+  }
+  return result;
+}
+function trackStateAccess(path, value) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("llm")) return;
+  const existing = stateAccesses.get(path);
+  const inferredType = inferTypeFromValue(value);
+  if (existing) {
+    const merged = mergeTypes([existing.type, inferredType]);
+    stateAccesses.set(path, {
+      path,
+      type: merged,
+      accessCount: existing.accessCount + 1
+    });
+  } else {
+    stateAccesses.set(path, {
+      path,
+      type: inferredType,
+      accessCount: 1
+    });
+  }
+}
+function trackFunctionCall(name, args, returnValue) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+  if (!isDebugEnabled("llm")) return;
+  const existing = functionCalls.get(name);
+  const argTypes = args.map((arg, i) => ({
+    name: inferArgName(arg, i),
+    type: inferTypeFromValue(arg),
+    optional: false
+  }));
+  const returnType = inferTypeFromValue(returnValue);
+  if (existing) {
+    const mergedParams = mergeParamTypes(existing.params, argTypes);
+    const mergedReturn = mergeTypes([existing.returnType, returnType]);
+    functionCalls.set(name, {
+      params: mergedParams,
+      returnType: mergedReturn,
+      callCount: existing.callCount + 1
+    });
+  } else {
+    functionCalls.set(name, {
+      params: argTypes,
+      returnType,
+      callCount: 1
+    });
+  }
+}
+function inferArgName(value, index) {
+  if (value === null || value === void 0) return `arg${index}`;
+  const type = typeof value;
+  if (type === "string") {
+    if (value.includes("@")) return "email";
+    if (value.match(/^\d{4}-\d{2}-\d{2}/)) return "date";
+    if (value.length > 100) return "text";
+    return "str";
+  }
+  if (type === "number") {
+    if (Number.isInteger(value)) {
+      if (value > 1e12) return "timestamp";
+      return "count";
+    }
+    return "value";
+  }
+  if (type === "boolean") return "flag";
+  if (Array.isArray(value)) return "items";
+  if (type === "object") {
+    if (value instanceof Date) return "date";
+    return "data";
+  }
+  return `arg${index}`;
+}
+function typeNodeToString(node, indent = 0) {
+  const pad = "  ".repeat(indent);
+  switch (node.kind) {
+    case "primitive":
+      return node.value;
+    case "literal":
+      return typeof node.value === "string" ? `"${node.value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"` : String(node.value);
+    case "array":
+      const elemStr = typeNodeToString(node.elementType, indent);
+      if (node.elementType.kind === "primitive" || node.elementType.kind === "unknown") {
+        return `${elemStr}[]`;
+      }
+      return `Array<${elemStr}>`;
+    case "object": {
+      const entries = Object.entries(node.properties);
+      if (entries.length === 0) return "{}";
+      const props = entries.map(([k, v]) => `${pad}  ${k}: ${typeNodeToString(v, indent + 1)};`).join("\n");
+      return `{
+${props}
+${pad}}`;
+    }
+    case "union":
+      const types = node.types.map((t) => typeNodeToString(t, indent));
+      return types.join(" | ");
+    case "function": {
+      const params = node.params.map((p) => `${p.name}${p.optional ? "?" : ""}: ${typeNodeToString(p.type)}`).join(", ");
+      return `(${params}) => ${typeNodeToString(node.returnType)}`;
+    }
+    case "date":
+      return "Date";
+    case "unknown":
+      return "unknown";
+  }
+}
+function buildStateTypeNode() {
+  const root = {};
+  for (const [path, access2] of stateAccesses) {
+    setNestedType(root, path, access2.type);
+  }
+  return buildTypeFromNested(root);
+}
+function setNestedType(obj, path, type) {
+  const parts = path.split(".");
+  let current = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    const arrayMatch2 = part.match(/^(.+)\[(\d+)\]$/);
+    if (arrayMatch2) {
+      const [, name] = arrayMatch2;
+      if (!current[name]) current[name] = { __isArray: true, __elementType: {} };
+      current = current[name].__elementType;
+    } else {
+      if (!current[part]) current[part] = {};
+      current = current[part];
+    }
+  }
+  const lastPart = parts[parts.length - 1];
+  const arrayMatch = lastPart.match(/^(.+)\[(\d+)\]$/);
+  if (arrayMatch) {
+    const [, name] = arrayMatch;
+    if (!current[name]) current[name] = { __isArray: true, __elementType: {} };
+    const existing = current[name].__elementType.__type;
+    if (existing) {
+      current[name].__elementType.__type = mergeTypes([existing, type]);
+    } else {
+      current[name].__elementType.__type = type;
+    }
+  } else {
+    const existing = current[lastPart]?.__type;
+    if (existing) {
+      current[lastPart] = { __type: mergeTypes([existing, type]) };
+    } else {
+      current[lastPart] = { __type: type };
+    }
+  }
+}
+function buildTypeFromNested(obj) {
+  if (obj.__type) return obj.__type;
+  if (obj.__isArray) {
+    return {
+      kind: "array",
+      elementType: buildTypeFromNested(obj.__elementType)
+    };
+  }
+  const properties = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key.startsWith("__")) continue;
+    if (value && typeof value === "object") {
+      properties[key] = buildTypeFromNested(value);
+    }
+  }
+  if (Object.keys(properties).length === 0) {
+    return { kind: "unknown" };
+  }
+  return { kind: "object", properties };
+}
+function buildStateInterface() {
+  const stateType = buildStateTypeNode();
+  if (stateType.kind === "unknown") {
+    return "interface State {}";
+  }
+  return `interface State ${typeNodeToString(stateType)}`;
+}
+function getEmptyTypeDefinitions() {
+  return {
+    state: "interface State {}",
+    helpers: {},
+    components: {},
+    events: {},
+    raw: {
+      state: { kind: "object", properties: {} },
+      helpers: {},
+      components: {},
+      events: {}
+    }
+  };
+}
+function inferTypes() {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+    return getEmptyTypeDefinitions();
+  }
+  if (!isDebugEnabled("llm")) {
+    return getEmptyTypeDefinitions();
+  }
+  const helpers = {};
+  for (const [name, fn] of functionCalls) {
+    helpers[name] = typeNodeToString({
+      kind: "function",
+      params: fn.params,
+      returnType: fn.returnType
+    });
+  }
+  const components = {};
+  for (const [tag, props] of componentProps) {
+    components[tag] = typeNodeToString({ kind: "object", properties: props });
+  }
+  const events = {};
+  for (const [name, payload] of eventPayloads) {
+    events[name] = typeNodeToString(payload);
+  }
+  const rawHelpers = {};
+  for (const [name, fn] of functionCalls) {
+    rawHelpers[name] = fn;
+  }
+  const rawComponents = {};
+  for (const [tag, props] of componentProps) {
+    rawComponents[tag] = { kind: "object", properties: props };
+  }
+  const rawEvents = {};
+  for (const [name, payload] of eventPayloads) {
+    rawEvents[name] = payload;
+  }
+  return {
+    state: buildStateInterface(),
+    helpers,
+    components,
+    events,
+    raw: {
+      state: buildStateTypeNode(),
+      helpers: rawHelpers,
+      components: rawComponents,
+      events: rawEvents
+    }
+  };
+}
+function typeOf(path) {
+  if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return "unknown";
+  if (!isDebugEnabled("llm")) return "unknown";
+  const access2 = stateAccesses.get(path);
+  if (access2) {
+    return typeNodeToString(access2.type);
+  }
+  const stateType = buildStateTypeNode();
+  const result = navigateToPath(stateType, path);
+  if (result) {
+    return typeNodeToString(result);
+  }
+  return "unknown";
+}
+function navigateToPath(node, path) {
+  const parts = path.split(".");
+  let current = node;
+  for (const part of parts) {
+    const arrayMatch = part.match(/^(.+)\[(\d+)\]$/);
+    if (arrayMatch) {
+      const [, name] = arrayMatch;
+      if (current.kind === "object" && current.properties[name]) {
+        current = current.properties[name];
+      } else {
+        return null;
+      }
+      if (current.kind === "array") {
+        current = current.elementType;
+      } else {
+        return null;
+      }
+    } else if (part.endsWith("[]")) {
+      const name = part.slice(0, -2);
+      if (current.kind === "object" && current.properties[name]) {
+        current = current.properties[name];
+      } else {
+        return null;
+      }
+    } else {
+      if (current.kind === "object" && current.properties[part]) {
+        current = current.properties[part];
+      } else {
+        return null;
+      }
+    }
+  }
+  return current;
+}
+function clearTypeTracking() {
+  stateAccesses.clear();
+  functionCalls.clear();
+  componentProps.clear();
+  eventPayloads.clear();
+}
+var stateAccesses, functionCalls, componentProps, eventPayloads;
+var init_type_inference = __esm({
+  "src/type-inference.ts"() {
+    "use strict";
+    init_debug();
+    stateAccesses = /* @__PURE__ */ new Map();
+    functionCalls = /* @__PURE__ */ new Map();
+    componentProps = /* @__PURE__ */ new Map();
+    eventPayloads = /* @__PURE__ */ new Map();
   }
 });
 
@@ -1642,6 +2545,7 @@ function isPOJO(arg) {
 }
 
 // src/bore.ts
+init_type_inference();
 function createEventsHandler(c, app, detail) {
   return (eventName, handler) => {
     addEventListener(eventName, (event) => {
@@ -1775,6 +2679,11 @@ function createStateAccessor(state, log, accum) {
       }
       current.path.length = 0;
       current.path.push(path);
+      if (typeof __DEBUG__ === "undefined" || __DEBUG__) {
+        if (typeof path === "string" && path !== "") {
+          trackStateAccess(path, value);
+        }
+      }
       return value;
     }
   });
@@ -2029,6 +2938,7 @@ async function inflictBoreDOM(state, componentsLogic, config) {
     proxifiedState.internal.updates.raf = void 0;
   }
   setCurrentAppState(proxifiedState, webComponent, registerComponent);
+  setValidationAppState(proxifiedState);
   runComponentsInitializer(proxifiedState);
   observeUndefinedElements();
   return proxifiedState.app;

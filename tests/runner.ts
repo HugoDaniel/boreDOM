@@ -7,6 +7,8 @@ import consoleApiTests from "./console-api.test";
 import insideOutTests from "./inside-out.test";
 import llmTests from "./llm.test";
 import typeInferenceTests from "./type-inference.test";
+import validationTests from "./validation.test";
+import validationEdgeCaseTests from "./validation-edge-cases.test";
 
 mocha.setup("bdd");
 
@@ -24,6 +26,8 @@ consoleApiTests();
 insideOutTests();
 llmTests();
 typeInferenceTests();
+validationTests();
+validationEdgeCaseTests();
 
 mocha.checkLeaks();
 mocha.run();

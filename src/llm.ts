@@ -14,6 +14,10 @@ import { getCurrentAppState } from "./console-api"
 import { insideOutAPI } from "./inside-out"
 import { VERSION } from "./version"
 import { inferTypes, typeOf, clearTypeTracking } from "./type-inference"
+import { validate, apply, applyBatch, setValidationAppState } from "./validation"
+
+// Re-export for use in inflictBoreDOM
+export { setValidationAppState }
 
 // Build-time flag (replaced by esbuild in prod builds with --define:__DEBUG__=false)
 declare const __DEBUG__: boolean
@@ -967,4 +971,11 @@ export const llmAPI = {
   typeOf,
   /** Clear type tracking data (for testing) */
   _clearTypes: clearTypeTracking,
+  // Validation & Apply (Phase 6)
+  /** Validate code without executing */
+  validate,
+  /** Execute code with automatic rollback on error */
+  apply,
+  /** Apply multiple code blocks atomically */
+  applyBatch,
 }

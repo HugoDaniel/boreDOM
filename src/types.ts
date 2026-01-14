@@ -273,3 +273,77 @@ export type TypeDefinitions = {
     events: Record<string, TypeNode>
   }
 }
+
+// ============================================================================
+// Validation & Apply Types (Phase 6)
+// ============================================================================
+
+/**
+ * Result of code validation.
+ */
+export type ValidationResult = {
+  /** Whether the code passed all validation checks */
+  valid: boolean
+  /** Issues found during validation */
+  issues: ValidationIssue[]
+}
+
+/**
+ * A single validation issue.
+ */
+export type ValidationIssue = {
+  /** Type of issue */
+  type: "syntax" | "reference" | "type" | "logic" | "warning"
+  /** Human-readable message */
+  message: string
+  /** Location in code (line/position) */
+  location?: string
+  /** Suggestion for how to fix */
+  suggestion?: string
+  /** Severity level */
+  severity: "error" | "warning"
+}
+
+/**
+ * Result of applying code.
+ */
+export type ApplyResult = {
+  /** Whether the code executed successfully */
+  success: boolean
+  /** Error message if failed */
+  error?: string
+  /** Function to rollback state changes */
+  rollback: () => void
+  /** Components potentially affected by changes */
+  componentsAffected: string[]
+  /** State changes that occurred */
+  stateChanges: StateChange[]
+}
+
+/**
+ * A single state change.
+ */
+export type StateChange = {
+  /** State path that changed */
+  path: string
+  /** Value before change */
+  before: any
+  /** Value after change */
+  after: any
+}
+
+/**
+ * Result of batch apply operation.
+ */
+export type BatchApplyResult = {
+  /** Whether all blocks succeeded */
+  success: boolean
+  /** Results for each code block */
+  results: ApplyResult[]
+  /** Function to rollback all changes */
+  rollbackAll: () => void
+  /** Error message of first failure */
+  error?: string
+  /** Index of first failed block */
+  failedIndex?: number
+}

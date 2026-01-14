@@ -38,7 +38,7 @@ import {
   observeUndefinedElements,
   insideOutAPI,
 } from "./inside-out";
-import { llmAPI } from "./llm";
+import { llmAPI, setValidationAppState } from "./llm";
 // Re-export debug utilities for testing and advanced usage
 export { setDebugConfig, isDebugEnabled, clearGlobals } from "./debug";
 // Re-export for console-api dynamic import
@@ -196,6 +196,9 @@ export async function inflictBoreDOM<S>(
 
   // Store appState for console API access (pass function refs to avoid circular imports)
   setCurrentAppState(proxifiedState, webComponent, registerComponent);
+
+  // Store appState for validation API (Phase 6)
+  setValidationAppState(proxifiedState);
 
   // Call the code from the corresponding .js file of each component:
   runComponentsInitializer(proxifiedState);
