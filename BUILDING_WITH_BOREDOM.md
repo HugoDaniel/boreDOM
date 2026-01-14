@@ -569,6 +569,108 @@ boreDOM.version         // Framework version
 | `boreDOM.prod.js` | ~11KB | Eliminated | Production deployment |
 | `boreDOM.esm.js` | ~32KB | Full | ES modules for bundlers |
 
+## Console API (Development)
+
+The Console API enables runtime component creation and live manipulation — perfect for prototyping, debugging, and exploring component behavior without touching files.
+
+### Runtime Component Definition
+
+Create components directly in the browser console:
+
+```javascript
+// Define a simple component
+boreDOM.define('greeting-card',
+  `<div class="card">
+    <h2 data-slot="title">Loading...</h2>
+    <p data-slot="message"></p>
+  </div>`,
+  ({ state }) => ({ slots }) => {
+    slots.title = state?.user?.name || 'Guest';
+    slots.message = state?.greeting || 'Welcome!';
+  }
+);
+
+// Add to page
+document.body.innerHTML += '<greeting-card></greeting-card>';
+```
+
+Components defined at runtime:
+- Integrate with existing app state reactivity
+- Support refs, slots, and event handlers
+- Can interact with file-based components
+
+### Live Component Surgery
+
+Inspect and modify running components via `boreDOM.operate()`:
+
+```javascript
+// Get component context by tag name
+const ctx = boreDOM.operate('user-card');
+
+// Mutate state (triggers re-render automatically)
+ctx.state.user.name = 'Alice';
+ctx.state.count = 42;
+
+// Access refs and slots directly
+ctx.refs.button.disabled = true;
+ctx.slots.title = 'Updated Title';
+
+// Force re-render
+ctx.rerender();
+
+// Get by CSS selector
+const specific = boreDOM.operate('#my-specific-card');
+
+// Get by index (for multiple instances)
+const second = boreDOM.operate('list-item', 1);
+
+// Get by element reference
+const elem = document.querySelector('user-card.featured');
+const featured = boreDOM.operate(elem);
+```
+
+The context object includes:
+- `state` — Mutable state proxy
+- `refs` — Component refs
+- `slots` — Component slots
+- `self` — DOM element
+- `detail` — Component detail (index, name, data)
+- `rerender()` — Force re-render function
+
+### Export Component
+
+Get JSON snapshots for debugging or persistence:
+
+```javascript
+// Export any component's state and template
+const snapshot = boreDOM.export('my-component');
+// {
+//   component: 'my-component',
+//   state: { count: 42, items: ['a', 'b'] },
+//   template: '<div>...</div>',
+//   timestamp: '2024-01-01T00:00:00.000Z'
+// }
+
+// Copy to clipboard
+navigator.clipboard.writeText(JSON.stringify(boreDOM.export('my-comp'), null, 2));
+```
+
+### Console API Configuration
+
+The Console API is enabled by default in development. Disable with:
+
+```javascript
+// Disable only the console API
+await inflictBoreDOM(state, logic, {
+  debug: { api: false }
+});
+
+// Or disable all debug features
+await inflictBoreDOM(state, logic, { debug: false });
+```
+
+Note: In production builds (`boreDOM.prod.js`), the Console API is eliminated entirely — no overhead in production.
+
 ## Important Rules
 
 ### DO:

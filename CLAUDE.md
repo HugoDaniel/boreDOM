@@ -29,6 +29,8 @@ src/                  # Core framework (TypeScript)
   index.ts            # Public API: inflictBoreDOM(), webComponent()
   bore.ts             # State proxies, event handlers, refs, slots
   dom.ts              # DOM scanning, component registration, Bored class
+  debug.ts            # Error-driven development utilities
+  console-api.ts      # Runtime component creation (define/operate/export)
   types.ts            # TypeScript definitions
   utils/              # Helper functions
 boreDOMCLI/           # Dev server CLI with HMR
@@ -60,6 +62,19 @@ dist/                 # Build output (don't commit)
 - `data-ref="name"` on elements exposes them via `refs.name`
 - Named slots for dynamic content via `slots.name = content`
 
+### Debug & Production Modes
+- `inflictBoreDOM(state, logic, { debug: false })` disables debug features at runtime
+- Use `boreDOM.prod.js` for production builds (debug code eliminated)
+- Error boundaries catch render/init errors without breaking other components
+- Debug globals (`$state`, `$refs`, `$rerender`) available in dev mode on error
+- Granular config: `{ debug: { console: true, globals: false, api: true } }`
+
+### Console API (Development Only)
+- `boreDOM.define(tag, template, logic)` - Create components at runtime
+- `boreDOM.operate(selector)` - Get live access to component internals (state, refs, slots, rerender)
+- `boreDOM.export(selector)` - Export component state and template as JSON
+- Eliminated in production builds
+
 ## Code Style
 
 - TypeScript, 2-space indent, no semicolons
@@ -85,8 +100,10 @@ dist/                 # Build output (don't commit)
 | Proxy internals | High |
 | Utilities | High |
 | Edge cases | High |
+| Debug/Error boundaries | High |
+| Console API | High |
 
-Tests include: mutation batching, read-only state enforcement, Symbol key bypass, hierarchical subscriptions, array methods, object replacement, error handling, and utility functions.
+Tests include: mutation batching, read-only state enforcement, Symbol key bypass, hierarchical subscriptions, array methods, object replacement, error handling, utility functions, debug mode toggling, granular debug config, error context exposure, Console API (define/operate/export), and build-time elimination.
 
 ## Current TODOs (from TODO file)
 
