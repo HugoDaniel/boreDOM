@@ -117,37 +117,52 @@ var INIT_CLAUDE_MD = `# boreDOM Project
 
 This project uses boreDOM with MCP integration. Claude can directly control the running app.
 
-## Quick Reference
+## Exports
 
-### State Mutations
+Only two functions are exported from boreDOM:
 \`\`\`javascript
-// In event handlers:
-on("eventName", ({ state }) => {
-  state.count++
-  state.users.push({ id: 1, name: "Alice" })
-})
+import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js"
 \`\`\`
 
-### Component Structure
+**DO NOT** try to import \`makeComponent\` - it's only available inside render functions.
+
+## Component Structure
+
 \`\`\`javascript
 webComponent(({ on, refs }) => {
-  // Init phase: setup event handlers (runs once)
+  // INIT PHASE: runs once when component is created
+  // - Setup event handlers here
+  // - refs are available
   on("click", ({ state }) => state.count++)
 
-  // Return render function (runs on every state change)
-  return ({ state, refs, slots }) => {
+  // RENDER PHASE: runs on every state change
+  return ({ state, refs, slots, makeComponent }) => {
+    // - Update DOM here
+    // - makeComponent is ONLY available here (not importable!)
     refs.display.textContent = state.count
     slots.list = state.items.map(i => \`<li>\${i.name}</li>\`).join("")
   }
 })
 \`\`\`
 
-### Template Attributes
-- \`data-ref="name"\` \u2192 Access via \`refs.name\`
-- \`data-slot="name"\` \u2192 Set HTML via \`slots.name = "..."\`
+## Template Attributes
+
+- \`data-ref="name"\` \u2192 Access element via \`refs.name\`
+- \`data-slot="name"\` \u2192 Set innerHTML via \`slots.name = "..."\`
 - \`onclick="dispatch('eventName')"\` \u2192 Trigger event handler
 
-### MCP Tools Available
+## State Mutations
+
+\`\`\`javascript
+// Only mutate state in event handlers, never in render
+on("addUser", ({ state }) => {
+  state.count++
+  state.users.push({ id: 1, name: "Alice" })
+})
+\`\`\`
+
+## MCP Tools
+
 | Tool | Description |
 |------|-------------|
 | \`boredom_get_context\` | Get full app state and components |
@@ -155,13 +170,17 @@ webComponent(({ on, refs }) => {
 | \`boredom_define_component\` | Create new component at runtime |
 | \`boredom_get_focus\` | Get focused context for current error |
 
-### Common Patterns
+## Common Patterns
 
-**Render a list:**
+**Render list with child components** (makeComponent is a render param, not an import):
 \`\`\`javascript
-slots.items = state.users.map((user, i) =>
-  makeComponent("user-card", { detail: { user, index: i } })
-).join("")
+webComponent(() => {
+  return ({ state, slots, makeComponent }) => {
+    slots.items = state.users.map((user, i) =>
+      makeComponent("user-card", { detail: { user, index: i } })
+    ).join("")
+  }
+})
 \`\`\`
 
 **Guard null values:**
