@@ -1,17 +1,60 @@
 # boreDOM MCP Server
 
-MCP server that lets Claude **directly control boreDOM apps** in your browser. No copy-paste. No intermediary.
+Claude reads your app's state, writes code, executes it in your browser. No copy-paste.
 
+## What Claude Sees
+
+When Claude calls `boredom_get_context`, it gets your entire running app:
+
+```json
+{
+  "state": {
+    "count": 42,
+    "users": [
+      { "id": 1, "name": "Alice" },
+      { "id": 2, "name": "Bob" }
+    ]
+  },
+  "components": ["my-counter", "user-list"],
+  "issues": {
+    "errors": [],
+    "warnings": ["user-list: refs.list is null"]
+  }
+}
 ```
-User: "Add dark mode"
-Claude: *reads app* → *writes code* → *dark mode appears*
+
+## What Claude Does
+
+```javascript
+// Claude calls boredom_apply_code with:
+state.users.push({ id: 3, name: "Charlie" })
+
+// Browser executes it. User list updates.
 ```
 
-## 2-Step Setup
+If the code throws, it rolls back automatically.
 
-### Step 1: Add to Claude Code
+## Tools
 
-Add this to `~/.claude/settings.json`:
+| Tool | What it does |
+|------|--------------|
+| `boredom_get_context` | Returns state, components, errors |
+| `boredom_get_focus` | Returns context for current error/issue |
+| `boredom_apply_code` | Executes JavaScript in browser |
+| `boredom_apply_batch` | Executes multiple blocks atomically |
+| `boredom_validate_code` | Checks code before execution |
+| `boredom_get_types` | Returns inferred TypeScript types |
+| `boredom_type_of` | Returns type for a state path |
+| `boredom_define_component` | Creates a new component at runtime |
+| `boredom_get_component` | Returns component's template and state |
+| `boredom_operate_component` | Returns live component refs/slots |
+| `boredom_get_attempts` | Returns history of code applications |
+
+## Setup
+
+Two things: tell Claude Code about the server, tell your browser to connect.
+
+**1. Claude Code config** (add to your MCP settings):
 
 ```json
 {
@@ -24,116 +67,43 @@ Add this to `~/.claude/settings.json`:
 }
 ```
 
-Then restart Claude Code (or run `/mcp` to reload).
-
-### Step 2: Add to Your HTML
+**2. Browser script** (add to your HTML):
 
 ```html
 <script src="http://localhost:31337"></script>
 ```
 
-**That's it.** Restart Claude Code and start building.
+Restart Claude Code. Open your app in browser. Ask Claude to do something.
 
----
-
-## What Can Claude Do?
-
-| Action | Tool |
-|--------|------|
-| See your app's state | `boredom_get_context` |
-| Find errors | `boredom_get_focus` |
-| Run code in browser | `boredom_apply_code` |
-| Create components | `boredom_define_component` |
-| Get TypeScript types | `boredom_get_types` |
-
-### Example Conversation
+## Architecture
 
 ```
-You: "The user list is broken"
-
-Claude: Let me check what's happening...
-        *calls boredom_get_focus*
-
-        I see the issue - users array is undefined.
-        Let me fix it...
-        *calls boredom_apply_code: state.users = state.users || []*
-
-        Fixed! The user list should render now.
+Claude Code ◄──STDIO──► boredom-mcp ◄──WebSocket──► Browser
 ```
 
----
-
-## All Tools
-
-| Tool | Description |
-|------|-------------|
-| `boredom_get_context` | Full app state, components, errors |
-| `boredom_get_focus` | Focused view of current issue |
-| `boredom_get_types` | Inferred TypeScript definitions |
-| `boredom_type_of` | Type for a specific state path |
-| `boredom_validate_code` | Check code before running |
-| `boredom_apply_code` | Run code (auto-validates, auto-rollback) |
-| `boredom_apply_batch` | Run multiple code blocks atomically |
-| `boredom_define_component` | Create new component at runtime |
-| `boredom_get_component` | Inspect a running component |
-| `boredom_operate_component` | Get live component context |
-| `boredom_get_attempts` | History of code applications |
-
----
-
-## How It Works
-
-```
-┌─────────────┐    STDIO    ┌─────────────┐   WebSocket   ┌─────────────┐
-│ Claude Code │◄──────────►│ boredom-mcp │◄─────────────►│   Browser   │
-└─────────────┘             └─────────────┘               └─────────────┘
-```
-
-1. Claude calls a tool (e.g., `boredom_get_context`)
-2. MCP server forwards to browser via WebSocket
-3. Browser executes on your running boreDOM app
-4. Result flows back to Claude
-
----
+Claude calls MCP tools. Server forwards to browser. Browser executes on your boreDOM app. Results flow back.
 
 ## Troubleshooting
 
-### "Browser not connected"
+**"Browser not connected"** - The bridge script isn't loaded. Add it to your HTML and refresh.
 
-Add the bridge script to your HTML:
-```html
-<script src="http://localhost:31337"></script>
-```
+**Check status** - In browser console: `boredomBridge.getStatus()`
 
-### Check connection status
-
-In browser console:
-```javascript
-boredomBridge.getStatus()
-// { connected: true, reconnectAttempts: 0 }
-```
-
-### Custom port
-
+**Custom port**:
 ```bash
 BOREDOM_MCP_PORT=3118 npx boredom-mcp
 ```
-
 ```html
 <script>window.BOREDOM_MCP_PORT = 3118</script>
-<script src="http://localhost:3118/bridge.js"></script>
+<script src="http://localhost:3118"></script>
 ```
-
----
 
 ## Development
 
 ```bash
 git clone https://github.com/HugoDaniel/boreDOM.git
 cd boreDOM/boredom-mcp
-pnpm install
-pnpm run build
-pnpm run test:all  # 28 tests
+pnpm install && pnpm run build && pnpm run test:all
 ```
 
 ## License
