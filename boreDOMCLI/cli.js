@@ -177,6 +177,63 @@ app-root
 "task-filter": webComponent(...)  // Handle filtering
 \`\`\`
 
+## File Organization
+
+**When index.html exceeds ~200 lines, split into separate files.**
+
+### Structure for larger apps:
+\`\`\`
+project/
+├── index.html              # App shell + state init only
+├── components/
+│   ├── task-list.html      # <template data-component="task-list">
+│   ├── task-list.js        # webComponent logic
+│   ├── task-item.html
+│   └── task-item.js
+\`\`\`
+
+### index.html (shell only):
+\`\`\`html
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <app-root></app-root>
+  <script type="module">
+    import { inflictBoreDOM } from "..."
+    inflictBoreDOM({ tasks: [] })
+  </script>
+</body>
+</html>
+\`\`\`
+
+### components/task-item.html:
+\`\`\`html
+<template data-component="task-item">
+  <div class="task">
+    <span data-ref="name"></span>
+    <button onclick="dispatch('delete')">Delete</button>
+  </div>
+</template>
+\`\`\`
+
+### components/task-item.js:
+\`\`\`javascript
+import { webComponent } from "boredom"
+export default webComponent(({ on }) => {
+  on("delete", ({ state, detail }) => {
+    state.tasks.splice(detail.index, 1)
+  })
+  return ({ refs, detail }) => {
+    refs.name.textContent = detail.task.name
+  }
+})
+\`\`\`
+
+Run with: \`boredom dev\` (auto-discovers components/ folder)
+
 ## Exports
 
 Only two functions are exported from boreDOM:
