@@ -172,6 +172,48 @@ var INIT_CLAUDE_MD = `# boreDOM Project
 
 This project uses boreDOM with MCP integration. Claude can directly control the running app.
 
+## Component Architecture
+
+**IMPORTANT: Break features into small, focused components.**
+
+### When to create a new component:
+- It represents a distinct UI element (card, button, form, list item)
+- It will be repeated (list items, cards in a grid)
+- It handles specific user interactions (a form, a menu)
+- It manages a logical slice of the UI (header, sidebar, main content)
+
+### Component hierarchy example:
+\`\`\`
+app-root
+\u251C\u2500\u2500 app-header          (navigation, logo)
+\u251C\u2500\u2500 task-list           (container, manages list)
+\u2502   \u2514\u2500\u2500 task-item       (repeated for each task)
+\u2502       \u2514\u2500\u2500 task-actions (edit/delete buttons)
+\u2514\u2500\u2500 task-form           (add new tasks)
+\`\`\`
+
+### Bad: One monolithic component
+\`\`\`javascript
+// DON'T do this - everything in one component
+"my-app": webComponent(({ on }) => {
+  on("addTask", ...)
+  on("deleteTask", ...)
+  on("editTask", ...)
+  on("toggleDone", ...)
+  on("filter", ...)
+  // 100+ lines of handlers and render logic
+})
+\`\`\`
+
+### Good: Focused components
+\`\`\`javascript
+// Each component has ONE job
+"task-item": webComponent(...)    // Display single task
+"task-list": webComponent(...)    // Render list of task-items
+"task-form": webComponent(...)    // Handle task creation
+"task-filter": webComponent(...)  // Handle filtering
+\`\`\`
+
 ## Exports
 
 Only two functions are exported from boreDOM:
@@ -227,16 +269,31 @@ on("addUser", ({ state }) => {
 
 ## Common Patterns
 
-**Render list with child components** (makeComponent is a render param, not an import):
+**Parent renders child components** (makeComponent is a render param, not an import):
 \`\`\`javascript
-webComponent(() => {
+// Parent component (task-list)
+"task-list": webComponent(() => {
   return ({ state, slots, makeComponent }) => {
-    slots.items = state.users.map((user, i) =>
-      makeComponent("user-card", { detail: { user, index: i } })
+    slots.items = state.tasks.map((task, index) =>
+      makeComponent("task-item", { detail: { task, index } })
     ).join("")
   }
 })
+
+// Child component (task-item) - receives data via detail
+"task-item": webComponent(({ on }) => {
+  on("delete", ({ state, detail }) => {
+    state.tasks.splice(detail.index, 1)
+  })
+
+  return ({ refs, detail }) => {
+    refs.name.textContent = detail.task.name
+  }
+})
 \`\`\`
+
+**Child-to-parent communication**: Children dispatch events, parents handle them.
+Events bubble up, so parent can use \`on()\` to catch child events.
 
 **Guard null values:**
 \`\`\`javascript
