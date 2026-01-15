@@ -26,7 +26,7 @@ export function registerContextTools(server: McpServer, bridge: Bridge): void {
             text: JSON.stringify({
               error: "Browser not connected",
               _meta: {
-                hint: "Include the bridge script in your page: <script src=\"http://localhost:3117/bridge.js\"></script>",
+                hint: "Include the bridge script in your page: <script src=\"http://localhost:31337/bridge.js\"></script>",
               } satisfies ResponseMeta,
             }, null, 2),
           }],
@@ -85,7 +85,7 @@ export function registerContextTools(server: McpServer, bridge: Bridge): void {
             text: JSON.stringify({
               error: "Browser not connected",
               _meta: {
-                hint: "Include the bridge script in your page: <script src=\"http://localhost:3117/bridge.js\"></script>",
+                hint: "Include the bridge script in your page: <script src=\"http://localhost:31337/bridge.js\"></script>",
               } satisfies ResponseMeta,
             }, null, 2),
           }],

@@ -24,7 +24,7 @@ interface PendingRequest {
 /**
  * Start the WebSocket bridge server
  *
- * @param port - Port to listen on (default: 3117)
+ * @param port - Port to listen on (default: 31337)
  * @returns Bridge interface for making calls to the browser
  */
 export async function startBridge(port: number): Promise<Bridge> {

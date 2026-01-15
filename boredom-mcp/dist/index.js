@@ -5,17 +5,17 @@
  * Enables Claude to directly control boreDOM applications running in the browser.
  *
  * Usage:
- *   npx boredom-mcp                    # Start with default port 3117
+ *   npx boredom-mcp                    # Start with default port 31337
  *   BOREDOM_MCP_PORT=3118 npx boredom-mcp  # Start with custom port
  *
  * In browser:
- *   <script src="http://localhost:3117/bridge.js"></script>
+ *   <script src="http://localhost:31337/bridge.js"></script>
  */
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createServer } from "./server.js";
 import { startBridge } from "./bridge/websocket.js";
 // Default port for WebSocket bridge
-const DEFAULT_PORT = 3117;
+const DEFAULT_PORT = 31337;
 async function main() {
     // Get port from environment or use default
     const port = parseInt(process.env.BOREDOM_MCP_PORT || String(DEFAULT_PORT), 10);

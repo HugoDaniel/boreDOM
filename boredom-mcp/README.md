@@ -29,7 +29,7 @@ Then restart Claude Code (or run `/mcp` to reload).
 ### Step 2: Add to Your HTML
 
 ```html
-<script src="http://localhost:3117/bridge.js"></script>
+<script src="http://localhost:31337/bridge.js"></script>
 ```
 
 **That's it.** Restart Claude Code and start building.
@@ -102,7 +102,7 @@ Claude: Let me check what's happening...
 
 Add the bridge script to your HTML:
 ```html
-<script src="http://localhost:3117/bridge.js"></script>
+<script src="http://localhost:31337/bridge.js"></script>
 ```
 
 ### Check connection status

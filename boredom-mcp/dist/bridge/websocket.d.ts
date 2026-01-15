@@ -8,7 +8,7 @@ import type { Bridge } from "../types.js";
 /**
  * Start the WebSocket bridge server
  *
- * @param port - Port to listen on (default: 3117)
+ * @param port - Port to listen on (default: 31337)
  * @returns Bridge interface for making calls to the browser
  */
 export declare function startBridge(port: number): Promise<Bridge>;
