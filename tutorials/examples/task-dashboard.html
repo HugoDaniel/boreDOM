@@ -26,7 +26,8 @@
 ║  "Add a due date filter to filter-panel"                                     ║
 ║  "Make stats-bar show a progress ring"                                       ║
 ║                                                                              ║
-║  DEPLOYMENT: Copy this file + boreDOM.prod.js to any static host.            ║
+║  DEPLOYMENT: Use CDN or copy files to any static host.                       ║
+║  CDN: https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.prod.js         ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
@@ -422,7 +423,7 @@
        ═══════════════════════════════════════════════════════════════════════ -->
 
   <script type="module">
-    import { inflictBoreDOM, webComponent } from '../../dist/boreDOM.min.js'
+    import { inflictBoreDOM, webComponent } from 'https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js'
 
     // ─────────────────────────────────────────────────────────────────────────
     // Persistence helpers

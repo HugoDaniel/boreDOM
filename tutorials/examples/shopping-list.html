@@ -7,7 +7,8 @@
 ║  This is a complete, production-ready app in a single HTML file.             ║
 ║  No build step. No npm install. No bundler configuration.                    ║
 ║                                                                              ║
-║  TO DEPLOY: Copy this file + boreDOM.prod.js to any static host.             ║
+║  TO DEPLOY: Use CDN (just change import below) or copy files to any host.    ║
+║  CDN: https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.prod.js         ║
 ║  See time-tracker.html for full deployment documentation.                    ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -157,7 +158,7 @@
   </template>
 
   <script type="module">
-    import { inflictBoreDOM, webComponent } from '../../dist/boreDOM.min.js'
+    import { inflictBoreDOM, webComponent } from 'https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js'
 
     // Load from localStorage
     const loadItems = () => {

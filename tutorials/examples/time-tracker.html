@@ -9,10 +9,15 @@
 ║                                                                              ║
 ║  TO DEPLOY:                                                                  ║
 ║  ──────────                                                                  ║
-║  1. Copy this HTML file to your server                                       ║
-║  2. Copy boreDOM.prod.js (30KB, ~10KB gzipped) alongside it                  ║
-║  3. Update the import path below to: './boreDOM.prod.js'                     ║
-║  4. Done! Serve from any static host.                                        ║
+║  Option A - Use CDN (easiest):                                               ║
+║    Just change the import below to:                                          ║
+║    https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.prod.js            ║
+║                                                                              ║
+║  Option B - Self-host:                                                       ║
+║    1. Copy this HTML file to your server                                     ║
+║    2. Copy boreDOM.prod.js (30KB, ~10KB gzipped) alongside it                ║
+║    3. Update the import path below to: './boreDOM.prod.js'                   ║
+║    4. Done! Serve from any static host.                                      ║
 ║                                                                              ║
 ║  HOSTING OPTIONS:                                                            ║
 ║  ────────────────                                                            ║
@@ -207,7 +212,7 @@
   </template>
 
   <script type="module">
-    import { inflictBoreDOM, webComponent } from '../../dist/boreDOM.min.js'
+    import { inflictBoreDOM, webComponent } from 'https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js'
 
     // Helper to save to localStorage
     const saveData = (state) => {
