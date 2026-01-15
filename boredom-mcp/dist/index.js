@@ -9,7 +9,7 @@
  *   BOREDOM_MCP_PORT=3118 npx boredom-mcp  # Start with custom port
  *
  * In browser:
- *   <script src="http://localhost:31337/bridge.js"></script>
+ *   <script src="http://localhost:31337"></script>
  */
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createServer } from "./server.js";

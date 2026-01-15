@@ -5,7 +5,7 @@
  * This enables Claude to directly control the app via MCP tools.
  *
  * Usage:
- *   <script src="http://localhost:31337/bridge.js"></script>
+ *   <script src="http://localhost:31337"></script>
  *
  * Or with custom port:
  *   <script>window.BOREDOM_MCP_PORT = 3118;</script>
