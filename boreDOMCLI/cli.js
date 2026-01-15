@@ -27,39 +27,202 @@ function collectMultiValue(value, previous) {
   return next;
 }
 
-console.log("## boreDOM CLI options");
-console.log(
-  "## ",
-  "--index <path to default html>",
-  "The base HTML file to serve",
-  "defaults to ./index.html",
-);
-console.log(
-  "## ",
-  "--html <folder>",
-  "Folder containing HTML component files",
-  'defaults to "./components"',
-);
-console.log(
-  "## ",
-  "--static <folder>",
-  "Static files folder, all files in here are copied as is",
-  'defaults to "./src"',
-);
-console.log(
-  "## ",
-  "--static-serve <folder>",
-  "Build subfolder used to serve static assets",
-  'defaults to "./"',
-);
-// console.log(
-//   "## ",
-//   "--bundle <folder>",
-//   "Folder containing JS/TS files to be bundled (using esbuild)",
-//   'defaults to "src"',
-// );
+// ============================================================================
+// Init Command Templates
+// ============================================================================
+
+const INIT_INDEX_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>boreDOM App</title>
+  <script type="module">
+    import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js"
+
+    inflictBoreDOM(
+      { count: 0 },
+      {
+        "my-app": webComponent(({ on }) => {
+          on("increment", ({ state }) => state.count++)
+          on("decrement", ({ state }) => state.count--)
+
+          return ({ state, refs }) => {
+            refs.count.textContent = state.count
+          }
+        })
+      }
+    )
+  </script>
+  <script src="http://localhost:31337"></script>
+</head>
+<body>
+  <my-app></my-app>
+
+  <template data-component="my-app">
+    <div style="font-family: system-ui; text-align: center; padding: 2rem;">
+      <h1>boreDOM App</h1>
+      <div style="display: flex; gap: 1rem; justify-content: center; align-items: center;">
+        <button onclick="dispatch('decrement')">-</button>
+        <span data-ref="count" style="font-size: 2rem; min-width: 3rem;">0</span>
+        <button onclick="dispatch('increment')">+</button>
+      </div>
+      <p style="margin-top: 2rem; color: #666;">
+        Edit this file. Claude can control this app via MCP.
+      </p>
+    </div>
+  </template>
+</body>
+</html>
+`;
+
+const INIT_CLAUDE_MD = `# boreDOM Project
+
+This project uses boreDOM with MCP integration. Claude can directly control the running app.
+
+## Quick Reference
+
+### State Mutations
+\`\`\`javascript
+// In event handlers:
+on("eventName", ({ state }) => {
+  state.count++
+  state.users.push({ id: 1, name: "Alice" })
+})
+\`\`\`
+
+### Component Structure
+\`\`\`javascript
+webComponent(({ on, refs }) => {
+  // Init phase: setup event handlers (runs once)
+  on("click", ({ state }) => state.count++)
+
+  // Return render function (runs on every state change)
+  return ({ state, refs, slots }) => {
+    refs.display.textContent = state.count
+    slots.list = state.items.map(i => \`<li>\${i.name}</li>\`).join("")
+  }
+})
+\`\`\`
+
+### Template Attributes
+- \`data-ref="name"\` → Access via \`refs.name\`
+- \`data-slot="name"\` → Set HTML via \`slots.name = "..."\`
+- \`onclick="dispatch('eventName')"\` → Trigger event handler
+
+### MCP Tools Available
+| Tool | Description |
+|------|-------------|
+| \`boredom_get_context\` | Get full app state and components |
+| \`boredom_apply_code\` | Execute JavaScript in browser |
+| \`boredom_define_component\` | Create new component at runtime |
+| \`boredom_get_focus\` | Get focused context for current error |
+
+### Common Patterns
+
+**Render a list:**
+\`\`\`javascript
+slots.items = state.users.map((user, i) =>
+  makeComponent("user-card", { detail: { user, index: i } })
+).join("")
+\`\`\`
+
+**Guard null values:**
+\`\`\`javascript
+slots.list = (state.items || []).map(i => \`<li>\${i.name}</li>\`).join("")
+\`\`\`
+
+**Conditional rendering:**
+\`\`\`javascript
+if (state.loading) {
+  slots.content = "<p>Loading...</p>"
+} else {
+  slots.content = state.items.map(i => \`<div>\${i.name}</div>\`).join("")
+}
+\`\`\`
+`;
+
+const INIT_MCP_JSON = `{
+  "mcpServers": {
+    "boredom": {
+      "command": "npx",
+      "args": ["-y", "boredom-mcp"]
+    }
+  }
+}
+`;
+
+async function initProject(targetDir) {
+  const dir = path.resolve(targetDir || ".")
+
+  console.log(`Initializing boreDOM project in ${dir}...`)
+
+  // Check if files already exist
+  const indexPath = path.join(dir, "index.html")
+  const claudePath = path.join(dir, "CLAUDE.md")
+  const mcpPath = path.join(dir, ".mcp.json")
+
+  const existingFiles = []
+  if (await fs.pathExists(indexPath)) existingFiles.push("index.html")
+  if (await fs.pathExists(claudePath)) existingFiles.push("CLAUDE.md")
+  if (await fs.pathExists(mcpPath)) existingFiles.push(".mcp.json")
+
+  if (existingFiles.length > 0) {
+    console.log("\x1b[33m%s\x1b[0m", `Warning: These files already exist and will be skipped: ${existingFiles.join(", ")}`)
+  }
+
+  // Create directory if needed
+  await fs.ensureDir(dir)
+
+  // Write files (skip existing)
+  if (!existingFiles.includes("index.html")) {
+    await fs.writeFile(indexPath, INIT_INDEX_HTML)
+    console.log("  Created index.html")
+  }
+
+  if (!existingFiles.includes("CLAUDE.md")) {
+    await fs.writeFile(claudePath, INIT_CLAUDE_MD)
+    console.log("  Created CLAUDE.md")
+  }
+
+  if (!existingFiles.includes(".mcp.json")) {
+    await fs.writeFile(mcpPath, INIT_MCP_JSON)
+    console.log("  Created .mcp.json")
+  }
+
+  console.log("")
+  console.log("\x1b[32m%s\x1b[0m", "Done! Next steps:")
+  console.log("")
+  console.log("  1. Open index.html in your browser")
+  console.log("  2. Start Claude Code in this directory")
+  console.log("  3. Ask Claude to modify your app")
+  console.log("")
+}
+
+// ============================================================================
+// CLI Setup
+// ============================================================================
+
+const isTestMode = Boolean(process.env.BOREDOM_CLI_TEST_MODE);
 
 program
+  .name("boredom")
+  .description("boreDOM CLI - dev server and project scaffolding")
+  .version("0.26.1")
+
+// Init command
+program
+  .command("init [directory]")
+  .description("Create a new boreDOM project with MCP support")
+  .action(async (directory) => {
+    await initProject(directory)
+    process.exit(0)
+  })
+
+// Dev command (default)
+const devCommand = program
+  .command("dev", { isDefault: true })
+  .description("Start the development server")
   .option("--index <path to file>", "Index file to serve", "index.html")
   .option(
     "--html <folder>",
@@ -82,14 +245,6 @@ program
     "Build subfolder used to serve static assets",
     DEFAULT_STATIC_SERVE,
   )
-  // .option(
-  //   "--bundle <folder>",
-  //   "Folder containing files to be bundled",
-  //   "components", 0; //
-  // )
-  ;
-
-const isTestMode = Boolean(process.env.BOREDOM_CLI_TEST_MODE);
 
 if (isTestMode) {
   program.parse([], { from: "user" });
@@ -97,7 +252,8 @@ if (isTestMode) {
   program.parse(process.argv);
 }
 
-const options = program.opts();
+// Get options from dev command for backwards compatibility
+const options = devCommand.opts();
 
 function sanitizeServeInput(value) {
   const normalizedSlashes = value.replace(/\\+/g, "/").trim();
@@ -514,10 +670,12 @@ async function watchFiles() {
   });
 }
 
-async function main() {
-  console.log("The file used as the base for HTML is:", options.index);
+async function main(cmdOptions) {
+  // Use passed options or fall back to devCommand options
+  const opts = cmdOptions || options;
+  console.log("The file used as the base for HTML is:", opts.index);
 
-  const indexPath = path.join(process.cwd(), options.index);
+  const indexPath = path.join(process.cwd(), opts.index);
   fs.ensureFile(indexPath, (err) => {
     if (err) {
       // This should not happen. ensureFile creates the file.
@@ -534,7 +692,11 @@ async function main() {
   await watchFiles();
 }
 
-if (!isTestMode) {
+// Only run dev server if not in test mode and not running init command
+const args = process.argv.slice(2);
+const isInitCommand = args[0] === "init";
+
+if (!isTestMode && !isInitCommand) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);

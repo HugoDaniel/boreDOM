@@ -14,3 +14,6 @@ DEVELOPER_EXPERIENCE.md
 LLM_EXAMPLES_PLAN.md
 REDDIT_RUBY_VIBECODE_APPROACH.md
 wt1/
+
+# Local MCP config (created by boredom init or manually)
+.mcp.json

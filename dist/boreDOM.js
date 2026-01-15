@@ -69,32 +69,165 @@ function collectMultiValue(value, previous) {
   next.push(value);
   return next;
 }
-console.log("## boreDOM CLI options");
-console.log(
-  "## ",
-  "--index <path to default html>",
-  "The base HTML file to serve",
-  "defaults to ./index.html"
-);
-console.log(
-  "## ",
-  "--html <folder>",
-  "Folder containing HTML component files",
-  'defaults to "./components"'
-);
-console.log(
-  "## ",
-  "--static <folder>",
-  "Static files folder, all files in here are copied as is",
-  'defaults to "./src"'
-);
-console.log(
-  "## ",
-  "--static-serve <folder>",
-  "Build subfolder used to serve static assets",
-  'defaults to "./"'
-);
-import_commander.program.option("--index <path to file>", "Index file to serve", "index.html").option(
+var INIT_INDEX_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>boreDOM App</title>
+  <script type="module">
+    import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js"
+
+    inflictBoreDOM(
+      { count: 0 },
+      {
+        "my-app": webComponent(({ on }) => {
+          on("increment", ({ state }) => state.count++)
+          on("decrement", ({ state }) => state.count--)
+
+          return ({ state, refs }) => {
+            refs.count.textContent = state.count
+          }
+        })
+      }
+    )
+  </script>
+  <script src="http://localhost:31337"></script>
+</head>
+<body>
+  <my-app></my-app>
+
+  <template data-component="my-app">
+    <div style="font-family: system-ui; text-align: center; padding: 2rem;">
+      <h1>boreDOM App</h1>
+      <div style="display: flex; gap: 1rem; justify-content: center; align-items: center;">
+        <button onclick="dispatch('decrement')">-</button>
+        <span data-ref="count" style="font-size: 2rem; min-width: 3rem;">0</span>
+        <button onclick="dispatch('increment')">+</button>
+      </div>
+      <p style="margin-top: 2rem; color: #666;">
+        Edit this file. Claude can control this app via MCP.
+      </p>
+    </div>
+  </template>
+</body>
+</html>
+`;
+var INIT_CLAUDE_MD = `# boreDOM Project
+
+This project uses boreDOM with MCP integration. Claude can directly control the running app.
+
+## Quick Reference
+
+### State Mutations
+\`\`\`javascript
+// In event handlers:
+on("eventName", ({ state }) => {
+  state.count++
+  state.users.push({ id: 1, name: "Alice" })
+})
+\`\`\`
+
+### Component Structure
+\`\`\`javascript
+webComponent(({ on, refs }) => {
+  // Init phase: setup event handlers (runs once)
+  on("click", ({ state }) => state.count++)
+
+  // Return render function (runs on every state change)
+  return ({ state, refs, slots }) => {
+    refs.display.textContent = state.count
+    slots.list = state.items.map(i => \`<li>\${i.name}</li>\`).join("")
+  }
+})
+\`\`\`
+
+### Template Attributes
+- \`data-ref="name"\` \u2192 Access via \`refs.name\`
+- \`data-slot="name"\` \u2192 Set HTML via \`slots.name = "..."\`
+- \`onclick="dispatch('eventName')"\` \u2192 Trigger event handler
+
+### MCP Tools Available
+| Tool | Description |
+|------|-------------|
+| \`boredom_get_context\` | Get full app state and components |
+| \`boredom_apply_code\` | Execute JavaScript in browser |
+| \`boredom_define_component\` | Create new component at runtime |
+| \`boredom_get_focus\` | Get focused context for current error |
+
+### Common Patterns
+
+**Render a list:**
+\`\`\`javascript
+slots.items = state.users.map((user, i) =>
+  makeComponent("user-card", { detail: { user, index: i } })
+).join("")
+\`\`\`
+
+**Guard null values:**
+\`\`\`javascript
+slots.list = (state.items || []).map(i => \`<li>\${i.name}</li>\`).join("")
+\`\`\`
+
+**Conditional rendering:**
+\`\`\`javascript
+if (state.loading) {
+  slots.content = "<p>Loading...</p>"
+} else {
+  slots.content = state.items.map(i => \`<div>\${i.name}</div>\`).join("")
+}
+\`\`\`
+`;
+var INIT_MCP_JSON = `{
+  "mcpServers": {
+    "boredom": {
+      "command": "npx",
+      "args": ["-y", "boredom-mcp"]
+    }
+  }
+}
+`;
+async function initProject(targetDir) {
+  const dir = import_path.default.resolve(targetDir || ".");
+  console.log(`Initializing boreDOM project in ${dir}...`);
+  const indexPath = import_path.default.join(dir, "index.html");
+  const claudePath = import_path.default.join(dir, "CLAUDE.md");
+  const mcpPath = import_path.default.join(dir, ".mcp.json");
+  const existingFiles = [];
+  if (await import_fs_extra.default.pathExists(indexPath)) existingFiles.push("index.html");
+  if (await import_fs_extra.default.pathExists(claudePath)) existingFiles.push("CLAUDE.md");
+  if (await import_fs_extra.default.pathExists(mcpPath)) existingFiles.push(".mcp.json");
+  if (existingFiles.length > 0) {
+    console.log("\x1B[33m%s\x1B[0m", `Warning: These files already exist and will be skipped: ${existingFiles.join(", ")}`);
+  }
+  await import_fs_extra.default.ensureDir(dir);
+  if (!existingFiles.includes("index.html")) {
+    await import_fs_extra.default.writeFile(indexPath, INIT_INDEX_HTML);
+    console.log("  Created index.html");
+  }
+  if (!existingFiles.includes("CLAUDE.md")) {
+    await import_fs_extra.default.writeFile(claudePath, INIT_CLAUDE_MD);
+    console.log("  Created CLAUDE.md");
+  }
+  if (!existingFiles.includes(".mcp.json")) {
+    await import_fs_extra.default.writeFile(mcpPath, INIT_MCP_JSON);
+    console.log("  Created .mcp.json");
+  }
+  console.log("");
+  console.log("\x1B[32m%s\x1B[0m", "Done! Next steps:");
+  console.log("");
+  console.log("  1. Open index.html in your browser");
+  console.log("  2. Start Claude Code in this directory");
+  console.log("  3. Ask Claude to modify your app");
+  console.log("");
+}
+var isTestMode = Boolean(process.env.BOREDOM_CLI_TEST_MODE);
+import_commander.program.name("boredom").description("boreDOM CLI - dev server and project scaffolding").version("0.26.1");
+import_commander.program.command("init [directory]").description("Create a new boreDOM project with MCP support").action(async (directory) => {
+  await initProject(directory);
+  process.exit(0);
+});
+var devCommand = import_commander.program.command("dev", { isDefault: true }).description("Start the development server").option("--index <path to file>", "Index file to serve", "index.html").option(
   "--html <folder>",
   "Folder containing HTML component files",
   DEFAULT_COMPONENTS_DIR
@@ -112,13 +245,12 @@ import_commander.program.option("--index <path to file>", "Index file to serve",
   "Build subfolder used to serve static assets",
   DEFAULT_STATIC_SERVE
 );
-var isTestMode = Boolean(process.env.BOREDOM_CLI_TEST_MODE);
 if (isTestMode) {
   import_commander.program.parse([], { from: "user" });
 } else {
   import_commander.program.parse(process.argv);
 }
-var options = import_commander.program.opts();
+var options = devCommand.opts();
 function sanitizeServeInput(value) {
   const normalizedSlashes = value.replace(/\\+/g, "/").trim();
   if (!normalizedSlashes) {
@@ -451,9 +583,10 @@ async function watchFiles() {
     }, 100);
   });
 }
-async function main() {
-  console.log("The file used as the base for HTML is:", options.index);
-  const indexPath = import_path.default.join(process.cwd(), options.index);
+async function main(cmdOptions) {
+  const opts = cmdOptions || options;
+  console.log("The file used as the base for HTML is:", opts.index);
+  const indexPath = import_path.default.join(process.cwd(), opts.index);
   import_fs_extra.default.ensureFile(indexPath, (err) => {
     if (err) {
       console.log(
@@ -468,7 +601,9 @@ Please specify a location for it with "--index"`
   startServer();
   await watchFiles();
 }
-if (!isTestMode) {
+var args = process.argv.slice(2);
+var isInitCommand = args[0] === "init";
+if (!isTestMode && !isInitCommand) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);
