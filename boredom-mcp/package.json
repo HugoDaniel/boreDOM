@@ -7,6 +7,19 @@
   "bin": {
     "boredom-mcp": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "bridge"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HugoDaniel/boreDOM.git",
+    "directory": "boredom-mcp"
+  },
+  "homepage": "https://github.com/HugoDaniel/boreDOM/tree/main/boredom-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/HugoDaniel/boreDOM/issues"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -21,7 +34,9 @@
     "boredom",
     "claude",
     "llm",
-    "model-context-protocol"
+    "model-context-protocol",
+    "claude-code",
+    "ai-coding"
   ],
   "author": "Hugo Daniel",
   "license": "MIT",
