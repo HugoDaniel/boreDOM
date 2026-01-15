@@ -48,6 +48,9 @@ importers:
         specifier: ^6.1.6
         version: 6.1.6
     devDependencies:
+      '@playwright/mcp':
+        specifier: ^0.0.55
+        version: 0.0.55
       '@testing-library/dom':
         specifier: ^10.4.1
         version: 10.4.1
@@ -75,6 +78,9 @@ importers:
       nyc:
         specifier: ^17.1.0
         version: 17.1.0
+      playwright:
+        specifier: ^1.57.0
+        version: 1.57.0
       typedoc:
         specifier: 0.26.7
         version: 0.26.7(typescript@5.9.2)
@@ -109,11 +115,11 @@ importers:
   create-boredom/template-minimal:
     devDependencies:
       boredom:
-        specifier: npm:@mr_hugo/boredom@^0.25.16
-        version: '@mr_hugo/boredom@0.25.16'
+        specifier: npm:@mr_hugo/boredom@^0.25.25
+        version: '@mr_hugo/boredom@0.25.26'
       typescript:
-        specifier: ~5.8.3
-        version: 5.8.3
+        specifier: ~5.9.3
+        version: 5.9.3
 
 packages:
 
@@ -426,8 +432,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@mr_hugo/boredom@0.25.16':
-    resolution: {integrity: sha512-lZn8ijuBM5Ex1BM0k1VXBlLG/Kd0URhBqaOgsRwXVbhtpp6wg9w0UIdsZcoKUyUHAzrHNJ1aVxv8V5XTc4KKyA==}
+  '@mr_hugo/boredom@0.25.26':
+    resolution: {integrity: sha512-qS5UHQbCzFrcv4F3B/gYpmG2uSpHlLHE+hILcDPo3jAoZksBF2MZuAi+orr9eQwx8J/oxWDa825OhotQGUy1XQ==}
     hasBin: true
 
   '@napi-rs/wasm-runtime@1.0.5':
@@ -442,6 +448,11 @@ packages:
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
+
+  '@playwright/mcp@0.0.55':
+    resolution: {integrity: sha512-BPr+Zew7bVuUkw+Zh2/pEq6f7RSGxmfGykN/dPgwvVACu7GiM46mQQJqJ/z5x1g0NoHi54Tx6gcegpxHfC7fyQ==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@quansync/fs@0.1.5':
     resolution: {integrity: sha512-lNS9hL2aS2NZgNW7BBj+6EBl4rOf8l+tQ0eRY6JWCI8jI2kc53gSoqbjojU0OnAWhzoXiOjFyGsHcDGePB3lhA==}
@@ -1141,6 +1152,11 @@ packages:
   fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
 
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -1661,6 +1677,26 @@ packages:
     resolution: {integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==}
     engines: {node: '>=8'}
 
+  playwright-core@1.57.0:
+    resolution: {integrity: sha512-agTcKlMw/mjBWOnD6kFZttAAGHgi/Nw0CZ2o6JqWSbMlI219lAFLZZCyqByTsvVAJq5XA5H8cA6PrvBRpBWEuQ==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright-core@1.58.0-alpha-2026-01-07:
+    resolution: {integrity: sha512-BV81BlzDg+WWhMut60z+1huVsSZF0O/6OXkwD16NXA6Mul49/yLHLJl4qHODAxAtdG/jxeXvJ87oFr3ERUCK0A==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.57.0:
+    resolution: {integrity: sha512-ilYQj1s8sr2ppEJ2YVadYBN0Mb3mdo9J0wQ+UuDhzYqURwSoW4n1Xs5vs7ORwgDGmyEh33tRMeS8KhdkMoLXQw==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.58.0-alpha-2026-01-07:
+    resolution: {integrity: sha512-ToIdvA1wM46BFcVURbbX9HCPNbzY2ugrJe2MUv2h6phkrD+hDD+vxNFkOOo+LLj5sJkiqr+Nwccay21tJj1NGw==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   pretty-format@27.5.1:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
@@ -1979,13 +2015,13 @@ packages:
     peerDependencies:
       typescript: 4.6.x || 4.7.x || 4.8.x || 4.9.x || 5.0.x || 5.1.x || 5.2.x || 5.3.x || 5.4.x || 5.5.x || 5.6.x
 
-  typescript@5.8.3:
-    resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
+  typescript@5.9.2:
+    resolution: {integrity: sha512-CWBzXQrc/qOkhidw1OzBTQuYRbfyxDXJMVJ1XNwUHGROVmuaeiEm3OslpZ1RV96d7SKKjZKrSJu3+t/xlw3R9A==}
     engines: {node: '>=14.17'}
     hasBin: true
 
-  typescript@5.9.2:
-    resolution: {integrity: sha512-CWBzXQrc/qOkhidw1OzBTQuYRbfyxDXJMVJ1XNwUHGROVmuaeiEm3OslpZ1RV96d7SKKjZKrSJu3+t/xlw3R9A==}
+  typescript@5.9.3:
+    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -2045,6 +2081,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -2433,11 +2470,12 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@mr_hugo/boredom@0.25.16':
+  '@mr_hugo/boredom@0.25.26':
     dependencies:
       cheerio: 1.1.2
       chokidar: 4.0.3
       commander: 13.1.0
+      entities: 6.0.1
       finalhandler: 2.1.0
       fs-extra: 11.3.2
       glob: 11.0.3
@@ -2466,6 +2504,11 @@ snapshots:
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
+
+  '@playwright/mcp@0.0.55':
+    dependencies:
+      playwright: 1.58.0-alpha-2026-01-07
+      playwright-core: 1.58.0-alpha-2026-01-07
 
   '@quansync/fs@0.1.5':
     dependencies:
@@ -3099,6 +3142,9 @@ snapshots:
 
   fs.realpath@1.0.0: {}
 
+  fsevents@2.3.2:
+    optional: true
+
   fsevents@2.3.3:
     optional: true
 
@@ -3686,6 +3732,22 @@ snapshots:
     dependencies:
       find-up: 4.1.0
 
+  playwright-core@1.57.0: {}
+
+  playwright-core@1.58.0-alpha-2026-01-07: {}
+
+  playwright@1.57.0:
+    dependencies:
+      playwright-core: 1.57.0
+    optionalDependencies:
+      fsevents: 2.3.2
+
+  playwright@1.58.0-alpha-2026-01-07:
+    dependencies:
+      playwright-core: 1.58.0-alpha-2026-01-07
+    optionalDependencies:
+      fsevents: 2.3.2
+
   pretty-format@27.5.1:
     dependencies:
       ansi-regex: 5.0.1
@@ -4050,9 +4112,9 @@ snapshots:
       typescript: 5.9.2
       yaml: 2.8.1
 
-  typescript@5.8.3: {}
-
   typescript@5.9.2: {}
+
+  typescript@5.9.3: {}
 
   uc.micro@2.1.0: {}
 

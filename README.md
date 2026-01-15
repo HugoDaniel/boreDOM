@@ -150,6 +150,38 @@ boreDOM.export()    // Export state snapshot
 
 See `BUILDING_WITH_BOREDOM.md` for full debug documentation.
 
+## Testing
+
+Browser tests are written in Mocha and run in a real browser environment.
+
+```bash
+# One-shot headless run with Playwright
+pnpm test:browser
+
+# Serve the browser test page for Playwright MCP (prints BROWSER_TESTS_URL)
+pnpm test:browser:serve
+```
+
+Notes:
+<!-- pending-tests:start -->
+- Pending tests (1): Phase 6: Validation Edge Cases State edge cases should handle circular references in state.
+<!-- pending-tests:end -->
+
+Playwright MCP example:
+
+```js
+// After navigating to BROWSER_TESTS_URL
+await page.waitForFunction(() => Boolean(window.__boreDOMTestResults));
+const results = await page.evaluate(() => window.__boreDOMTestResults);
+console.log(results.stats);
+```
+
+Update the pending list after test changes:
+
+```bash
+pnpm update:pending-tests
+```
+
 ## API Reference
 
 ### Core Functions

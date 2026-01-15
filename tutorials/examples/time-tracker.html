@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         DEPLOYMENT GUIDE                                      ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  This is a complete, production-ready app in a single HTML file.             ║
+║  No build step. No npm install. No bundler configuration.                    ║
+║                                                                              ║
+║  TO DEPLOY:                                                                  ║
+║  ──────────                                                                  ║
+║  1. Copy this HTML file to your server                                       ║
+║  2. Copy boreDOM.prod.js (30KB, ~10KB gzipped) alongside it                  ║
+║  3. Update the import path below to: './boreDOM.prod.js'                     ║
+║  4. Done! Serve from any static host.                                        ║
+║                                                                              ║
+║  HOSTING OPTIONS:                                                            ║
+║  ────────────────                                                            ║
+║  • GitHub Pages  - Just push to gh-pages branch                              ║
+║  • Netlify       - Drag and drop the files                                   ║
+║  • Vercel        - Same, or connect to git                                   ║
+║  • S3/CloudFront - Upload to bucket, enable static hosting                   ║
+║  • Any web server - Apache, nginx, Python's http.server, anything            ║
+║                                                                              ║
+║  SELF-CONTAINED OPTION:                                                      ║
+║  ──────────────────────                                                      ║
+║  Want zero external dependencies? Inline the framework:                      ║
+║                                                                              ║
+║    1. Copy contents of boreDOM.prod.js                                       ║
+║    2. Paste into a <script> tag (remove type="module")                       ║
+║    3. Change import to: const { inflictBoreDOM, webComponent } = boreDOM     ║
+║    4. Now it's ONE file with everything included                             ║
+║                                                                              ║
+║  CSS LAYERS (RECOMMENDED)                                                    ║
+║  ────────────────────────                                                    ║
+║  One layer per component - users can override without !important:            ║
+║                                                                              ║
+║    @layer base { /* resets, body */ }                                        ║
+║    @layer my-component { my-component button { background: blue; } }         ║
+║    @layer other-component { other-component .card { padding: 20px; } }       ║
+║                                                                              ║
+║    my-component button { background: red; }  /* User override - wins! */     ║
+║                                                                              ║
+║  WHAT ABOUT ASSETS?                                                          ║
+║  ──────────────────                                                          ║
+║  Images, fonts, icons? You have options:                                     ║
+║                                                                              ║
+║    • Inline them: Use base64 data URLs for small images/icons                ║
+║      <img src="data:image/png;base64,iVBORw0KGgo...">                        ║
+║                                                                              ║
+║    • Copy alongside: Put assets in same folder, use relative paths           ║
+║      my-app/                                                                 ║
+║        index.html                                                            ║
+║        boreDOM.prod.js                                                       ║
+║        logo.png                                                              ║
+║        styles.css  (or keep CSS inline in <style>)                           ║
+║                                                                              ║
+║    • Use CDNs: Google Fonts, unpkg, cdnjs for external libraries             ║
+║      <link href="https://fonts.googleapis.com/css2?family=Inter">            ║
+║                                                                              ║
+║  Still no build step - just copy your files and go.                          ║
+║                                                                              ║
+║  COMPARISON:                                                                 ║
+║  ───────────                                                                 ║
+║  React/Next.js deploy: npm install → configure → build → deploy dist/       ║
+║  Vue/Nuxt deploy:      npm install → configure → build → deploy dist/       ║
+║  boreDOM deploy:       Copy your files. Done.                                ║
+║                                                                              ║
+║  This simplicity is intentional. boreDOM apps are designed to be trivially  ║
+║  deployable, whether hand-crafted or generated by an LLM.                    ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Tracker</title>
+  <style>
+    /*
+     * CSS Layers: One layer per component for easy overrides.
+     * Unlayered styles always win over layered styles - no !important needed.
+     * Learn more: https://developer.mozilla.org/en-US/docs/Web/CSS/@layer
+     */
+
+    /* Base layer: resets and page-level defaults */
+    @layer base {
+      * { box-sizing: border-box; }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+        color: #333;
+      }
+    }
+
+    /* Time-tracker component layer */
+    @layer time-tracker {
+      time-tracker h1 { margin-bottom: 24px; }
+      time-tracker h3 { margin: 0 0 12px 0; color: #555; }
+
+      time-tracker .card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+
+      time-tracker .form-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      time-tracker button {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      time-tracker button:hover { background: #2563eb; }
+      time-tracker button.danger { background: #ef4444; }
+      time-tracker button.danger:hover { background: #dc2626; }
+      time-tracker button.secondary { background: #6b7280; }
+      time-tracker button.secondary:hover { background: #4b5563; }
+
+      time-tracker input,
+      time-tracker select {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      time-tracker input:focus,
+      time-tracker select:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+      time-tracker input[type="text"],
+      time-tracker input[type="number"] { flex: 1; }
+
+      time-tracker table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+      time-tracker th,
+      time-tracker td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+      time-tracker th {
+        font-weight: 600;
+        color: #555;
+        font-size: 13px;
+        text-transform: uppercase;
+      }
+
+      time-tracker .amount {
+        font-weight: 600;
+        color: #059669;
+      }
+
+      time-tracker .empty-state {
+        text-align: center;
+        color: #999;
+        padding: 20px;
+      }
+
+      time-tracker .tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 16px;
+      }
+      time-tracker .tabs button {
+        background: #e5e7eb;
+        color: #374151;
+      }
+      time-tracker .tabs button:hover { background: #d1d5db; }
+      time-tracker .tabs button.active {
+        background: #3b82f6;
+        color: white;
+      }
+    }
+  </style>
+</head>
+<body>
+  <time-tracker></time-tracker>
+
+  <template data-component="time-tracker">
+    <div>
+      <h1>Time Tracker</h1>
+      <div class="tabs">
+        <button onclick="dispatch('setView')" data-view="clients" data-ref="clientsTab">Clients</button>
+        <button onclick="dispatch('setView')" data-view="entries" data-ref="entriesTab">Time Entries</button>
+        <button onclick="dispatch('setView')" data-view="summary" data-ref="summaryTab">Summary</button>
+      </div>
+      <div data-ref="content">Loading...</div>
+    </div>
+  </template>
+
+  <script type="module">
+    import { inflictBoreDOM, webComponent } from '../../dist/boreDOM.min.js'
+
+    // Helper to save to localStorage
+    const saveData = (state) => {
+      localStorage.setItem('timeTracker', JSON.stringify({
+        clients: state.clients,
+        entries: state.entries
+      }))
+    }
+
+    // Load initial state from localStorage
+    const loadInitialState = () => {
+      const saved = localStorage.getItem('timeTracker')
+      if (saved) {
+        try {
+          const data = JSON.parse(saved)
+          return {
+            clients: data.clients || [],
+            entries: data.entries || []
+          }
+        } catch (e) {
+          console.warn('Failed to load saved data:', e)
+        }
+      }
+      return { clients: [], entries: [] }
+    }
+
+    const initialData = loadInitialState()
+
+    inflictBoreDOM(
+      {
+        // Data (loaded from localStorage)
+        clients: initialData.clients,
+        entries: initialData.entries,
+
+        // UI state
+        currentView: 'clients'
+      },
+      {
+        "time-tracker": webComponent(({ state, on, refs }) => {
+          // View switching
+          on('setView', ({ state: mutableState, e }) => {
+            mutableState.currentView = e.dispatcher.dataset.view
+          })
+
+          // Client management
+          on('addClient', ({ state: mutableState }) => {
+            const nameInput = document.querySelector('[data-ref="clientName"]')
+            const rateInput = document.querySelector('[data-ref="clientRate"]')
+            const name = nameInput?.value
+            const rate = parseFloat(rateInput?.value)
+
+            if (!name || isNaN(rate)) {
+              alert('Please enter client name and rate')
+              return
+            }
+
+            mutableState.clients.push({
+              id: Date.now(),
+              name,
+              rate,
+              created: new Date().toISOString()
+            })
+
+            nameInput.value = ''
+            rateInput.value = ''
+            saveData(mutableState)
+          })
+
+          on('deleteClient', ({ state: mutableState, e }) => {
+            const id = e.arg
+            if (confirm('Delete this client? Their time entries will remain.')) {
+              const index = mutableState.clients.findIndex(c => c.id === id)
+              if (index !== -1) {
+                mutableState.clients.splice(index, 1)
+              }
+              saveData(mutableState)
+            }
+          })
+
+          // Time entry management
+          on('addEntry', ({ state: mutableState }) => {
+            const clientSelect = document.querySelector('[data-ref="entryClient"]')
+            const hoursInput = document.querySelector('[data-ref="entryHours"]')
+            const noteInput = document.querySelector('[data-ref="entryNote"]')
+
+            const clientId = parseInt(clientSelect?.value)
+            const hours = parseFloat(hoursInput?.value)
+            const note = noteInput?.value || ''
+
+            if (!clientId || isNaN(hours)) {
+              alert('Please select a client and enter hours')
+              return
+            }
+
+            mutableState.entries.push({
+              id: Date.now(),
+              clientId,
+              hours,
+              note,
+              date: new Date().toISOString()
+            })
+
+            clientSelect.value = ''
+            hoursInput.value = ''
+            noteInput.value = ''
+            saveData(mutableState)
+          })
+
+          on('deleteEntry', ({ state: mutableState, e }) => {
+            const id = e.arg
+            if (confirm('Delete this time entry?')) {
+              const index = mutableState.entries.findIndex(entry => entry.id === id)
+              if (index !== -1) {
+                mutableState.entries.splice(index, 1)
+              }
+              saveData(mutableState)
+            }
+          })
+
+          on('exportCSV', ({ state: mutableState }) => {
+            const rows = [['Date', 'Client', 'Hours', 'Rate', 'Amount', 'Note']]
+
+            mutableState.entries.forEach(entry => {
+              const client = mutableState.clients.find(c => c.id === entry.clientId)
+              rows.push([
+                new Date(entry.date).toLocaleDateString(),
+                client?.name || 'Unknown',
+                entry.hours.toFixed(2),
+                client?.rate.toFixed(2) || '0',
+                ((entry.hours * (client?.rate || 0)).toFixed(2)),
+                entry.note || ''
+              ])
+            })
+
+            const csv = rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+            const blob = new Blob([csv], { type: 'text/csv' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `time-tracker-${new Date().toISOString().slice(0,10)}.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+          })
+
+          return ({ state, refs, self }) => {
+            // Access state properties at start of render
+            const currentView = state.currentView
+            const clients = state.clients
+            const entries = state.entries
+
+            // Update tab active states
+            refs.clientsTab.classList.toggle('active', currentView === 'clients')
+            refs.entriesTab.classList.toggle('active', currentView === 'entries')
+            refs.summaryTab.classList.toggle('active', currentView === 'summary')
+
+            // Set up event delegation for dynamically created buttons
+            refs.content.onclick = (e) => {
+              const btn = e.target.closest('[data-action]')
+              if (btn) {
+                const action = btn.dataset.action
+                const arg = btn.dataset.arg
+                // Dispatch event in boreDOM's expected format
+                dispatchEvent(new CustomEvent(action, {
+                  detail: {
+                    event: e,
+                    dispatcher: btn,
+                    component: self,
+                    index: -1,
+                    // Include the arg as the detail for handlers that expect it
+                    ...(arg ? { arg: parseInt(arg) } : {})
+                  }
+                }))
+              }
+            }
+
+            // Render current view
+            if (currentView === 'clients') {
+              refs.content.innerHTML = `
+                <div class="card">
+                  <h3>Add Client</h3>
+                  <div class="form-row">
+                    <input type="text" data-ref="clientName" placeholder="Client name" />
+                    <input type="number" data-ref="clientRate" placeholder="Hourly rate" step="0.01" />
+                    <button data-action="addClient">Add Client</button>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>Clients</h3>
+                  ${clients.length === 0
+                    ? '<p class="empty-state">No clients yet. Add your first client above!</p>'
+                    : `<table>
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Rate</th>
+                            <th>Total Hours</th>
+                            <th>Total Earned</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${clients.map(client => {
+                            const clientEntries = entries.filter(e => e.clientId === client.id)
+                            const totalHours = clientEntries.reduce((sum, e) => sum + e.hours, 0)
+                            const totalEarned = totalHours * client.rate
+                            return `
+                              <tr>
+                                <td>${client.name}</td>
+                                <td>$${client.rate.toFixed(2)}/hr</td>
+                                <td>${totalHours.toFixed(1)} hrs</td>
+                                <td class="amount">$${totalEarned.toFixed(2)}</td>
+                                <td>
+                                  <button class="danger" data-action="deleteClient" data-arg="${client.id}">Delete</button>
+                                </td>
+                              </tr>
+                            `
+                          }).join('')}
+                        </tbody>
+                      </table>`
+                  }
+                </div>
+              `
+            } else if (currentView === 'entries') {
+              refs.content.innerHTML = `
+                <div class="card">
+                  <h3>Log Time</h3>
+                  <div class="form-row">
+                    <select data-ref="entryClient">
+                      <option value="">Select client...</option>
+                      ${clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                    </select>
+                    <input type="number" data-ref="entryHours" placeholder="Hours" step="0.25" style="width: 100px;" />
+                    <input type="text" data-ref="entryNote" placeholder="Note (optional)" />
+                    <button data-action="addEntry">Log Time</button>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>Recent Entries</h3>
+                  ${entries.length === 0
+                    ? '<p class="empty-state">No time entries yet. Log your first entry above!</p>'
+                    : `<table>
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Client</th>
+                            <th>Hours</th>
+                            <th>Amount</th>
+                            <th>Note</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${entries.slice().reverse().map(entry => {
+                            const client = clients.find(c => c.id === entry.clientId)
+                            const amount = client ? entry.hours * client.rate : 0
+                            return `
+                              <tr>
+                                <td>${new Date(entry.date).toLocaleDateString()}</td>
+                                <td>${client?.name || 'Unknown'}</td>
+                                <td>${entry.hours.toFixed(2)} hrs</td>
+                                <td class="amount">$${amount.toFixed(2)}</td>
+                                <td>${entry.note || '-'}</td>
+                                <td>
+                                  <button class="danger" data-action="deleteEntry" data-arg="${entry.id}">Delete</button>
+                                </td>
+                              </tr>
+                            `
+                          }).join('')}
+                        </tbody>
+                      </table>`
+                  }
+                </div>
+              `
+            } else if (currentView === 'summary') {
+              const weekAgo = new Date()
+              weekAgo.setDate(weekAgo.getDate() - 7)
+
+              const recentEntries = entries.filter(e => new Date(e.date) >= weekAgo)
+
+              const summaryByClient = clients.map(client => {
+                const clientEntries = recentEntries.filter(e => e.clientId === client.id)
+                const totalHours = clientEntries.reduce((sum, e) => sum + e.hours, 0)
+                return {
+                  name: client.name,
+                  hours: totalHours,
+                  earnings: totalHours * client.rate
+                }
+              }).filter(c => c.hours > 0)
+
+              const totalHours = summaryByClient.reduce((sum, c) => sum + c.hours, 0)
+              const totalEarnings = summaryByClient.reduce((sum, c) => sum + c.earnings, 0)
+
+              refs.content.innerHTML = `
+                <div class="card">
+                  <h3>This Week's Summary</h3>
+                  ${summaryByClient.length === 0
+                    ? '<p class="empty-state">No time logged this week.</p>'
+                    : `<table>
+                        <thead>
+                          <tr>
+                            <th>Client</th>
+                            <th>Hours</th>
+                            <th>Earnings</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${summaryByClient.map(c => `
+                            <tr>
+                              <td>${c.name}</td>
+                              <td>${c.hours.toFixed(1)} hrs</td>
+                              <td class="amount">$${c.earnings.toFixed(2)}</td>
+                            </tr>
+                          `).join('')}
+                          <tr style="font-weight: bold; border-top: 2px solid #ddd;">
+                            <td>Total</td>
+                            <td>${totalHours.toFixed(1)} hrs</td>
+                            <td class="amount">$${totalEarnings.toFixed(2)}</td>
+                          </tr>
+                        </tbody>
+                      </table>`
+                  }
+                </div>
+                <div class="card">
+                  <h3>Actions</h3>
+                  <button data-action="exportCSV" class="secondary">Export to CSV</button>
+                </div>
+              `
+            }
+          }
+        })
+      }
+    ).then(() => {
+      console.log('%c Time Tracker Ready! ', 'background: #3b82f6; color: white; padding: 4px 8px; border-radius: 4px;')
+      console.log('Try: boreDOM.llm.context() to see the full app state')
+      console.log('Try: boreDOM.llm.inferTypes() to see inferred types')
+    })
+  </script>
+</body>
+</html>

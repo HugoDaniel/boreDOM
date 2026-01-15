@@ -15,11 +15,11 @@ boreDOM is a lightweight reactive JavaScript framework for building web componen
 ## Quick Reference
 
 ```bash
-pnpm install          # Install dependencies
-pnpm run build        # Build all bundles + CLI
-pnpm run dev          # Dev server with watch (serves www/)
-pnpm run test         # Browser tests (open served page)
-pnpm run test:cli     # CLI tests with Mocha
+pnpm install              # Install dependencies
+pnpm run build            # Build all bundles + CLI
+pnpm run dev              # Dev server with watch (serves www/)
+pnpm run test:browser     # Run browser tests (Playwright, headless)
+pnpm run test:cli         # CLI tests with Mocha
 ```
 
 ## Project Structure
@@ -84,9 +84,47 @@ dist/                 # Build output (don't commit)
 
 ## Testing
 
-- Browser tests: `tests/dom.test.ts` - run `pnpm run test` then open served page
-- CLI tests: `pnpm run test:cli`
-- Coverage: `pnpm exec nyc pnpm run test:cli`
+### Browser Tests (Playwright)
+
+```bash
+pnpm run test:browser              # Run tests with human-readable output
+pnpm run test:browser -- --json    # JSON output for CI/programmatic use
+pnpm run test:browser -- --headed  # Visible browser window for debugging
+pnpm run test:browser -- --verbose # List each passing test name
+pnpm run test:browser -- -h        # Show help
+```
+
+**Output format (default):**
+```
+  boreDOM Browser Tests
+
+  Failures:                          # Shown first if any
+    1) Component should do X
+       Error: expected Y but got Z
+
+  Pending:                           # Skipped tests
+    ○ Feature should handle edge case
+
+  Summary:
+    ✓ 523 passing (2.31s)
+    ○ 1 pending
+
+  Status: PASS                       # Clear pass/fail for parsing
+```
+
+**Flags:**
+| Flag | Description |
+|------|-------------|
+| `--json` | Raw JSON results (for CI pipelines) |
+| `--headed` | Show browser window (debug failing tests) |
+| `--verbose` / `-v` | List all passing test names |
+| `--help` / `-h` | Usage information |
+
+### Other Test Commands
+
+- `pnpm run test` - Dev server with watch (manual browser testing)
+- `pnpm run test:cli` - CLI unit tests with Mocha
+- `pnpm exec nyc pnpm run test:cli` - CLI tests with coverage
 
 ### Coverage Status
 

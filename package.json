@@ -46,6 +46,9 @@
     "build_cli": "pnpm run build_full_module && pnpm run build_decls && echo '#!/usr/bin/env node\nconst boredom=`' > dist/boreDOM.js && cat dist/boreDOM.full.js | base64 >> dist/boreDOM.js && echo '`;' >> dist/boreDOM.js && cat boreDOMCLI/cli.js >> dist/boreDOM.js && chmod +x dist/boreDOM.js && cp dist/boreDOM.js boreDOMCLI/generated_cli.js",
     "dev": "esbuild src/boreDOM.ts --bundle --outdir=www/js --watch --servedir=www --platform=neutral",
     "test": "esbuild tests/runner.ts --bundle --outdir=tests/js --watch --servedir=tests --platform=browser",
+    "test:browser": "node scripts/run-browser-tests.cjs",
+    "test:browser:serve": "node scripts/start-browser-tests.cjs",
+    "update:pending-tests": "node scripts/update-pending-tests.cjs",
     "test:cli": "mocha \"boreDOMCLI/tests/**/*.spec.mjs\""
   },
   "keywords": [
@@ -62,6 +65,7 @@
   "repository": "github:HugoDaniel/boreDOM",
   "homespage": "https://hugodaniel.com/pages/boredom/",
   "devDependencies": {
+    "@playwright/mcp": "^0.0.55",
     "@testing-library/dom": "^10.4.1",
     "@types/chai": "^5.2.2",
     "@types/mocha": "^10.0.10",
@@ -71,6 +75,7 @@
     "esbuild": "^0.25.10",
     "mocha": "^10.8.2",
     "nyc": "^17.1.0",
+    "playwright": "^1.57.0",
     "typedoc": "0.26.7",
     "typescript": "^5.9.2"
   },

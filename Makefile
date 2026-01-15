@@ -30,6 +30,11 @@ dev: node_modules
 test: node_modules tests/dist/boreDOM.min.js
 	find src/ | entr -s 'make clean && make all && pnpm run test'
 
+update-pending-tests: node_modules
+	pnpm run update:pending-tests
+
+release-prep: update-pending-tests
+
 clean_cli:
 	rm dist/boreDOM.js
 	rm boreDOMCLI/generated_cli.js
@@ -39,4 +44,3 @@ clean: clean_cli
 	rm dist/*
 	rm -rf node_modules 
 	rm -rf boreDOMCLI/node_modules 
-
