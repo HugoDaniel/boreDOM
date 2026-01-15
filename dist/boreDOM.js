@@ -75,6 +75,65 @@ var INIT_INDEX_HTML = `<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>boreDOM App</title>
+  <style>
+    /* CSS Layers: base < components < overrides */
+    @layer base, components, overrides;
+
+    @layer base {
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        line-height: 1.5;
+        min-height: 100vh;
+      }
+      button {
+        cursor: pointer;
+        font: inherit;
+      }
+    }
+
+    @layer components {
+      /* my-app component styles */
+      my-app {
+        display: block;
+        padding: 2rem;
+        text-align: center;
+      }
+      my-app h1 {
+        margin-bottom: 1.5rem;
+      }
+      my-app .counter {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        align-items: center;
+      }
+      my-app .counter button {
+        width: 3rem;
+        height: 3rem;
+        font-size: 1.5rem;
+        border: 1px solid #ccc;
+        border-radius: 0.5rem;
+        background: #f5f5f5;
+      }
+      my-app .counter button:hover {
+        background: #e5e5e5;
+      }
+      my-app .count {
+        font-size: 2rem;
+        min-width: 4rem;
+        font-variant-numeric: tabular-nums;
+      }
+      my-app .hint {
+        margin-top: 2rem;
+        color: #666;
+      }
+    }
+
+    @layer overrides {
+      /* Page-specific overrides go here */
+    }
+  </style>
   <script type="module">
     import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js"
 
@@ -98,17 +157,13 @@ var INIT_INDEX_HTML = `<!DOCTYPE html>
   <my-app></my-app>
 
   <template data-component="my-app">
-    <div style="font-family: system-ui; text-align: center; padding: 2rem;">
-      <h1>boreDOM App</h1>
-      <div style="display: flex; gap: 1rem; justify-content: center; align-items: center;">
-        <button onclick="dispatch('decrement')">-</button>
-        <span data-ref="count" style="font-size: 2rem; min-width: 3rem;">0</span>
-        <button onclick="dispatch('increment')">+</button>
-      </div>
-      <p style="margin-top: 2rem; color: #666;">
-        Edit this file. Claude can control this app via MCP.
-      </p>
+    <h1>boreDOM App</h1>
+    <div class="counter">
+      <button onclick="dispatch('decrement')">\u2212</button>
+      <span class="count" data-ref="count">0</span>
+      <button onclick="dispatch('increment')">+</button>
     </div>
+    <p class="hint">Edit this file. Claude can control this app via MCP.</p>
   </template>
 </body>
 </html>
@@ -196,6 +251,39 @@ if (state.loading) {
   slots.content = state.items.map(i => \`<div>\${i.name}</div>\`).join("")
 }
 \`\`\`
+
+## CSS Best Practices
+
+Use CSS layers for predictable specificity. Order: base < components < overrides.
+
+\`\`\`css
+@layer base, components, overrides;
+
+@layer base {
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; }
+}
+
+@layer components {
+  /* Each component gets its own section */
+  my-component {
+    display: block;
+  }
+  my-component .title {
+    font-size: 1.5rem;
+  }
+}
+
+@layer overrides {
+  /* Page-specific overrides - no !important needed */
+}
+\`\`\`
+
+**Rules:**
+- Style components by tag name: \`user-card { }\` not \`.user-card { }\`
+- Use classes for internal elements: \`user-card .name { }\`
+- Keep styles in the same file as templates (single HTML file)
+- Unlayered styles override layered styles automatically
 `;
 var INIT_MCP_JSON = `{
   "mcpServers": {
