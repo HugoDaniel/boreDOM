@@ -2918,6 +2918,7 @@ var boreDOM = {
 };
 if (typeof window !== "undefined") {
   window.boreDOM = boreDOM;
+  window.dispatch = dispatch;
 }
 async function inflictBoreDOM(state, componentsLogic, config) {
   if (config?.debug !== void 0) {

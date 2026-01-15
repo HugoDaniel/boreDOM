@@ -12,6 +12,7 @@ import {
   dynamicImportScripts,
   searchForComponents,
   registerComponent,
+  dispatch,
 } from "./dom";
 import {
   setDebugConfig,
@@ -123,6 +124,8 @@ export const boreDOM = {
 // Expose boreDOM global in browser environment
 if (typeof window !== "undefined") {
   (window as any).boreDOM = boreDOM;
+  // Expose dispatch globally for inline event handlers (onclick="dispatch('...')")
+  (window as any).dispatch = dispatch;
 }
 
 /**
