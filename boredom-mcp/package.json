@@ -1,6 +1,6 @@
 {
   "name": "boredom-mcp",
-  "version": "1.0.0",
+  "version": "0.26.1",
   "description": "MCP server for boreDOM - enables Claude to directly control boreDOM applications",
   "type": "module",
   "main": "dist/index.js",
