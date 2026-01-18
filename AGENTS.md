@@ -56,7 +56,7 @@ dist/                 # Build output (don't commit)
 - `webComponent(init)` returns `{ init, render }` functions
 - `init` receives `{ state, on, refs, slots, self }` - for setup
 - `render` receives `{ state, refs, slots, self, makeComponent }` - for updates
-- Events: inline `onclick="['eventName']"` or `on('eventName', handler)` in JS
+- Events: inline `data-dispatch="eventName"` or `on('eventName', handler)` in JS
 
 ### Refs & Slots
 - `data-ref="name"` on elements exposes them via `refs.name`
