@@ -10,6 +10,9 @@ export type WebComponentInitParams<S> = {
 	state: S;
 	refs: Refs;
 	self: Bored;
+	makeComponent: (tag: string, options?: {
+		detail?: WebComponentDetail;
+	}) => Bored;
 	on: (eventName: string, eventHandler: (options: {
 		state: S | undefined;
 		e: CustomEvent["detail"];
@@ -89,6 +92,10 @@ export type DebugOptions = {
 export type BoreDOMConfig = {
 	/** Debug mode: true for full debug, false to disable, or granular DebugOptions */
 	debug?: boolean | DebugOptions;
+	/** Single-file mode: skip dynamic imports and favor inline logic (default: false) */
+	singleFile?: boolean;
+	/** Mirror template data-* attributes onto component hosts (default: true) */
+	mirrorAttributes?: boolean;
 };
 /**
  * Context exposed when a component render throws an error.
@@ -128,124 +135,59 @@ export type ExportedState = {
 	/** Original error message (for errored components) */
 	error: string;
 };
-/**
- * Context captured when an undefined function is called via the helpers proxy.
- * Available via $missingName, $missingArgs, etc. globals and boreDOM.missingFunctions map.
- */
-export type MissingFunctionContext = {
-	/** The function name that was called */
-	name: string;
-	/** Arguments passed to the function */
-	args: any[];
-	/** Component where the call occurred */
-	component: string;
-	/** Component DOM element */
-	element: HTMLElement;
-	/** When the call occurred */
-	timestamp: number;
-	/** Function to define the missing function and re-render */
-	define: (implementation: Function) => void;
+export type SemanticAttributes = {
+	id?: string;
+	class?: string;
+	type?: string;
+	value?: string;
+	checked?: boolean;
+	disabled?: boolean;
+	placeholder?: string;
+	href?: string;
+	src?: string;
+	alt?: string;
+	title?: string;
+	role?: string;
+	[key: `aria-${string}`]: string;
+	[key: `data-${string}`]: string;
 };
-/**
- * Inferred template data generated for undefined custom elements.
- */
-export type InferredTemplate = {
-	/** The custom element tag name */
+export type SemanticNode = {
 	tagName: string;
-	/** Generated HTML template string */
-	template: string;
-	/** Props inferred from element attributes (kebab-case converted to camelCase) */
-	props: Record<string, any>;
-	/** Slot names inferred from child elements */
-	slots: string[];
+	attributes?: SemanticAttributes;
+	text?: string;
+	children?: SemanticNode[];
 };
-/**
- * Type node representing an inferred type.
- * Uses discriminated union for different type kinds.
- */
-export type TypeNode = {
-	kind: "primitive";
-	value: "string" | "number" | "boolean" | "null" | "undefined";
+export type JSONPatchOp = {
+	op: "add";
+	path: string;
+	value: any;
 } | {
-	kind: "literal";
-	value: string | number | boolean;
+	op: "remove";
+	path: string;
 } | {
-	kind: "array";
-	elementType: TypeNode;
+	op: "replace";
+	path: string;
+	value: any;
 } | {
-	kind: "object";
-	properties: Record<string, TypeNode>;
-} | {
-	kind: "union";
-	types: TypeNode[];
-} | {
-	kind: "function";
-	params: ParamType[];
-	returnType: TypeNode;
-} | {
-	kind: "date";
-} | {
-	kind: "unknown";
+	op: "test";
+	path: string;
+	value: any;
 };
-/**
- * Parameter type for function signatures.
- */
-export type ParamType = {
-	name: string;
-	type: TypeNode;
-	/** Whether the parameter is optional (defaults to false) */
-	optional?: boolean;
-};
-/**
- * Tracked function type info.
- */
-export type FunctionType = {
-	params: ParamType[];
-	returnType: TypeNode;
-	callCount: number;
-};
-/**
- * Output structure for type inference.
- */
-export type TypeDefinitions = {
-	/** Generated TypeScript interface for app state */
-	state: string;
-	/** Inferred helper function signatures */
-	helpers: Record<string, string>;
-	/** Component prop types inferred from attributes */
-	components: Record<string, string>;
-	/** Event payload types */
-	events: Record<string, string>;
-	/** Raw type data for further processing */
-	raw: {
-		state: TypeNode;
-		helpers: Record<string, FunctionType>;
-		components: Record<string, TypeNode>;
-		events: Record<string, TypeNode>;
-	};
+export type TransactionResult = {
+	success: boolean;
+	error?: string;
 };
 /**
  * Queries for the component tag name in the DOM. Throws error if not found.
  */
-/**
- * Queries a component by CSS selector and returns it only if it is a
- * boreDOM component (Bored). Returns undefined when not found/mismatched.
- *
- * Example:
- * ```ts
- * const card = queryComponent('user-card');
- * if (card) card.setAttribute('data-visible', 'true');
- * ```
- */
 export declare const queryComponent: (q: string) => Bored | undefined;
 declare abstract class Bored extends HTMLElement {
 	abstract renderCallback: (elem: Bored) => void;
+	[key: string]: any;
 }
 /**
  * Registers a custom element with the given tag name.
  * Simpler alias for `component()` used by console API.
- *
- * @param tagName - The custom element tag name to register
  */
 export declare const registerComponent: (tagName: string) => void;
 /** Boolean-type debug features */
@@ -296,242 +238,9 @@ export declare function getDebugConfig(): DebugOptions;
  */
 export declare function clearGlobals(): void;
 declare function exportState(tagName?: string): ExportedState | null;
-declare function inferTypes(): TypeDefinitions;
-declare function typeOf(path: string): string;
-declare function clearTypeTracking(): void;
-export interface ValidationResult {
-	valid: boolean;
-	issues: ValidationIssue[];
-}
-export interface ValidationIssue {
-	type: "syntax" | "reference" | "type" | "logic" | "warning";
-	message: string;
-	location?: string;
-	suggestion?: string;
-	severity: "error" | "warning";
-}
-export interface ApplyResult {
-	success: boolean;
-	error?: string;
-	rollback: () => void;
-	componentsAffected: string[];
-	stateChanges: StateChange[];
-}
-export interface StateChange {
-	path: string;
-	before: any;
-	after: any;
-}
-export interface BatchApplyResult {
-	success: boolean;
-	results: ApplyResult[];
-	rollbackAll: () => void;
-	error?: string;
-	failedIndex?: number;
-}
-declare function setValidationAppState(state: AppState<any>): void;
-declare function validate(code: string): ValidationResult;
-declare function apply(code: string): ApplyResult;
-declare function applyBatch(codeBlocks: string[]): BatchApplyResult;
-/**
- * Component information for LLM context.
- */
-export interface LLMComponentInfo {
-	/** Component tag name */
-	tagName: string;
-	/** HTML template string */
-	template: string | null;
-	/** Whether component has logic attached */
-	hasLogic: boolean;
-	/** Named refs in the component */
-	refs: string[];
-	/** Named slots in the component */
-	slots: string[];
-	/** Event handlers registered */
-	events: string[];
-	/** State paths this component accesses */
-	stateAccess: string[];
-	/** Whether component is in error state */
-	hasError: boolean;
-	/** Number of instances in DOM */
-	instanceCount: number;
-}
-/**
- * Error information for LLM context.
- */
-export interface LLMErrorInfo {
-	/** Component tag name */
-	component: string;
-	/** Error message */
-	error: string;
-	/** Stack trace */
-	stack: string;
-	/** State at time of error */
-	state: any;
-	/** When error occurred */
-	timestamp: number;
-}
-/**
- * Missing function information for LLM context.
- */
-export interface LLMMissingFunctionInfo {
-	/** Function name */
-	name: string;
-	/** Arguments passed */
-	args: any[];
-	/** Component where called */
-	component: string;
-	/** Inferred function signature */
-	inferredSignature: string;
-	/** Number of times called */
-	callCount: number;
-}
-/**
- * Information about a missing function's calls.
- */
-export interface LLMMissingCallInfo {
-	/** All argument sets passed */
-	args: any[][];
-	/** Components that called this function */
-	components: string[];
-	/** Last call timestamp */
-	lastCall: number;
-}
-/**
- * Detected patterns in the codebase.
- */
-export interface LLMPatternInfo {
-	/** Event naming convention */
-	eventNaming: "kebab-case" | "camelCase" | "mixed" | "unknown";
-	/** State structure style */
-	stateStructure: "flat" | "nested" | "mixed" | "unknown";
-	/** Component naming pattern */
-	componentNaming: string;
-}
-/**
- * Attempt tracking for LLM workflow.
- */
-export interface LLMAttemptInfo {
-	/** Code that was attempted */
-	code: string;
-	/** Result of the attempt */
-	result: "success" | "error";
-	/** Error message if failed */
-	error?: string;
-	/** When attempt was made */
-	timestamp: number;
-}
-/**
- * Example code for LLM context.
- */
-export interface LLMExampleInfo {
-	/** Description of what the example shows */
-	description: string;
-	/** The code */
-	code: string;
-}
-/**
- * Complete session context for LLM consumption.
- */
-export interface LLMContext {
-	/** Framework identification */
-	framework: {
-		name: "boreDOM";
-		version: string;
-		capabilities: string[];
-	};
-	/** Application state info */
-	state: {
-		/** Inferred TypeScript interface */
-		shape: string;
-		/** All state paths */
-		paths: string[];
-		/** Sanitized sample data */
-		sample: any;
-	};
-	/** Registered components */
-	components: Record<string, LLMComponentInfo>;
-	/** Current issues */
-	issues: {
-		errors: LLMErrorInfo[];
-		missingFunctions: LLMMissingFunctionInfo[];
-		missingComponents: string[];
-	};
-	/** Helper functions */
-	helpers: {
-		defined: Record<string, string>;
-		missing: Record<string, LLMMissingCallInfo>;
-	};
-	/** Detected patterns */
-	patterns: LLMPatternInfo;
-}
-/**
- * Focused context for current issue.
- */
-export interface LLMFocusedContext {
-	/** Current issue description */
-	issue: {
-		type: "error" | "missing_function" | "missing_component" | "none";
-		description: string;
-		component?: string;
-		suggestion?: string;
-	};
-	/** Relevant component info */
-	component?: LLMComponentInfo & {
-		currentState: any;
-	};
-	/** Only state relevant to the issue */
-	relevantState: any;
-	/** Previous fix attempts */
-	previousAttempts?: LLMAttemptInfo[];
-	/** Similar working examples */
-	examples?: LLMExampleInfo[];
-}
-declare function context$1(): LLMContext;
-declare function focus$1(): LLMFocusedContext;
-declare function copy(): string;
-declare function recordAttempt(code: string, result: "success" | "error", error?: string): void;
-declare function clearAttempts(): void;
 export declare const VERSION = "0.25.25";
-/**
- * Context for a running component, accessible via operate()
- */
-export interface ComponentContext<S = any> {
-	/** Mutable state proxy */
-	state: S;
-	/** Component refs */
-	refs: Refs;
-	/** Component slots */
-	slots: Slots;
-	/** DOM element */
-	self: HTMLElement;
-	/** Component detail */
-	detail: WebComponentDetail;
-	/** Force re-render */
-	rerender: () => void;
-}
-/**
- * Exported component data structure
- */
-export interface ExportedComponent {
-	/** Component tag name */
-	component: string;
-	/** Current state snapshot (JSON-serializable) */
-	state: any;
-	/** Template HTML (if available) */
-	template?: string;
-	/** Timestamp of export */
-	timestamp: string;
-	/** Error message if component errored */
-	error?: string;
-}
-declare function define<S>(tagName: string, template: string, logic: InitFunction<S> | ((appState: AppState<S>, detail?: any) => (c: any) => void)): boolean;
-declare function operate<S = any>(selectorOrElement: string | HTMLElement, index?: number): ComponentContext<S> | undefined;
-declare function exportComponent(selector: string): ExportedComponent | null;
-declare function defineHelper(name: string, implementation: Function): void;
-declare function clearHelper(name: string): void;
-declare function clearMissingFunctions(): void;
-declare function inferTemplate(tagName: string, element?: HTMLElement): InferredTemplate | null;
+export declare const html: (strings: TemplateStringsArray, ...values: Array<string | number>) => string;
+export declare function component<S>(tagName: string, template: string, initFunction: InitFunction<S | undefined>): (appState: AppState<S>, detail?: any) => (c: Bored) => void;
 /**
  * Global boreDOM object for debugging and programmatic access.
  * Exposed on window.boreDOM when running in browser.
@@ -558,44 +267,29 @@ export declare const boreDOM: {
 	_setDebugConfig: typeof setDebugConfig;
 	/** Framework version */
 	version: string;
-	/** Define a new component at runtime */
-	define: typeof define;
-	/** Get live access to a component's internals */
-	operate: typeof operate;
-	/** Export component state and template */
-	exportComponent: typeof exportComponent;
-	/** Map of missing function calls by function name */
-	readonly missingFunctions: Map<string, MissingFunctionContext[]>;
-	/** Most recent missing function context */
-	readonly lastMissing: MissingFunctionContext | null;
-	/** Define a helper function available to all render functions */
-	defineHelper: typeof defineHelper;
-	/** Get all defined helpers */
-	readonly helpers: Map<string, Function>;
-	/** Clear a helper definition */
-	clearHelper: typeof clearHelper;
-	/** Clear all missing function records */
-	clearMissingFunctions: typeof clearMissingFunctions;
-	/** Map of inferred templates by tag name */
-	readonly inferredTemplates: Map<string, InferredTemplate>;
-	/** Manually infer template for a tag */
-	inferTemplate: typeof inferTemplate;
 	/** LLM context and output utilities */
 	llm: {
-		context: typeof context$1;
-		focus: typeof focus$1;
-		copy: typeof copy;
-		readonly attempts: LLMAttemptInfo[];
-		clearAttempts: typeof clearAttempts;
-		_recordAttempt: typeof recordAttempt;
-		inferTypes: typeof inferTypes;
-		typeOf: typeof typeOf;
-		_clearTypes: typeof clearTypeTracking;
-		validate: typeof validate;
-		apply: typeof apply;
-		applyBatch: typeof applyBatch;
-		_setValidationAppState: typeof setValidationAppState;
+		vision: (root?: Element) => SemanticNode | null;
+		transact: (patch: JSONPatchOp[]) => TransactionResult;
+		compact: () => {
+			framework: {
+				name: string;
+				version: string;
+			};
+			state: {
+				paths: string[];
+				sample: Record<string, any>;
+			};
+			components: {
+				tag: string;
+				hasLogic: boolean;
+			}[];
+		} | null;
 	};
+	/** Create a template-backed component in single-file mode */
+	component: typeof component;
+	/** Template literal helper for HTML strings */
+	html: (strings: TemplateStringsArray, ...values: Array<string | number>) => string;
 };
 /**
  * Queries all `<template>` elements that
