@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="game-board.css">
   <link rel="stylesheet" href="game-button.css">
-  <script src="main.js" type="module"></script>
 </head>
 
 <body>
@@ -19,7 +18,13 @@
   </game-board>
 
   <template data-component="game-button">
-    <button onclick="dispatch('play')">
+    <!-- 
+      Event Dispatching:
+      We use data-dispatch="play" which automatically attaches metadata to the event:
+      - index: The index of this component within its parent
+      - component: Reference to this component instance
+    -->
+    <button data-dispatch="play">
       <slot name="valuePlayed"></slot>
     </button>
   </template>
@@ -38,14 +43,114 @@
     <game-button></game-button>
     <game-button></game-button>
     <game-button></game-button>
-  </template>
-  <script src="./game-board.js" type="module"></script>
 
+    <div class="controls">
+      <button data-ref="reset">Reset Game</button>
+    </div>
+
+    <script type="module">
+      /**
+       * Taken from https://react.dev/learn/tutorial-tic-tac-toe
+       */
+      function calculateWinner(squares) {
+        const lines = [
+          [0, 1, 2],
+          [3, 4, 5],
+          [6, 7, 8],
+          [0, 3, 6],
+          [1, 4, 7],
+          [2, 5, 8],
+          [0, 4, 8],
+          [2, 4, 6],
+        ];
+        for (let i = 0; i < lines.length; i++) {
+          const [a, b, c] = lines[i];
+          if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+            return squares[a];
+          }
+        }
+        return null;
+      }
+
+      export default ({ on, self, refs, state }) => {
+        // Event Handling:
+        // We listen for the 'play' event dispatched by our children (<game-button>).
+        // 'e' contains the CustomEvent detail, which boreDOM automatically populates with 'index'.
+        on("play", ({ state, e }) => {
+          const { index } = e;
+          const { gameState } = state;
+
+          const isGameWon = gameState.winner !== null;
+          const isEmptySquare = gameState.board[index] == null;
+
+          if (!isGameWon && isEmptySquare) {
+            gameState.board[index] = gameState.nextToPlay;
+            // Update the next to play:
+            gameState.nextToPlay =
+              gameState.nextToPlay === "O" ? "X" : "O";
+            // Update the winner state
+            gameState.winner = calculateWinner(gameState.board);
+          }
+        });
+
+        // Hybrid Approach:
+        // For singular elements like this Reset button, we use 'refs' directly.
+        // This is more intuitive for LLMs than dispatching a custom event for a simple click.
+        refs.reset.onclick = () => {
+          console.log("Resetting game...");
+          state.gameState.board = new Array(9).fill(null);
+          state.gameState.nextToPlay = "O";
+          state.gameState.winner = null;
+        };
+
+        return ({ state }) => {
+          let index = 0;
+          for (const child of self.children) {
+            // Skip the controls div
+            if (child.tagName === 'DIV') continue;
+
+            const boardValue = state.gameState.board[index++];
+
+            // If the child is a component with slots, we can update them directly.
+            // This is safer than manipulating innerHTML.
+            if (boardValue && child.slots) {
+              child.slots.valuePlayed = boardValue;
+            } else if (!boardValue && child.slots) {
+               // Clear the slot if the board value is empty (on reset)
+               child.slots.valuePlayed = '';
+            }
+          }
+        };
+      };
+    </script>
+  </template>
   
   <template data-component="game-turn">
     <p><slot name="playerTurn"></slot></p>
+    <script type="module">
+      export default () => {
+        return ({ state, slots }) => {
+          if (state.gameState.winner) {
+            slots.playerTurn = `Victory for Player ${state.gameState.winner}`;
+          } else {
+            slots.playerTurn = `Next player: ${state.gameState.nextToPlay}`;
+          }
+        };
+      };
+    </script>
   </template>
-  <script src="./game-turn.js" type="module"></script>
+
+  <script type="module">
+    import { inflictBoreDOM } from "./boreDOM.js?v=2";
+
+    await inflictBoreDOM({
+      gameState: {
+        board: new Array(9),
+        nextToPlay: "O",
+        winner: null,
+      },
+    });
+  </script>
 
 </body>
 

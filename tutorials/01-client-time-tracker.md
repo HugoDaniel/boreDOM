@@ -177,7 +177,7 @@ boreDOM.llm.apply(`
       <h3>Add Client</h3>
       <input data-ref="name" placeholder="Client name" />
       <input data-ref="rate" type="number" placeholder="Hourly rate" />
-      <button data-event="click:['addClient']">Add Client</button>
+      <button data-dispatch="addClient">Add Client</button>
     </div>\`,
     ({ state, refs, on }) => {
       on('addClient', () => {

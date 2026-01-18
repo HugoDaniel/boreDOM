@@ -1,160 +1,268 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>boreDOM Single File Example</title>
+
+  <!-- STYLES -->
   <style>
+    :root {
+      color-scheme: light;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      line-height: 1.4;
+    }
     body {
-      font-family: system-ui, sans-serif;
-      max-width: 600px;
-      margin: 2rem auto;
-      padding: 0 1rem;
+      margin: 0;
+      padding: 2rem;
+      background: #f6f5f3;
+      color: #1d1b1a;
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+    }
+    .shell {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      margin-top: 2rem;
     }
     section {
-      margin: 2rem 0;
-      padding: 1rem;
-      border: 1px solid #ddd;
-      border-radius: 8px;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 8px 24px rgba(15, 14, 13, 0.08);
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
     }
     button {
+      border: none;
+      border-radius: 999px;
       padding: 0.5rem 1rem;
-      margin: 0.25rem;
+      background: #1d4ed8;
+      color: #fff;
       cursor: pointer;
+      font-weight: 600;
     }
-    input {
-      padding: 0.5rem;
-      margin: 0.25rem;
+    button.secondary {
+      background: #e2e8f0;
+      color: #1d1b1a;
+    }
+    input[type="text"],
+    input[type="number"] {
+      border: 1px solid #cbd5f5;
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      width: 100%;
+    }
+    .stats {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.9rem;
+      color: #4b5563;
+      margin-bottom: 0.75rem;
+    }
+    .task {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.65rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 0.5rem;
+    }
+    .task.done {
+      background: #f0fdf4;
+      color: #4b5563;
+      text-decoration: line-through;
+    }
+    .task label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .empty {
+      font-style: italic;
+      color: #9ca3af;
     }
   </style>
 </head>
-
 <body>
   <h1>Single File boreDOM</h1>
-  <p>Everything in one HTML file. No build step. No separate JS files.</p>
+  <p>Everything stays in one HTML file and fits in LLM context.</p>
 
-  <!-- Component instances -->
-  <section>
-    <h2>Counter</h2>
-    <my-counter></my-counter>
-  </section>
+  <!-- STATE -->
+  <script>
+    const initialState = {
+      count: 0,
+      name: "World",
+      celsius: 0,
+      fahrenheit: 32,
+      newTask: "",
+      showEmpty: false,
+      showList: true,
+      taskStats: { total: 2, done: 1 },
+      tasks: [
+        { id: 1, title: "Ship single-file bundle", done: true },
+        { id: 2, title: "Add data-list bindings", done: false }
+      ]
+    }
+  </script>
 
-  <section>
-    <h2>Greeter</h2>
-    <name-input></name-input>
-    <my-greeter></my-greeter>
-  </section>
+  <app-shell></app-shell>
 
-  <section>
-    <h2>Temperature Converter</h2>
-    <temp-converter></temp-converter>
-  </section>
+  <!-- TEMPLATES -->
+  <template data-component="app-shell">
+    <div class="shell">
+      <section>
+        <h2>Counter</h2>
+        <my-counter></my-counter>
+      </section>
 
-  <!-- Component templates -->
+      <section>
+        <h2>Greeter</h2>
+        <name-input></name-input>
+        <my-greeter></my-greeter>
+      </section>
+
+      <section>
+        <h2>Temperature</h2>
+        <temp-converter></temp-converter>
+      </section>
+
+      <section>
+        <h2>Task Board</h2>
+        <task-board></task-board>
+      </section>
+    </div>
+  </template>
+
   <template data-component="my-counter">
-    <p>Count: <strong><slot name="value">0</slot></strong></p>
-    <button onclick="dispatch('decrement')">-</button>
-    <button onclick="dispatch('increment')">+</button>
-    <button onclick="dispatch('reset')">Reset</button>
+    <p>Count: <strong data-text="state.count"></strong></p>
+    <div class="row">
+      <button data-dispatch="decrement">-</button>
+      <button data-dispatch="increment">+</button>
+      <button class="secondary" data-dispatch="reset">Reset</button>
+    </div>
   </template>
 
   <template data-component="name-input">
-    <label>
-      Your name:
-      <input type="text" data-ref="input" placeholder="Enter your name">
+    <label class="row">
+      <span>Name</span>
+      <input type="text" data-value="state.name" data-dispatch-input="nameInput">
     </label>
-    <button onclick="dispatch('update-name')">Update</button>
   </template>
 
   <template data-component="my-greeter">
-    <p><slot name="greeting">Hello, World!</slot></p>
+    <p>Hello, <span data-text="state.name"></span>!</p>
   </template>
 
   <template data-component="temp-converter">
-    <div>
-      <label>
-        Celsius:
-        <input type="number" data-ref="celsius" value="0">
-      </label>
-      <button onclick="dispatch('convert-c')">Convert</button>
+    <div class="row">
+      <input type="number" data-value="state.celsius" data-dispatch-input="celsiusInput">
+      <span>°C</span>
     </div>
-    <p>
-      <slot name="celsius">0</slot>°C = <slot name="fahrenheit">32</slot>°F
-    </p>
+    <p><strong data-text="state.fahrenheit"></strong> °F</p>
   </template>
 
-  <!-- All logic in a single script -->
+  <template data-component="task-board">
+    <div class="row">
+      <input type="text" placeholder="New task" data-value="state.newTask" data-dispatch-input="taskInput">
+      <button data-dispatch="addTask">Add</button>
+    </div>
+
+    <div class="stats">
+      <span>Total: <strong data-text="state.taskStats.total"></strong></span>
+      <span>Done: <strong data-text="state.taskStats.done"></strong></span>
+    </div>
+
+    <p class="empty" data-show="state.showEmpty">No tasks yet.</p>
+
+    <ul data-show="state.showList" data-list="state.tasks">
+      <template data-item>
+        <li class="task" data-class="done:item.done">
+          <label>
+            <input type="checkbox" data-checked="item.done" data-dispatch="toggleTask" data-prop-id="item.id">
+            <span data-text="item.title"></span>
+          </label>
+          <button class="secondary" data-dispatch="removeTask" data-prop-id="item.id">Remove</button>
+        </li>
+      </template>
+    </ul>
+  </template>
+
+  <!-- LOGIC -->
   <script type="module">
-    // For CDN usage, replace with:
-    // import { inflictBoreDOM, webComponent } from "https://esm.sh/@mr_hugo/boredom";
-    import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js";
+    import { inflictBoreDOM, webComponent } from "./boreDOM.js"
 
-    // Define all components inline
-    const Counter = webComponent(({ on }) => {
-      on("increment", ({ state }) => {
-        state.count++;
-      });
-      on("decrement", ({ state }) => {
-        state.count--;
-      });
-      on("reset", ({ state }) => {
-        state.count = 0;
-      });
+    const updateTaskStats = (state) => {
+      const total = state.tasks.length
+      const done = state.tasks.filter((task) => task.done).length
+      state.taskStats = { total, done }
+      state.showList = total > 0
+      state.showEmpty = total === 0
+    }
 
-      return ({ state, slots }) => {
-        slots.value = String(state.count);
-      };
-    });
-
-    const NameInput = webComponent(({ on, refs }) => {
-      on("update-name", ({ state }) => {
-        if (refs.input instanceof HTMLInputElement) {
-          state.name = refs.input.value || "World";
-        }
-      });
-
-      // No render needed - this component only handles input
-      return () => {};
-    });
-
-    const Greeter = webComponent(() => {
-      return ({ state, slots }) => {
-        slots.greeting = `Hello, ${state.name}!`;
-      };
-    });
-
-    const TempConverter = webComponent(({ on, refs }) => {
-      on("convert-c", ({ state }) => {
-        if (refs.celsius instanceof HTMLInputElement) {
-          state.celsius = parseFloat(refs.celsius.value) || 0;
-        }
-      });
-
-      return ({ state, slots }) => {
-        const fahrenheit = (state.celsius * 9/5) + 32;
-        slots.celsius = String(state.celsius);
-        slots.fahrenheit = fahrenheit.toFixed(1);
-      };
-    });
-
-    // Initialize with state and all component logic
-    await inflictBoreDOM(
-      {
-        count: 0,
-        name: "World",
-        celsius: 0,
-      },
-      {
-        "my-counter": Counter,
-        "name-input": NameInput,
-        "my-greeter": Greeter,
-        "temp-converter": TempConverter,
-      }
-    );
-
-    console.log("[boreDOM] Single file example loaded");
+    await inflictBoreDOM(initialState, {
+      "my-counter": webComponent(({ on }) => {
+        on("increment", ({ state }) => { state.count += 1 })
+        on("decrement", ({ state }) => { state.count -= 1 })
+        on("reset", ({ state }) => { state.count = 0 })
+        return () => {}
+      }),
+      "name-input": webComponent(({ on }) => {
+        on("nameInput", ({ state, e }) => {
+          const target = e.event.target
+          if (target && "value" in target) {
+            state.name = target.value || "World"
+          }
+        })
+        return () => {}
+      }),
+      "temp-converter": webComponent(({ on }) => {
+        on("celsiusInput", ({ state, e }) => {
+          const target = e.event.target
+          const next = target && "value" in target ? parseFloat(target.value) : 0
+          state.celsius = Number.isFinite(next) ? next : 0
+          state.fahrenheit = Math.round((state.celsius * 9 / 5 + 32) * 10) / 10
+        })
+        return () => {}
+      }),
+      "task-board": webComponent(({ on }) => {
+        on("taskInput", ({ state, e }) => {
+          const target = e.event.target
+          if (target && "value" in target) {
+            state.newTask = target.value
+          }
+        })
+        on("addTask", ({ state }) => {
+          const title = state.newTask.trim()
+          if (!title) return
+          state.tasks.unshift({ id: Date.now(), title, done: false })
+          state.newTask = ""
+          updateTaskStats(state)
+        })
+        on("toggleTask", ({ state, e }) => {
+          const id = Number(e.dispatcher.dataset.id)
+          const task = state.tasks.find((t) => t.id === id)
+          if (task) task.done = !task.done
+          updateTaskStats(state)
+        })
+        on("removeTask", ({ state, e }) => {
+          const id = Number(e.dispatcher.dataset.id)
+          const index = state.tasks.findIndex((t) => t.id === id)
+          if (index >= 0) state.tasks.splice(index, 1)
+          updateTaskStats(state)
+        })
+        return () => {}
+      }),
+    }, { singleFile: true })
   </script>
-</body>
 
+  <!-- RUNTIME -->
+</body>
 </html>

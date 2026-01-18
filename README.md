@@ -46,8 +46,8 @@ pnpm dev
     <template data-component="simple-counter">
       <div>
         <p>Count: <slot name="counter">0</slot></p>
-        <button onclick="['increase']">+</button>
-        <button onclick="['decrease']">-</button>
+        <button data-dispatch="increase">+</button>
+        <button data-dispatch="decrease">-</button>
       </div>
     </template>
 
@@ -131,6 +131,17 @@ Use the production bundle for smallest size (~13KB, debug code eliminated):
 </script>
 ```
 
+### LLM-First (Single-File Build)
+
+Use the LLM bundle for single-file apps and inline-friendly workflows:
+
+```html
+<script type="module">
+  import { inflictBoreDOM } from "@mr_hugo/boredom/llm";
+  await inflictBoreDOM(state, logic, { singleFile: true });
+</script>
+```
+
 ### Debug API
 
 When errors occur in development mode:
@@ -192,7 +203,7 @@ Initializes the boreDOM framework and creates reactive state.
 
 - **`initialState`** - Initial application state object
 - **`componentsLogic`** - Optional inline component definitions
-- **`config`** - Optional configuration (`{ debug: boolean | DebugOptions }`)
+- **`config`** - Optional configuration (`{ debug?: boolean | DebugOptions, singleFile?: boolean, mirrorAttributes?: boolean }`)
 - **Returns** - Proxified reactive state object
 
 ```javascript
@@ -268,8 +279,8 @@ Templates use standard HTML with special attributes:
   </div>
 
   <!-- Event dispatching -->
-  <button onclick="['save']">Save</button>
-  <button onclick="['cancel']">Cancel</button>
+  <button data-dispatch="save">Save</button>
+  <button data-dispatch="cancel">Cancel</button>
 
   <!-- Reference elements -->
   <input ref="userInput" type="text">
@@ -285,8 +296,8 @@ Templates use standard HTML with special attributes:
 
 <template data-component="simple-counter" data-aria-label="Counter">
   <p>Count: <slot name="count">0</slot></p>
-  <button onclick="['increment']">+</button>
-  <button onclick="['decrement']">-</button>
+  <button data-dispatch="increment">+</button>
+  <button data-dispatch="decrement">-</button>
   <!-- Any other data-* on the template is mirrored to the element -->
   <!-- e.g., data-aria-label -> aria-label on <simple-counter> -->
   <!-- Add shadowrootmode="open" to render into a ShadowRoot -->
@@ -327,7 +338,7 @@ What happens under the hood
 
 - The runtime scans `<template data-component>` and registers custom elements.
 - It mirrors template `data-*` to host attributes and wires inline
-  `onclick="['...']"` to custom events ("[]" is the dispatch action).
+  `data-dispatch="..."` or `on-click="..."` to custom events.
 - Scripts are dynamically imported and run for every matching instance in the
   DOM (including multiple instances).
 - Subsequent instances created programmatically use the same initialization via
@@ -491,7 +502,8 @@ Pass your components as the second argument to `inflictBoreDOM()`:
         {
           "my-counter": Counter,
           "my-greeter": Greeter,
-        }
+        },
+        { singleFile: true }
       );
     </script>
   </head>
@@ -501,8 +513,8 @@ Pass your components as the second argument to `inflictBoreDOM()`:
 
     <template data-component="my-counter">
       <p>Count: <slot name="value">0</slot></p>
-      <button onclick="['increment']">+</button>
-      <button onclick="['decrement']">-</button>
+      <button data-dispatch="increment">+</button>
+      <button data-dispatch="decrement">-</button>
     </template>
 
     <template data-component="my-greeter">
@@ -518,6 +530,34 @@ This approach:
 - Can be served from a CDN or as a static file
 - Keeps everything self-contained in one HTML file
 - Skips dynamic imports entirely
+
+You can also define templates alongside logic to reduce boilerplate:
+
+```html
+<script type="module">
+  import { inflictBoreDOM, component, html } from "https://esm.sh/@mr_hugo/boredom/llm";
+
+  const Counter = component("my-counter", html`
+    <p>Count: <span data-text="state.count"></span></p>
+    <button data-dispatch="increment">+</button>
+    <button data-dispatch="decrement">-</button>
+  `, ({ on }) => {
+    on("increment", ({ state }) => state.count++)
+    on("decrement", ({ state }) => state.count--)
+    return () => {}
+  })
+
+  await inflictBoreDOM({ count: 0 }, { "my-counter": Counter }, { singleFile: true })
+</script>
+```
+
+### Single-File Bundling
+
+Inline the framework bundle directly into your HTML:
+
+```bash
+pnpm run bundle:single-file -- --in index.html --out index.single.html
+```
 
 For larger applications, the standard multi-file approach with the CLI is
 recommended for better organization.

@@ -86,6 +86,29 @@ webComponent(({ state, on, refs }) => {
 
 ---
 
+### Single-File Helpers
+
+#### `component(tagName, template, initFunction)`
+
+Define a template and logic together to reduce boilerplate in single-file apps.
+
+```typescript
+// Example
+const Counter = component("my-counter", html`
+  <button data-dispatch="decrement">-</button>
+  <span data-ref="display"></span>
+  <button data-dispatch="increment">+</button>
+`, ({ on }) => {
+  on("increment", ({ state }) => { state.count++ })
+  on("decrement", ({ state }) => { state.count-- })
+  return ({ state, refs }) => {
+    refs.display.textContent = String(state.count)
+  }
+})
+```
+
+---
+
 ### Console API (Development Only)
 
 #### `boreDOM.define(tagName, template, logic)`
@@ -187,6 +210,23 @@ const ctx = boreDOM.llm.context()
 //   issues: { errors: [], missingFunctions: [], missingComponents: [] },
 //   ...
 // }
+```
+
+#### `boreDOM.llm.compact()`
+
+Get a compact summary (framework + state paths + components).
+
+```typescript
+// Signature
+function compact(): {
+  framework: { name: "boreDOM", version: string }
+  state: { paths: string[], sample: Record<string, any> }
+  components: Array<{ tag: string, hasLogic: boolean }>
+} | null
+
+// Example
+const compact = boreDOM.llm.compact()
+// OUTPUT: { framework: { name: "boreDOM", version: "0.26.1" }, state: { paths: ["count", "users"], sample: { count: 1, users: "[2]" } }, components: [...] }
 ```
 
 #### `boreDOM.llm.focus()`
@@ -580,14 +620,14 @@ webComponent(() => {
 
 ---
 
-### Concept: Events via dispatch()
+### Concept: Events via data-dispatch
 
-**Rule**: Use `onclick="dispatch('eventName')"` in templates, handle with `on('eventName', handler)`.
+**Rule**: Use `data-dispatch="eventName"` in templates, handle with `on('eventName', handler)`.
 
 ```html
 <template data-component="my-button">
-  <button onclick="dispatch('clicked')">Click me</button>
-  <button onclick="dispatch('reset')" data-id="123">Reset</button>
+  <button data-dispatch="clicked">Click me</button>
+  <button data-dispatch="reset" data-id="123">Reset</button>
 </template>
 ```
 
@@ -661,6 +701,42 @@ if (!result.success) {
   result.rollback()  // Undo changes
 }
 ```
+
+---
+
+### Single-File Layout Contract
+
+**Rule**: Use stable section markers so the full app stays easy to edit in one file.
+
+```html
+<!-- STATE -->
+<script>
+  const initialState = {
+    // Keep state shape here
+  }
+</script>
+
+<!-- STYLES -->
+<style>
+  /* Global + component styles */
+</style>
+
+<!-- TEMPLATES -->
+<template data-component="app-shell">
+  <!-- UI markup -->
+</template>
+
+<!-- LOGIC -->
+<script type="module">
+  // Component logic + inflictBoreDOM()
+</script>
+
+<!-- RUNTIME -->
+<!-- Optional: dev helpers, diagnostics, etc. -->
+```
+
+This keeps edits deterministic for LLMs, reduces diff noise, and avoids
+splitting the app across files.
 
 ---
 
@@ -771,7 +847,7 @@ boreDOM.define("user-card-v2",
   `<div class="card">
     <h3 data-ref="name"></h3>
     <p data-ref="email"></p>
-    <button onclick="dispatch('delete')">Delete</button>
+    <button data-dispatch="delete">Delete</button>
   </div>`,
   ({ state, on }) => {
     on("delete", ({ state, detail }) => {
@@ -893,9 +969,9 @@ boreDOM.llm.apply(`
   <my-counter></my-counter>
 
   <template data-component="my-counter">
-    <button onclick="dispatch('decrement')">-</button>
+    <button data-dispatch="decrement">-</button>
     <span data-ref="display">0</span>
-    <button onclick="dispatch('increment')">+</button>
+    <button data-dispatch="increment">+</button>
   </template>
 </body>
 </html>
@@ -953,7 +1029,7 @@ boreDOM.llm.apply(`
   <template data-component="list-item">
     <li>
       <span data-ref="text"></span>
-      <button onclick="dispatch('remove')">X</button>
+      <button data-dispatch="remove">X</button>
     </li>
   </template>
 </body>
@@ -1001,8 +1077,8 @@ boreDOM.llm.apply(`
   <add-form></add-form>
 
   <template data-component="add-form">
-    <input data-ref="input" type="text" placeholder="Add item..." onkeyup="dispatch('keypress')">
-    <button onclick="dispatch('submit')">Add</button>
+    <input data-ref="input" type="text" placeholder="Add item..." data-dispatch-keyup="keypress">
+    <button data-dispatch="submit">Add</button>
   </template>
 </body>
 </html>
@@ -1189,7 +1265,7 @@ inflictBoreDOM(
 
 ```html
 <template data-component="item-card">
-  <div onclick="dispatch('select')">
+  <div data-dispatch="select">
     <span data-ref="name"></span>
   </div>
 </template>
@@ -1273,6 +1349,75 @@ inflictBoreDOM(
     background: yellow;
   }
 </style>
+```
+
+---
+
+### Pattern 11: Micro-Bindings (No JS for simple updates)
+
+**When to use**: Reduce render code for common UI updates.
+
+```html
+<template data-component="status-panel">
+  <h2 data-text="state.title"></h2>
+  <p data-show="state.loading">Loading...</p>
+  <p data-text="state.error" data-class="error:state.error"></p>
+  <input data-value="state.query">
+  <input type="checkbox" data-checked="state.enabled">
+</template>
+```
+
+```javascript
+webComponent(() => {
+  return () => {
+    // No render logic needed for the bindings above.
+  }
+})
+```
+
+---
+
+### Pattern 12: Declarative Lists
+
+**When to use**: Render arrays without `map().join("")`.
+
+```html
+<template data-component="item-board">
+  <ul data-list="state.items">
+    <template data-item>
+      <li>
+        <span data-text="item.label"></span>
+        <span data-text="index"></span>
+      </li>
+    </template>
+  </ul>
+</template>
+```
+
+```javascript
+webComponent(() => () => {})
+```
+
+---
+
+### Pattern 13: Prop Wiring for Child Components
+
+**When to use**: Pass state into child components without `makeComponent()`.
+
+```html
+<template data-component="parent-view">
+  <user-card data-prop-user-id="state.selectedId"></user-card>
+</template>
+```
+
+```javascript
+webComponent(() => () => {})
+```
+
+```javascript
+webComponent(() => ({ detail, refs }) => {
+  refs.name.textContent = String(detail?.data?.userId ?? "")
+})
 ```
 
 ---
@@ -1500,7 +1645,7 @@ console.log(Object.keys(ctx.refs))
 
 ### Error: Events not firing
 
-**Cause**: Wrong event syntax or missing dispatch.
+**Cause**: Wrong event syntax or missing `data-dispatch`.
 
 **Check template syntax**:
 ```html
@@ -1508,7 +1653,7 @@ console.log(Object.keys(ctx.refs))
 <button onclick="doSomething()">Click</button>
 
 <!-- CORRECT -->
-<button onclick="dispatch('doSomething')">Click</button>
+<button data-dispatch="doSomething">Click</button>
 ```
 
 **Check handler registration**:
@@ -1676,8 +1821,8 @@ A full working todo app demonstrating all concepts:
 
   <!-- Form Component -->
   <template data-component="todo-form">
-    <input data-ref="input" type="text" placeholder="What needs to be done?" onkeyup="dispatch('keypress')">
-    <button onclick="dispatch('add')">Add</button>
+    <input data-ref="input" type="text" placeholder="What needs to be done?" data-dispatch-keyup="keypress">
+    <button data-dispatch="add">Add</button>
   </template>
 
   <!-- List Component -->
@@ -1687,15 +1832,15 @@ A full working todo app demonstrating all concepts:
 
   <!-- Item Component -->
   <template data-component="todo-item">
-    <input type="checkbox" data-ref="checkbox" onclick="dispatch('toggle')">
+    <input type="checkbox" data-ref="checkbox" data-dispatch="toggle">
     <span class="text" data-ref="text"></span>
-    <button onclick="dispatch('delete')">Delete</button>
+    <button data-dispatch="delete">Delete</button>
   </template>
 
   <!-- Stats Component -->
   <template data-component="todo-stats">
     <span data-ref="count"></span>
-    <button onclick="dispatch('clearDone')">Clear completed</button>
+    <button data-dispatch="clearDone">Clear completed</button>
   </template>
 
   <script type="module">

@@ -264,21 +264,21 @@ boreDOM.llm.apply(`
   boreDOM.define("request-builder",
     \`<div>
       <div class="method-select">
-        <button class="get" data-event="click:['setMethod', 'GET']"
+        <button class="get" data-dispatch="setMethod" data-method="GET"
           data-ref="getBtn">GET</button>
-        <button class="post" data-event="click:['setMethod', 'POST']"
+        <button class="post" data-dispatch="setMethod" data-method="POST"
           data-ref="postBtn">POST</button>
-        <button class="put" data-event="click:['setMethod', 'PUT']"
+        <button class="put" data-dispatch="setMethod" data-method="PUT"
           data-ref="putBtn">PUT</button>
-        <button class="delete" data-event="click:['setMethod', 'DELETE']"
+        <button class="delete" data-dispatch="setMethod" data-method="DELETE"
           data-ref="deleteBtn">DELETE</button>
       </div>
       <input data-ref="url" placeholder="Enter URL" />
-      <button data-event="click:['send']" data-ref="sendBtn">Send</button>
+      <button data-dispatch="send" data-ref="sendBtn">Send</button>
     </div>\`,
     ({ state, refs, on }) => {
-      on('setMethod', (e) => {
-        state.method = e.detail
+      on('setMethod', ({ e }) => {
+        state.method = e.dispatcher.dataset.method || "GET"
       })
 
       on('send', async () => {

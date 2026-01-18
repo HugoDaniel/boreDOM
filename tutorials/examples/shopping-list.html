@@ -147,8 +147,8 @@
 
       <div class="add-form">
         <input type="text" data-ref="input" placeholder="Add item..."
-               onkeyup="dispatch('keypress')">
-        <button onclick="dispatch('add')">Add</button>
+               data-dispatch-keyup="keypress">
+        <button data-dispatch="add">Add</button>
       </div>
 
       <div data-ref="items"></div>
@@ -243,10 +243,10 @@
                 <div class="item ${item.checked ? 'checked' : ''}">
                   <input type="checkbox"
                          ${item.checked ? 'checked' : ''}
-                         onclick="dispatch('toggle')"
+                         data-dispatch="toggle"
                          data-id="${item.id}">
                   <span class="item-name">${item.name}</span>
-                  <button onclick="dispatch('remove')" data-id="${item.id}">Remove</button>
+                  <button data-dispatch="remove" data-id="${item.id}">Remove</button>
                 </div>
               `).join('')
             }
@@ -257,7 +257,7 @@
                 <div class="stats">
                   <span>${checkedCount} of ${totalCount} items checked</span>
                   ${checkedCount > 0
-                    ? '<button class="clear-btn" onclick="dispatch(\'clearChecked\')">Clear checked</button>'
+                    ? '<button class="clear-btn" data-dispatch="clearChecked">Clear checked</button>'
                     : ''}
                 </div>
               `

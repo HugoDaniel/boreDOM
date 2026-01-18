@@ -203,9 +203,9 @@
     <div>
       <h1>Time Tracker</h1>
       <div class="tabs">
-        <button onclick="dispatch('setView')" data-view="clients" data-ref="clientsTab">Clients</button>
-        <button onclick="dispatch('setView')" data-view="entries" data-ref="entriesTab">Time Entries</button>
-        <button onclick="dispatch('setView')" data-view="summary" data-ref="summaryTab">Summary</button>
+        <button data-dispatch="setView" data-view="clients" data-ref="clientsTab">Clients</button>
+        <button data-dispatch="setView" data-view="entries" data-ref="entriesTab">Time Entries</button>
+        <button data-dispatch="setView" data-view="summary" data-ref="summaryTab">Summary</button>
       </div>
       <div data-ref="content">Loading...</div>
     </div>

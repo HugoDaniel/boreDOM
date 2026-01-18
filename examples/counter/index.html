@@ -5,7 +5,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>boreDOM Counter</title>
-  <script src="main.js" type="module"></script>
 </head>
 
 <body>
@@ -16,15 +15,33 @@
   <template data-component="simple-counter">
     <slot name="counter">Some value</slot>
 
-    <button onclick="dispatch('increase')">
+    <button data-ref="inc">
       Increase
     </button>
 
-    <button onclick="dispatch('decrease')">
+    <button data-ref="dec">
       Decrease
     </button>
+
+    <script type="module">
+      export default ({ refs, state }) => {
+        refs.inc.onclick = () => state.count++;
+        refs.dec.onclick = () => state.count--;
+
+        return ({ state, slots }) => {
+          slots.counter = String(state.count);
+        };
+      };
+    </script>
   </template>
-  <script src="./simple-counter.js" type="module"></script>
+
+  <script type="module">
+    import { inflictBoreDOM } from "./boreDOM.js";
+
+    await inflictBoreDOM({
+      count: 0
+    });
+  </script>
 
 </body>
 

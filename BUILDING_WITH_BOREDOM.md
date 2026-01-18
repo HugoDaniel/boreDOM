@@ -103,9 +103,9 @@ window.addEventListener("DOMContentLoaded", async () => {
 <template data-component="counter-display">
   <div class="counter">
     <h2>Count: <slot name="count">0</slot></h2>
-    <button onclick="['increment']">+</button>
-    <button onclick="['decrement']">-</button>
-    <input data-ref="input" type="number" oninput="['setCount']" />
+    <button data-dispatch="increment">+</button>
+    <button data-dispatch="decrement">-</button>
+    <input data-ref="input" type="number" data-dispatch-input="setCount" />
   </div>
 </template>
 ```
@@ -114,7 +114,7 @@ Key points:
 - `data-component="tag-name"` - defines the custom element tag (must have hyphen)
 - `slot name="x"` - placeholder for dynamic content
 - `data-ref="x"` - element reference accessible via `refs.x`
-- `onclick="['eventName']"` - dispatches custom event
+- `data-dispatch="eventName"` - dispatches custom event
 
 ### Logic (.js)
 
@@ -351,9 +351,9 @@ export const SearchInput = webComponent(({ on }) => {
 ```html
 <template data-component="login-form">
   <form>
-    <input data-ref="email" type="email" oninput="['emailChange']" />
-    <input data-ref="password" type="password" oninput="['passwordChange']" />
-    <button onclick="['submit']">Login</button>
+    <input data-ref="email" type="email" data-dispatch-input="emailChange" />
+    <input data-ref="password" type="password" data-dispatch-input="passwordChange" />
+    <button data-dispatch="submit">Login</button>
     <div data-ref="error" hidden></div>
   </form>
 </template>
@@ -686,7 +686,7 @@ Note: In production builds (`boreDOM.prod.js`), the Console API is eliminated en
 ### DON'T:
 - Don't mutate state in render functions (state is read-only there)
 - Don't forget the hyphen in component names (`my-component`, not `mycomponent`)
-- Don't use `dispatch()` in templates - use `onclick="['eventName']"` syntax
+- Don't use `dispatch()` in templates - use `data-dispatch="eventName"` syntax
 - Don't create components without matching templates
 - Don't store DOM elements or browser APIs directly in reactive state
 

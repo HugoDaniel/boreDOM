@@ -59,16 +59,16 @@
   <!-- Templates -->
   <template data-component="my-counter">
     <p>Count: <strong data-slot="count">0</strong></p>
-    <button onclick="dispatch('decrement')">-</button>
-    <button onclick="dispatch('increment')">+</button>
-    <button onclick="dispatch('reset')">Reset</button>
+    <button data-dispatch="decrement">-</button>
+    <button data-dispatch="increment">+</button>
+    <button data-dispatch="reset">Reset</button>
   </template>
 
   <template data-component="user-list">
     <div data-ref="container">
       <p>Users: <span data-slot="userCount">0</span></p>
       <ul data-ref="list"></ul>
-      <button onclick="dispatch('addUser')">Add User</button>
+      <button data-dispatch="addUser">Add User</button>
     </div>
   </template>
 

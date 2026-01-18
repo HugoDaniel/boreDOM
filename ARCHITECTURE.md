@@ -275,7 +275,7 @@ component(tag, props)
 ┌─────────────────────────────────────────────────────────────┐
 │  customElements.define(tag, class extends Bored { ... })    │
 │    - connectedCallback: init template, wire events, render  │
-│    - #createDispatchers: convert onclick="dispatch('x')"    │
+│    - #createDispatchers: convert data-dispatch="x"          │
 │    - Shadow DOM support via shadowrootmode attribute        │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -299,16 +299,16 @@ The internal class created by `component()` adds:
 | `renderCallback` | User-provided render function |
 | `slots` | Slot accessor proxy |
 | `traverse(fn, opts)` | Iterates over child elements |
-| `#createDispatchers()` | Converts `onclick="dispatch('x')"` to real listeners |
+| `#createDispatchers()` | Converts `data-dispatch="x"` to real listeners |
 | `#init()` | Clones template, attaches shadow if needed, wires events |
 
 #### Inline Event Transformation
 
-When a component initializes, `#createDispatchers()` finds all `on*` attributes containing `dispatch(...)`:
+When a component initializes, `#createDispatchers()` finds `data-dispatch` or `on-*` attributes:
 
 ```html
 <!-- Before -->
-<button onclick="dispatch('save', { id: 1 })">Save</button>
+<button data-dispatch="save" data-id="1">Save</button>
 
 <!-- After -->
 <button data-onclick-dispatches="save">Save</button>
@@ -458,7 +458,7 @@ Logged to console on first `inflictBoreDOM` call.
 ### Event Handling
 
 ```
-1. User clicks: <button onclick="dispatch('save')">
+1. User clicks: <button data-dispatch="save">
 2. #createDispatchers() converted this to real listener
 3. dispatch('save', { event, component, ... }) fires CustomEvent
 4. createEventsHandler listener receives event
@@ -686,7 +686,7 @@ Pass custom data to dynamically created components:
 ```html
 <!-- Template -->
 <template data-component="sliders-panel">
-  <input type="range" oninput="['valueChange']" />
+  <input type="range" data-dispatch-input="valueChange" />
 </template>
 ```
 
@@ -708,12 +708,12 @@ export const SlidersPanel = webComponent(({ on }) => {
 
 ### Template Pattern: Inline Events
 
-Use array syntax for event names in templates:
+Use `data-dispatch` for events in templates:
 
 ```html
-<button onclick="['recompile']">Compile</button>
-<input type="range" oninput="['sliderChange']" />
-<input type="radio" onchange="['tabChange']" />
+<button data-dispatch="recompile">Compile</button>
+<input type="range" data-dispatch-input="sliderChange" />
+<input type="radio" data-dispatch-change="tabChange" />
 ```
 
 ### Template Pattern: Refs for Direct DOM Access
@@ -871,7 +871,7 @@ index.ts
 - Slot default behavior with Shadow DOM
 
 #### Event System
-- `dispatch('eventName')` in onclick attributes
+- `data-dispatch="eventName"` or `on-click="eventName"` attributes
 - `data-onclick-dispatches` attribute set on processed elements
 - CustomEvent fired with correct detail (event, target)
 - Multiple events in single dispatch call

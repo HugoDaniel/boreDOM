@@ -121,9 +121,9 @@ const INIT_INDEX_HTML = `<!DOCTYPE html>
   <template data-component="my-app">
     <h1>boreDOM App</h1>
     <div class="counter">
-      <button onclick="dispatch('decrement')">−</button>
+      <button data-dispatch="decrement">−</button>
       <span class="count" data-ref="count">0</span>
-      <button onclick="dispatch('increment')">+</button>
+      <button data-dispatch="increment">+</button>
     </div>
     <p class="hint">Edit this file. Claude can control this app via MCP.</p>
   </template>
@@ -134,6 +134,119 @@ const INIT_INDEX_HTML = `<!DOCTYPE html>
 const INIT_CLAUDE_MD = `# boreDOM Project
 
 This project uses boreDOM with MCP integration. Claude can directly control the running app.
+
+**Event syntax - ONLY use this format:**
+\`\`\`html
+<button data-dispatch="eventName">Click</button>
+\`\`\`
+
+**These are WRONG (don't invent alternatives):**
+- \`dispatch('event')\` ← WRONG
+- \`data-onclick-dispatches\` ← WRONG
+- \`dispatchEvent()\` ← WRONG
+- \`addEventListener()\` ← WRONG (boreDOM handles this)
+
+---
+
+## STOP - Before You "Fix" Dynamic Components
+
+If you think:
+- "render function isn't triggering for dynamically created components"
+- "I need to include data directly in the HTML string"
+- "dynamically created components don't auto-initialize"
+
+**YOU ARE WRONG.** Dynamic components FULLY WORK in boreDOM.
+
+**Before changing your approach, DEBUG FIRST:**
+1. Add \`console.log('RENDER', self.tagName, self.dataset.index)\` as FIRST line in render
+2. Check browser console for the log
+3. If log appears → render IS running, bug is elsewhere (check state values, refs)
+4. If no log → check component registration and init/render syntax
+
+**DO NOT:**
+- Inline data directly into HTML strings (defeats reactivity)
+- Replace \`refs.container.innerHTML\` with static HTML
+- Add "fallback" code for "when render doesn't trigger"
+
+**The pattern IS correct. Debug, don't work around.**
+
+### Correct Pattern: Labels from Array
+
+**State:**
+\`\`\`javascript
+const state = { pads: [{ label: "Kick" }, { label: "Snare" }, { label: "Hat" }] }
+\`\`\`
+
+**Parent creates children with data-index:**
+\`\`\`javascript
+"pad-grid": webComponent(() => {
+  let initialized = false
+  return ({ state, refs }) => {
+    if (initialized) return
+    initialized = true
+    refs.container.innerHTML = state.pads.map((_, i) =>
+      \`<pad-button data-index="\${i}"></pad-button>\`
+    ).join("")
+  }
+})
+\`\`\`
+
+**Child reads index, accesses state for its data:**
+\`\`\`javascript
+"pad-button": webComponent(() => {
+  return ({ state, refs, self }) => {
+    const index = parseInt(self.dataset.index)
+    const pad = state.pads[index]
+    refs.label.textContent = pad.label  // ← This WORKS. Render IS called.
+  }
+})
+\`\`\`
+
+**Child template:**
+\`\`\`html
+<template data-component="pad-button">
+  <button><span data-ref="label"></span></button>
+</template>
+\`\`\`
+
+**This pattern works because:**
+1. Parent creates \`<pad-button data-index="0">\` via innerHTML
+2. boreDOM auto-registers it and calls its render function
+3. Child's render reads \`self.dataset.index\` to know which pad it is
+4. Child accesses \`state.pads[index]\` to get its label
+5. Label appears. No "fix" needed.
+
+---
+
+## Development Workflow - Progressive Enhancement
+
+**Build in layers. Don't style broken code. Don't fix styled code.**
+
+### Phase 1: Structure (get it rendering)
+1. Create component template with basic HTML structure
+2. Add \`data-ref\` for elements you'll update
+3. Add \`data-dispatch="event"\` for interactive elements
+4. Verify component appears in browser (reload, check for errors)
+
+### Phase 2: Functionality (get it working)
+1. Add event handlers with \`on('event', handler)\`
+2. Wire up state mutations
+3. Update refs/slots in render function
+4. **TEST EACH INTERACTION** before moving on
+5. Fix any bugs NOW, not later
+
+### Phase 3: Styling (make it pretty)
+1. Only start styling AFTER functionality works
+2. Add CSS for layout, colors, typography
+3. Don't change HTML structure while styling (breaks functionality)
+
+**Why this order matters:**
+- Styling broken code = wasted effort (you'll change the HTML)
+- Fixing styled code = style breaks (you'll change the HTML)
+- Testing early = small bugs, easy fixes
+- Testing late = compound bugs, hard to debug
+
+**After each phase: reload and verify before proceeding.**
 
 ## Component Architecture
 
@@ -184,29 +297,61 @@ app-root
 ### Structure for larger apps:
 \`\`\`
 project/
-├── index.html              # App shell + state init only
+├── index.html              # App shell only
+├── state.js                # Initial state + inflictBoreDOM call
+├── styles.css              # Global styles (@layer base)
 ├── components/
 │   ├── task-list.html      # <template data-component="task-list">
 │   ├── task-list.js        # webComponent logic
+│   ├── task-list.css       # Component styles (@layer components)
 │   ├── task-item.html
-│   └── task-item.js
+│   ├── task-item.js
+│   └── task-item.css
 \`\`\`
 
-### index.html (shell only):
+### index.html (shell only - no logic):
 \`\`\`html
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My App</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="components/task-list.css">
+  <link rel="stylesheet" href="components/task-item.css">
 </head>
 <body>
   <app-root></app-root>
-  <script type="module">
-    import { inflictBoreDOM } from "..."
-    inflictBoreDOM({ tasks: [] })
-  </script>
+
+  <!-- Templates -->
+  <template data-component="app-root">
+    <main><task-list></task-list></main>
+  </template>
+
+  <!-- Scripts -->
+  <script type="module" src="state.js"></script>
+  <script src="http://localhost:31337"></script>
 </body>
 </html>
+\`\`\`
+
+### state.js (app initialization):
+\`\`\`javascript
+import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js"
+import taskList from "./components/task-list.js"
+import taskItem from "./components/task-item.js"
+
+const initialState = {
+  tasks: [],
+  filter: "all"
+}
+
+inflictBoreDOM(initialState, {
+  "app-root": webComponent(() => () => {}),
+  "task-list": taskList,
+  "task-item": taskItem
+})
 \`\`\`
 
 ### components/task-item.html:
@@ -214,7 +359,7 @@ project/
 <template data-component="task-item">
   <div class="task">
     <span data-ref="name"></span>
-    <button onclick="dispatch('delete')">Delete</button>
+    <button data-dispatch="delete">Delete</button>
   </div>
 </template>
 \`\`\`
@@ -232,7 +377,49 @@ export default webComponent(({ on }) => {
 })
 \`\`\`
 
-Run with: \`boredom dev\` (auto-discovers components/ folder)
+### Running the app:
+\`\`\`bash
+boredom serve              # Clean static server (recommended for MCP)
+boredom serve --live       # With auto-reload on file changes
+boredom serve -p 3000      # Custom port
+\`\`\`
+
+**Note:** \`boredom dev\` auto-injects scripts and transforms HTML.
+Use \`boredom serve\` for transparent serving, add \`--live\` for auto-reload.
+
+## Browser Control
+
+**When the user provides a URL, navigate to it first before taking screenshots.**
+Don't assume the browser is already on the correct page. Always navigate first:
+
+\`\`\`
+User: "server running on localhost:8880, change the button color"
+
+1. Navigate to http://localhost:8880 (don't screenshot first!)
+2. Take screenshot to see current state
+3. Make changes
+4. Trigger reload or re-navigate to verify
+\`\`\`
+
+## Browser Reload - Which Method to Use
+
+**If you're controlling the browser via chrome-devtools MCP:**
+\`\`\`
+Use: navigate_page with type: "reload"
+\`\`\`
+This directly reloads the browser you're controlling. Simple and reliable.
+
+**If user is viewing in their own browser (not controlled by you):**
+\`\`\`bash
+curl http://localhost:PORT/__trigger-reload
+\`\`\`
+This sends reload signal to browsers with live reload script connected.
+
+**Decision rule:**
+- Using chrome-devtools MCP? → \`navigate_page(type: "reload")\`
+- User watching their own browser? → \`curl /__trigger-reload\`
+
+Don't use both. Pick one based on the situation.
 
 ## Exports
 
@@ -246,27 +433,70 @@ import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom
 ## Component Structure
 
 \`\`\`javascript
-webComponent(({ on, refs }) => {
+webComponent(({ on }) => {
   // INIT PHASE: runs once when component is created
   // - Setup event handlers here
-  // - refs are available
+  // - Do NOT access refs here (template not attached yet)
   on("click", ({ state }) => state.count++)
 
-  // RENDER PHASE: runs on every state change
-  return ({ state, refs, slots, makeComponent }) => {
+  // RENDER PHASE: runs on every state change AND on first render
+  return ({ state, refs, slots, self }) => {
+    if (!state) return
     // - Update DOM here
-    // - makeComponent is ONLY available here (not importable!)
+    // - refs ARE available here (template is attached)
+    // - Read data attributes: self.dataset.index
     refs.display.textContent = state.count
     slots.list = state.items.map(i => \`<li>\${i.name}</li>\`).join("")
   }
 })
 \`\`\`
 
+**Key insight:** The render function runs AFTER the template is attached, so refs work there. Don't try to access refs in init phase.
+
 ## Template Attributes
 
 - \`data-ref="name"\` → Access element via \`refs.name\`
-- \`data-slot="name"\` → Set innerHTML via \`slots.name = "..."\`
-- \`onclick="dispatch('eventName')"\` → Trigger event handler
+- \`<slot name="x">default</slot>\` → Set content via \`slots.x = "..."\`
+- \`data-dispatch="eventName"\` → Trigger event handler
+- \`data-dispatch="event1 event2"\` → Trigger multiple events
+
+### refs vs slots - When to Use Each
+
+**refs** = Read/write element properties (textContent, value, classList, style)
+\`\`\`html
+<span data-ref="count">0</span>
+<input data-ref="input" type="text">
+\`\`\`
+\`\`\`javascript
+refs.count.textContent = state.count      // ✓ Set text
+refs.input.value = state.query            // ✓ Set input value
+refs.count.classList.add("highlight")     // ✓ Modify classes
+\`\`\`
+
+**slots** = Inject simple HTML content (text, basic markup)
+\`\`\`html
+<slot name="message">Default text</slot>
+<slot name="status"></slot>
+\`\`\`
+\`\`\`javascript
+slots.message = "<strong>Hello!</strong>" // ✓ Simple HTML
+slots.status = state.isLoading ? "Loading..." : "Ready"
+\`\`\`
+
+**For component lists, use refs.innerHTML:**
+\`\`\`html
+<div data-ref="items"></div>
+\`\`\`
+\`\`\`javascript
+refs.items.innerHTML = state.tasks.map((t, i) =>
+  \`<task-item data-index="\${i}"></task-item>\`
+).join("")
+\`\`\`
+
+**Summary:**
+- **Slots** (\`<slot name="x">\`) = Simple text/HTML content → \`slots.x = "Hello"\`
+- **Refs** (\`data-ref="x"\`) = Element access → \`refs.x.textContent\`, \`refs.x.classList\`, \`refs.x.innerHTML\`
+- **Component lists** = Use refs.innerHTML with HTML strings (NOT slots, NOT makeComponent)
 
 ## State Mutations
 
@@ -278,42 +508,149 @@ on("addUser", ({ state }) => {
 })
 \`\`\`
 
-## MCP Tools
+## MCP Workflow
 
-| Tool | Description |
-|------|-------------|
-| \`boredom_get_context\` | Get full app state and components |
-| \`boredom_apply_code\` | Execute JavaScript in browser |
-| \`boredom_define_component\` | Create new component at runtime |
-| \`boredom_get_focus\` | Get focused context for current error |
+**Standard workflow when user provides a URL:**
+1. **Navigate first** - \`navigate_page\` to the URL (never screenshot before navigating)
+2. **Get context** - Use \`boredom_get_context\` to understand app state (NOT screenshots)
+3. **Read files** - Understand the code structure
+4. **Edit the source files** - Use Edit/Write tools to modify index.html, CSS, JS files
+5. **Reload** - \`curl http://localhost:PORT/__trigger-reload\` or navigate again
+6. **Verify** - Screenshot only to confirm visual changes
+
+**Prefer boreDOM MCP tools over screenshots:**
+- \`boredom_get_context\` → Get app state, components, errors (structured data)
+- \`boredom_get_focus\` → Get current error context
+- Screenshots → Only for visual verification after changes
+
+**Why use boreDOM tools instead of screenshots?**
+- Structured data about state, not pixels
+- See actual variable values, component structure, errors
+- Faster and more accurate than visual inspection
+
+**IMPORTANT - File edits vs runtime changes:**
+- **Edit source files** (index.html, *.js, *.css) for persistent changes
+- Runtime JavaScript execution (browser console, boreDOM.llm.apply) is temporary
+- Changes made via runtime APIs are lost on page refresh
+- Always modify the actual files so changes survive reload
+- **Don't use boredom_apply_code for debugging** - just fix the source files directly
+
+**CSS changes don't need screenshot verification:**
+- Edit the CSS file
+- Trigger reload: \`curl http://localhost:PORT/__trigger-reload\`
+- Done. Trust the reload. CSS is applied.
+- Only screenshot if user asks "how does it look?" or you need to verify layout
+
+**Don't:**
+- Take screenshots to understand app state (use boredom_get_context instead)
+- Take screenshots to verify CSS changes (trust the reload)
+- Use runtime JavaScript execution for permanent changes (won't persist!)
+- Take screenshots before navigating to the provided URL
+- Assume the browser is already showing the right page
+- Forget to reload after editing files
 
 ## Common Patterns
 
-**Parent renders child components** (makeComponent is a render param, not an import):
+### Rendering Lists of Child Components
+
+**CRITICAL: Always use the \`initialized\` flag when creating dynamic components!**
+Without it, parent re-renders destroy and recreate all children, breaking their state.
+
+**Use refs.innerHTML for component lists** (most reliable approach):
+
+\`\`\`html
+<!-- Parent template -->
+<template data-component="item-list">
+  <div data-ref="container"></div>
+</template>
+\`\`\`
+
 \`\`\`javascript
-// Parent component (task-list)
-"task-list": webComponent(() => {
-  return ({ state, slots, makeComponent }) => {
-    slots.items = state.tasks.map((task, index) =>
-      makeComponent("task-item", { detail: { task, index } })
+"item-list": webComponent(() => {
+  let initialized = false
+  return ({ state, refs }) => {
+    if (!state) return
+    if (initialized) return  // Only render once
+    initialized = true
+
+    // Set innerHTML on ref - custom elements get their templates applied
+    refs.container.innerHTML = state.items.map((item, i) =>
+      \`<item-card data-index="\${i}"></item-card>\`
     ).join("")
-  }
-})
-
-// Child component (task-item) - receives data via detail
-"task-item": webComponent(({ on }) => {
-  on("delete", ({ state, detail }) => {
-    state.tasks.splice(detail.index, 1)
-  })
-
-  return ({ refs, detail }) => {
-    refs.name.textContent = detail.task.name
   }
 })
 \`\`\`
 
-**Child-to-parent communication**: Children dispatch events, parents handle them.
-Events bubble up, so parent can use \`on()\` to catch child events.
+**Key points:**
+- Use \`data-ref="container"\` not \`<slot>\` for dynamic component lists
+- Use \`initialized\` flag to prevent re-rendering on every state change
+- Don't use \`document.createElement\` - it bypasses template binding
+
+**IMPORTANT: Dynamic components FULLY WORK!**
+When you set \`refs.container.innerHTML = '<my-component></my-component>'\`:
+1. Browser creates the custom element
+2. boreDOM registers it and applies the template
+3. Component's init function runs (event handlers registered)
+4. Component's render function runs (DOM updated)
+5. \`data-dispatch="event"\` handlers work automatically
+
+**Don't "fix" dynamic components by assuming they're broken.** If something isn't working:
+1. **ADD CONSOLE.LOG to debug** - don't guess!
+   \`\`\`javascript
+   return ({ state, refs, self }) => {
+     console.log('render running', self.dataset.index, state)
+     // ... rest of render
+   }
+   \`\`\`
+2. Check if render runs (if no log, check init function syntax)
+3. Check if state has expected values
+4. Check if refs are defined
+5. The dynamic creation pattern IS correct - don't work around it
+
+**Child component pattern** - reads data from parent via data attributes:
+\`\`\`html
+<template data-component="item-card">
+  <div class="card">
+    <span data-ref="name"></span>
+    <button data-dispatch="delete">X</button>
+  </div>
+</template>
+\`\`\`
+\`\`\`javascript
+"item-card": webComponent(({ on }) => {
+  on("delete", ({ state, self }) => {
+    const index = parseInt(self.dataset.index)
+    state.items.splice(index, 1)
+  })
+  return ({ state, refs, self }) => {
+    if (!state) return
+    const index = parseInt(self.dataset.index)
+    const item = state.items[index]
+    if (item) refs.name.textContent = item.name
+  }
+})
+\`\`\`
+
+### Always Guard State
+
+Start every render function with a state check:
+\`\`\`javascript
+return ({ state, refs, slots }) => {
+  if (!state) return  // ALWAYS do this first
+
+  // Now safe to use state
+  refs.count.textContent = state.count
+}
+\`\`\`
+
+**Child-to-parent communication**: Children trigger events via \`data-dispatch="eventName"\`, parents handle them with \`on('eventName', handler)\`.
+Events bubble up, so parent can catch child events.
+
+**Simple HTML lists** (for plain elements, not boreDOM components):
+\`\`\`javascript
+// Use slots for simple HTML lists (li, div, span, etc.)
+slots.list = state.items.map(i => \`<li>\${i.name}</li>\`).join("")
+\`\`\`
 
 **Guard null values:**
 \`\`\`javascript
@@ -322,11 +659,59 @@ slots.list = (state.items || []).map(i => \`<li>\${i.name}</li>\`).join("")
 
 **Conditional rendering:**
 \`\`\`javascript
-if (state.loading) {
-  slots.content = "<p>Loading...</p>"
-} else {
-  slots.content = state.items.map(i => \`<div>\${i.name}</div>\`).join("")
-}
+slots.content = state.loading
+  ? "<p>Loading...</p>"
+  : state.items.map(i => \`<div>\${i.name}</div>\`).join("")
+\`\`\`
+
+## Important Rules
+
+### DO:
+- Always check \`if (!state) return\` at start of render
+- Use \`state\` parameter name in event handlers for mutations
+- Use refs.innerHTML with HTML strings for component lists
+- Create separate templates for repeated/list items
+
+### DON'T:
+- Don't use \`dispatchEvent\` or \`dispatch()\` - use \`data-dispatch="eventName"\` syntax
+- Don't use \`document.createElement\` for boreDOM components - use refs.innerHTML
+- Don't use \`boredom_apply_code\` for debugging - edit source files directly
+- Don't access refs in init phase - use them in render function
+- Don't mutate state in render functions (only in event handlers)
+- Don't forget the hyphen in component names (\`my-component\`, not \`mycomponent\`)
+- Don't use makeComponent in string templates (returns HTMLElement, not string)
+- Don't store DOM elements in reactive state
+- Don't manually add event listeners - innerHTML binds \`data-dispatch="event"\` automatically
+- Don't replace dynamic components with static ones - dynamic creation WORKS
+- Don't forget \`initialized\` flag when creating components via innerHTML
+- Don't assume "render isn't running" - add console.log to verify before changing approach
+- Don't use \`window.state\` - it doesn't exist! State is only available in event handlers and render
+
+## Accessing State from Global Event Handlers
+
+\`window.state\` does NOT exist. To access state from global keyboard handlers:
+
+**Option 1: Capture return value from inflictBoreDOM**
+\`\`\`javascript
+const state = await inflictBoreDOM({...}, {...})
+document.addEventListener('keydown', (e) => {
+  state.activePad = index  // Works - state is the returned proxy
+})
+\`\`\`
+
+**Option 2: Handle keyboard inside component init (recommended)**
+\`\`\`javascript
+"mpc-app": webComponent(({ on }) => {
+  document.addEventListener('keydown', (e) => {
+    // Dispatch event that component can catch
+    window.dispatchEvent(new CustomEvent('key-press', { detail: { key: e.key } }))
+  })
+
+  on('key-press', ({ state, detail }) => {
+    state.activePad = keyToIndex[detail.key]  // state available here
+  })
+  return ...
+})
 \`\`\`
 
 ## CSS Best Practices
@@ -440,10 +825,161 @@ program
     process.exit(0)
   })
 
-// Dev command (default)
+// Live reload script injected into HTML when --live is used
+const LIVE_RELOAD_SCRIPT = `
+<script>
+(function() {
+  const es = new EventSource("/__reload");
+  es.onmessage = () => location.reload();
+  es.onerror = () => setTimeout(() => location.reload(), 1000);
+})();
+</script>
+</body>`;
+
+// Serve command - clean static server, no transformations
+program
+  .command("serve [directory]")
+  .description("Start a clean static server (no transformations)")
+  .option("-p, --port <port>", "Port to serve on", "8080")
+  .option("-l, --live", "Enable live reload on file changes")
+  .action(async (directory, opts) => {
+    const dir = path.resolve(directory || ".")
+    const port = parseInt(opts.port, 10)
+    const liveReload = opts.live
+
+    // SSE clients for live reload
+    const sseClients = new Set()
+
+    console.log(`Serving ${dir} on http://localhost:${port}`)
+    if (liveReload) {
+      console.log("Live reload enabled - browser will refresh on file changes")
+    } else {
+      console.log("Clean mode - files served as-is")
+      console.log(`Reload API available: http://localhost:${port}/__trigger-reload`)
+    }
+    console.log("")
+
+    // Function to trigger reload (used by file watcher and API)
+    const triggerReload = (reason = "manual") => {
+      if (sseClients.size > 0) {
+        console.log(`Reload triggered: ${reason} (${sseClients.size} client${sseClients.size === 1 ? "" : "s"})`)
+        sseClients.forEach(client => {
+          client.write("data: reload\n\n")
+        })
+        return true
+      }
+      return false
+    }
+
+    const server = http.createServer((req, res) => {
+      // Live reload SSE endpoint (always available for Claude)
+      if (req.url === "/__reload") {
+        res.writeHead(200, {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+          "Access-Control-Allow-Origin": "*"
+        })
+        res.write("data: connected\n\n")
+        sseClients.add(res)
+        req.on("close", () => sseClients.delete(res))
+        return
+      }
+
+      // API endpoint to trigger reload (always available for Claude)
+      if (req.url === "/__trigger-reload") {
+        res.writeHead(200, {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        })
+        const reloaded = triggerReload("API call")
+        res.end(JSON.stringify({ success: true, clients: sseClients.size, reloaded }))
+        return
+      }
+
+      // Serve the reload script for manual inclusion
+      if (req.url === "/__reload.js") {
+        res.writeHead(200, {
+          "Content-Type": "application/javascript",
+          "Access-Control-Allow-Origin": "*"
+        })
+        res.end(`(function() {
+  const es = new EventSource("/__reload");
+  es.onmessage = () => location.reload();
+  es.onerror = () => setTimeout(() => location.reload(), 1000);
+})();`)
+        return
+      }
+
+      let urlPath = decodeURIComponent(req.url.split(/[?#]/)[0])
+      if (urlPath === "/" || urlPath.endsWith("/")) {
+        urlPath = path.posix.join(urlPath, "index.html")
+      }
+
+      const filePath = path.join(dir, urlPath)
+
+      fs.pathExists(filePath).then(async (exists) => {
+        if (!exists) {
+          res.writeHead(404, { "Content-Type": "text/plain" })
+          return res.end("Not Found")
+        }
+
+        const contentType = mime.lookup(filePath) || "application/octet-stream"
+
+        // Inject live reload script into HTML files
+        if (liveReload && contentType === "text/html") {
+          let content = await fs.readFile(filePath, "utf-8")
+          content = content.replace("</body>", LIVE_RELOAD_SCRIPT)
+          res.writeHead(200, {
+            "Content-Type": contentType,
+            "Access-Control-Allow-Origin": "*"
+          })
+          return res.end(content)
+        }
+
+        res.writeHead(200, {
+          "Content-Type": contentType,
+          "Access-Control-Allow-Origin": "*"
+        })
+        fs.createReadStream(filePath).pipe(res)
+      }).catch(() => {
+        res.writeHead(500, { "Content-Type": "text/plain" })
+        res.end("Internal Server Error")
+      })
+    })
+
+    server.listen(port, () => {
+      console.log(`Ready: http://localhost:${port}`)
+    })
+
+    server.on("error", (e) => {
+      if (e.code === "EADDRINUSE") {
+        console.error(`Port ${port} is in use. Try: boredom serve -p ${port + 1}`)
+        process.exit(1)
+      }
+    })
+
+    // Watch for file changes when live reload is enabled
+    if (liveReload) {
+      const watcher = chokidar.watch(dir, {
+        ignoreInitial: true,
+        ignored: /(^|[\/\\])\../  // ignore dotfiles
+      })
+
+      let reloadTimeout
+      watcher.on("all", (event, changedPath) => {
+        if (reloadTimeout) clearTimeout(reloadTimeout)
+        reloadTimeout = setTimeout(() => {
+          triggerReload(`file changed: ${path.relative(dir, changedPath)}`)
+        }, 100)
+      })
+    }
+  })
+
+// Dev command (default) - transforms HTML, injects scripts
 const devCommand = program
   .command("dev", { isDefault: true })
-  .description("Start the development server")
+  .description("Start dev server with auto-injection (use 'serve' for clean mode)")
   .option("--index <path to file>", "Index file to serve", "index.html")
   .option(
     "--html <folder>",
@@ -913,11 +1449,12 @@ async function main(cmdOptions) {
   await watchFiles();
 }
 
-// Only run dev server if not in test mode and not running init command
+// Only run dev server if not in test mode and not running init/serve commands
 const args = process.argv.slice(2);
 const isInitCommand = args[0] === "init";
+const isServeCommand = args[0] === "serve";
 
-if (!isTestMode && !isInitCommand) {
+if (!isTestMode && !isInitCommand && !isServeCommand) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);
