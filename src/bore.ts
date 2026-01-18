@@ -25,41 +25,17 @@ import {
 import { access } from "./utils/access";
 import { flatten } from "./utils/flatten";
 import { isPOJO } from "./utils/isPojo";
-import { trackStateAccess } from "./type-inference";
 
-/**
- * Called during initialization. This function sets
- * the custom event listeners for all events that modify state.
- * This does not register the "update" event (used for modifying the DOM).
- *
- * @param {State} state The state reference that will be transformed
- * at each event
-export const addCustomEvents = (state) => {
-  for (const eventName in allEvents) {
-    // @ts-ignore
-    listener(eventName, state, allEvents[eventName]);
+const extractDetailData = (element: HTMLElement) => {
+  const data: Record<string, string> = {};
+  for (const [key, value] of Object.entries(element.dataset)) {
+    if (key.startsWith("prop")) continue;
+    data[key] = value;
   }
+  return data;
 };
- */
 
-/**
- * Listens for an event, and logs it in the event logger
- *
- * @param {keyof Event} name - the event name to listen
- * @param {State} state - the state to transform
- * @param {(s: State, e: Event[keyof Event]) => any} h - the handler to call
-const listener = (name, state, h) => {
-  addEventListener(name, (evt) => {
-    if (evt instanceof CustomEvent) {
-      // log(name, evt.detail);
-      h(state, evt.detail);
 
-      // Log it
-      state.runtime.log.push({ e: name });
-    }
-  });
-};
-*/
 
 /** */
 /**
@@ -74,7 +50,7 @@ const listener = (name, state, h) => {
  *   on('increment', () => { state.count++; });
  *   return () => {};
  * });
- * // <my-comp><button onclick="dispatch('increment')"></button></my-comp>
+ * // <my-comp><button data-dispatch="increment"></button></my-comp>
  * ```
  */
 export function createEventsHandler<S>(
@@ -202,10 +178,10 @@ export function createSlotsAccessor(c: Bored): Slots {
       let elem = value;
       if (value instanceof HTMLElement) {
         value.setAttribute("data-slot", prop);
-      } else if (typeof value === "string") {
+      } else if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
         elem = create("span");
         elem.setAttribute("data-slot", prop);
-        elem.innerText = value;
+        elem.innerText = String(value);
       } else {
         throw new Error(`Invalid value for slot ${prop} in <${c.tagName}>`);
       }
@@ -216,9 +192,8 @@ export function createSlotsAccessor(c: Bored): Slots {
       if (existingSlots.length > 0) {
         existingSlots.forEach((s) => s.parentElement?.replaceChild(elem, s));
       } else {
-        const slots = Array.from(c.querySelectorAll(`slot[name="${prop}"]`));
-        slots.forEach((s) => s.parentElement?.replaceChild(elem, s));
-      }
+              const slots = Array.from(c.querySelectorAll(`slot[name="${prop}"]`));
+                            slots.forEach((s) => s.parentElement?.replaceChild(elem, s));      }
 
       return true;
     },
@@ -246,6 +221,7 @@ export function createSlotsAccessor(c: Bored): Slots {
 export function createStateAccessor<S>(
   state: S | undefined,
   log: (string[] | string)[],
+  allowWrites: boolean = false,
   accum?: {
     targets: WeakMap<any, (string | symbol)>;
     path: (string | symbol)[];
@@ -255,8 +231,11 @@ export function createStateAccessor<S>(
   if (state === undefined) return undefined;
 
   return new Proxy(state as any, {
-    // State accessors are read-only:
+    // State accessors are read-only by default:
     set(target, prop, newValue) {
+      if (allowWrites) {
+        return Reflect.set(target, prop, newValue);
+      }
       if (typeof prop === "string") {
         console.error(
           `State is read-only for web components. Unable to set '${prop}'.`,
@@ -293,7 +272,7 @@ export function createStateAccessor<S>(
         if (!current.targets.has(value) && typeof prop === "string") {
           current.targets.set(value, current.path.join("."));
         }
-        return createStateAccessor(value, log, current);
+        return createStateAccessor(value, log, allowWrites, current);
       }
 
       // Create current path, this is made by appending the current target path
@@ -313,13 +292,6 @@ export function createStateAccessor<S>(
       }
       current.path.length = 0;
       current.path.push(path);
-
-      // Track state access for type inference (Phase 5)
-      if (typeof __DEBUG__ === "undefined" || __DEBUG__) {
-        if (typeof path === "string" && path !== "") {
-          trackStateAccess(path, value);
-        }
-      }
 
       return value;
     },
@@ -555,9 +527,16 @@ export function runComponentsInitializer<S>(state: AppState<S>) {
     }
 
     elements.forEach((componentClass, index) => {
-      code(state as any, { index, name: tagName, data: undefined })(
-        componentClass,
-      );
+      if ((componentClass as any).isBoredInitialized) return;
+      const detail = {
+        index,
+        name: tagName,
+        data: extractDetailData(componentClass),
+      };
+      code(state as any, detail)(componentClass);
+      // @ts-ignore
+      componentClass.__boreDOMDetail = detail;
+      (componentClass as any).isBoredInitialized = true;
     });
   }
 
@@ -592,7 +571,11 @@ export function createAndRunCode<S extends object>(
   const code = state.internal.components.get(name);
   if (code) {
     const info = { ...detail, tagName: name };
-    return createComponent(name, code(state as any, info));
+    if (!info.data) info.data = {};
+    const element = createComponent(name, code(state as any, info));
+    // @ts-ignore
+    element.__boreDOMDetail = info;
+    return element;
   }
 
   return createComponent(name);

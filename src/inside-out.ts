@@ -11,7 +11,6 @@
 import type { MissingFunctionContext, InferredTemplate } from "./types"
 import { isDebugEnabled } from "./debug"
 import { define, getCurrentAppState } from "./console-api"
-import { trackFunctionCall } from "./type-inference"
 
 // Build-time flag (replaced by esbuild in prod builds with --define:__DEBUG__=false)
 declare const __DEBUG__: boolean
@@ -64,9 +63,6 @@ export function createRenderHelpers(
         // Wrap to track function calls for type inference (Phase 5)
         return (...args: any[]) => {
           const result = helper(...args)
-          if (typeof __DEBUG__ === "undefined" || __DEBUG__) {
-            trackFunctionCall(prop, args, result)
-          }
           return result
         }
       }

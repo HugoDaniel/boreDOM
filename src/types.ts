@@ -141,6 +141,10 @@ export type DebugOptions = {
 export type BoreDOMConfig = {
   /** Debug mode: true for full debug, false to disable, or granular DebugOptions */
   debug?: boolean | DebugOptions
+  /** Single-file mode: skip dynamic imports and favor inline logic (default: false) */
+  singleFile?: boolean
+  /** Mirror template data-* attributes onto component hosts (default: true) */
+  mirrorAttributes?: boolean
 }
 
 /**
@@ -217,133 +221,44 @@ export type InferredTemplate = {
 }
 
 // ============================================================================
-// Type Inference Types (Phase 5)
+// Vision Types (LLM Symbiosis)
 // ============================================================================
 
-/**
- * Type node representing an inferred type.
- * Uses discriminated union for different type kinds.
- */
-export type TypeNode =
-  | { kind: "primitive"; value: "string" | "number" | "boolean" | "null" | "undefined" }
-  | { kind: "literal"; value: string | number | boolean }
-  | { kind: "array"; elementType: TypeNode }
-  | { kind: "object"; properties: Record<string, TypeNode> }
-  | { kind: "union"; types: TypeNode[] }
-  | { kind: "function"; params: ParamType[]; returnType: TypeNode }
-  | { kind: "date" }
-  | { kind: "unknown" }
-
-/**
- * Parameter type for function signatures.
- */
-export type ParamType = {
-  name: string
-  type: TypeNode
-  /** Whether the parameter is optional (defaults to false) */
-  optional?: boolean
+export type SemanticAttributes = {
+  id?: string;
+  class?: string;
+  type?: string;
+  value?: string;
+  checked?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  href?: string;
+  src?: string;
+  alt?: string;
+  title?: string;
+  role?: string;
+  [key: `aria-${string}`]: string;
+  [key: `data-${string}`]: string;
 }
 
-/**
- * Tracked function type info.
- */
-export type FunctionType = {
-  params: ParamType[]
-  returnType: TypeNode
-  callCount: number
-}
-
-/**
- * Output structure for type inference.
- */
-export type TypeDefinitions = {
-  /** Generated TypeScript interface for app state */
-  state: string
-  /** Inferred helper function signatures */
-  helpers: Record<string, string>
-  /** Component prop types inferred from attributes */
-  components: Record<string, string>
-  /** Event payload types */
-  events: Record<string, string>
-  /** Raw type data for further processing */
-  raw: {
-    state: TypeNode
-    helpers: Record<string, FunctionType>
-    components: Record<string, TypeNode>
-    events: Record<string, TypeNode>
-  }
+export type SemanticNode = {
+  tagName: string;
+  attributes?: SemanticAttributes;
+  text?: string;
+  children?: SemanticNode[];
 }
 
 // ============================================================================
-// Validation & Apply Types (Phase 6)
+// Patch Types
 // ============================================================================
 
-/**
- * Result of code validation.
- */
-export type ValidationResult = {
-  /** Whether the code passed all validation checks */
-  valid: boolean
-  /** Issues found during validation */
-  issues: ValidationIssue[]
-}
+export type JSONPatchOp = 
+  | { op: "add"; path: string; value: any }
+  | { op: "remove"; path: string }
+  | { op: "replace"; path: string; value: any }
+  | { op: "test"; path: string; value: any };
 
-/**
- * A single validation issue.
- */
-export type ValidationIssue = {
-  /** Type of issue */
-  type: "syntax" | "reference" | "type" | "logic" | "warning"
-  /** Human-readable message */
-  message: string
-  /** Location in code (line/position) */
-  location?: string
-  /** Suggestion for how to fix */
-  suggestion?: string
-  /** Severity level */
-  severity: "error" | "warning"
-}
-
-/**
- * Result of applying code.
- */
-export type ApplyResult = {
-  /** Whether the code executed successfully */
-  success: boolean
-  /** Error message if failed */
-  error?: string
-  /** Function to rollback state changes */
-  rollback: () => void
-  /** Components potentially affected by changes */
-  componentsAffected: string[]
-  /** State changes that occurred */
-  stateChanges: StateChange[]
-}
-
-/**
- * A single state change.
- */
-export type StateChange = {
-  /** State path that changed */
-  path: string
-  /** Value before change */
-  before: any
-  /** Value after change */
-  after: any
-}
-
-/**
- * Result of batch apply operation.
- */
-export type BatchApplyResult = {
-  /** Whether all blocks succeeded */
-  success: boolean
-  /** Results for each code block */
-  results: ApplyResult[]
-  /** Function to rollback all changes */
-  rollbackAll: () => void
-  /** Error message of first failure */
-  error?: string
-  /** Index of first failed block */
-  failedIndex?: number
+export type TransactionResult = {
+  success: boolean;
+  error?: string;
 }
