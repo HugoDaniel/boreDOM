@@ -57,7 +57,7 @@ const collectElements = (root: Bored | DocumentFragment) => {
   }
 
   elements.push(root);
-  root.traverse((elem) => {
+  root.traverse((elem: HTMLElement) => {
     elements.push(elem);
   }, { traverseShadowRoot: true });
 

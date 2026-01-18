@@ -30,6 +30,7 @@ const extractDetailData = (element: HTMLElement) => {
   const data: Record<string, string> = {};
   for (const [key, value] of Object.entries(element.dataset)) {
     if (key.startsWith("prop")) continue;
+    if (value === undefined) continue;
     data[key] = value;
   }
   return data;

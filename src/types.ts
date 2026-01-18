@@ -11,6 +11,10 @@ export type WebComponentInitParams<S> = {
   state: S;
   refs: Refs;
   self: Bored;
+  makeComponent: (
+    tag: string,
+    options?: { detail?: WebComponentDetail },
+  ) => Bored;
   on: (
     eventName: string,
     eventHandler: (options: {

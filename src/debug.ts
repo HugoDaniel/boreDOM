@@ -181,10 +181,12 @@ export function logError<S>(ctx: ErrorContext<S>): void {
 
   // LLM output mode: single-line JSON
   if (debugConfig.outputFormat === "llm") {
-    // Import is dynamic to avoid circular dependency at module load time
-    import("./llm").then(({ formatErrorForLLM }) => {
-      console.log(formatErrorForLLM(ctx))
-    })
+    console.log(JSON.stringify({
+      type: "error",
+      component: ctx.component,
+      message: ctx.error?.message,
+      stack: ctx.error?.stack,
+    }))
     return
   }
 
