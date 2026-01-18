@@ -96,6 +96,7 @@
       "countLabel": "2",
       "mode": "calm",
       "showDetails": true,
+      "detailsLabel": "Hide details",
       "name": "Ada",
       "agreed": false,
       "statusLine": "Ready"
@@ -114,7 +115,7 @@
         <button data-dispatch="decrement">-</button>
         <strong data-text="state.countLabel"></strong>
         <button data-dispatch="increment">+</button>
-        <button class="secondary" data-dispatch="toggleDetails">Toggle details</button>
+        <button class="secondary" data-dispatch="toggleDetails">\n          <span data-text="state.detailsLabel"></span>\n        </button>
       </div>
 
       <div class="status" data-show="state.showDetails">
@@ -140,6 +141,7 @@
           const updateLabel = () => {
             state.countLabel = String(state.count)
             state.mode = state.count > 4 ? "hot" : "calm"
+            state.detailsLabel = state.showDetails ? "Hide details" : "Show details"
             state.statusLine = state.agreed
               ? `Agreement locked at ${state.count}`
               : `Count is ${state.count}`
@@ -157,6 +159,7 @@
 
           on("toggleDetails", () => {
             state.showDetails = !state.showDetails
+            updateLabel()
           })
 
           on("nameInput", ({ e }) => {
