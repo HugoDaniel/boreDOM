@@ -121,40 +121,19 @@
         <button data-dispatch="addTask">Add</button>
       </div>
 
-      <ul data-list="state.tasks">
+      <ul data-list="state.tasks" data-dispatch-click="toggleDone" data-dispatch-change="toggleDone">
         <template data-item>
-          <task-card
-            data-prop-id="item.id"
-            data-prop-title="item.title"
-            data-prop-done="item.done"
-          ></task-card>
+          <li class="card" data-class="done:item.done" data-prop-id="item.id">
+            <input
+              type="checkbox"
+              data-checked="item.done"
+            >
+            <span data-text="item.title"></span>
+            <button>Toggle</button>
+          </li>
         </template>
       </ul>
     </section>
-  </template>
-
-  <template data-component="task-card">
-    <li class="card" data-class="done:detail.data.done">
-      <input type="checkbox" data-checked="detail.data.done" disabled>
-      <span data-text="detail.data.title"></span>
-      <button data-dispatch="toggleDone">Toggle</button>
-    </li>
-
-    <script type="module">
-      export default ({ on, state, detail }) => {
-        const findTask = () => state.tasks.find((task) => task.id === detail.data.id)
-
-        on("toggleDone", () => {
-          const task = findTask()
-          if (task) {
-            task.done = !task.done
-            state.stats.done = state.tasks.filter((item) => item.done).length
-          }
-        })
-
-        return () => {}
-      }
-    </script>
   </template>
 
   <!-- RUNTIME -->
@@ -172,6 +151,13 @@
           state.stats.done = state.tasks.filter((task) => task.done).length
         }
 
+        const toggleById = (id) => {
+          const task = state.tasks.find((item) => item.id === id)
+          if (!task) return
+          task.done = !task.done
+          updateStats()
+        }
+
         on("editTitle", ({ e }) => {
           const target = e.event.target
           if (target && "value" in target) {
@@ -185,6 +171,16 @@
           state.tasks.push({ id: state.nextId++, title, done: false })
           state.newTitle = ""
           updateStats()
+        })
+
+        on("toggleDone", ({ e }) => {
+          const target = e.event.target
+          if (!(target instanceof HTMLElement)) return
+          const itemEl = target.closest("li")
+          if (!itemEl) return
+          const id = Number(itemEl.dataset.id)
+          if (!Number.isFinite(id)) return
+          toggleById(id)
         })
 
         updateStats()
