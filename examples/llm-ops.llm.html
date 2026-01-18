@@ -130,7 +130,9 @@
 
         on("vision", () => {
           state.lastAction = "Captured vision tree"
-          state.visionSummary = JSON.stringify(boreDOM.llm.vision(), null, 2)
+          requestAnimationFrame(() => {
+            state.visionSummary = JSON.stringify(boreDOM.llm.vision(), null, 2)
+          })
         })
 
         return () => {}
