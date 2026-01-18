@@ -42,28 +42,6 @@ const resolveValue = (expr: string, scope: BindingScope) => {
   return resolvePath(scope.state, raw);
 };
 
-const collectElements = (root: Bored | DocumentFragment) => {
-  const elements: HTMLElement[] = [];
-
-  if (root instanceof DocumentFragment) {
-    const walker = document.createTreeWalker(
-      root,
-      NodeFilter.SHOW_ELEMENT,
-    );
-    while (walker.nextNode()) {
-      elements.push(walker.currentNode as HTMLElement);
-    }
-    return elements;
-  }
-
-  elements.push(root);
-  root.traverse((elem: HTMLElement) => {
-    elements.push(elem);
-  }, { traverseShadowRoot: true });
-
-  return elements;
-};
-
 const getClassBase = (element: HTMLElement) => {
   const stored = element.getAttribute("data-class-base");
   if (stored !== null) return stored;
@@ -108,11 +86,54 @@ const applyClassBinding = (
   }
 };
 
-const applyAttributeBindings = (elements: HTMLElement[], scope: BindingScope) => {
+export const applyBindings = (root: Bored | DocumentFragment, scope: BindingScope) => {
+  const elements: HTMLElement[] = [];
+  if (root instanceof DocumentFragment) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    while (walker.nextNode()) {
+      elements.push(walker.currentNode as HTMLElement);
+    }
+  } else {
+    elements.push(root);
+    root.traverse((elem: HTMLElement) => {
+      elements.push(elem);
+    }, { traverseShadowRoot: true });
+  }
+
   const skipListItems = scope.item === undefined;
+
   elements.forEach((element) => {
     if (element instanceof HTMLTemplateElement) return;
     if (skipListItems && element.closest("[data-list-item]")) return;
+
+    const listExpr = element.getAttribute("data-list");
+    if (listExpr) {
+      const template = element.querySelector("template[data-item]");
+      if (template instanceof HTMLTemplateElement) {
+        const resolved = resolveValue(listExpr, scope);
+        const items = Array.isArray(resolved) ? resolved : [];
+
+        Array.from(element.children).forEach((child) => {
+          if ((child as HTMLElement).hasAttribute("data-list-item")) {
+            child.remove();
+          }
+        });
+
+        const fragment = document.createDocumentFragment();
+        items.forEach((item, index) => {
+          const clone = template.content.cloneNode(true) as DocumentFragment;
+          Array.from(clone.childNodes).forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              (node as HTMLElement).setAttribute("data-list-item", "");
+            }
+          });
+          applyBindings(clone, { ...scope, item, index });
+          fragment.appendChild(clone);
+        });
+
+        element.appendChild(fragment);
+      }
+    }
 
     const textBinding = element.getAttribute("data-text");
     if (textBinding) {
@@ -192,55 +213,4 @@ const applyAttributeBindings = (elements: HTMLElement[], scope: BindingScope) =>
       }
     }
   });
-};
-
-const applyListBinding = (
-  element: HTMLElement,
-  scope: BindingScope,
-) => {
-  const listExpr = element.getAttribute("data-list");
-  if (!listExpr) return;
-
-  const template = element.querySelector("template[data-item]");
-  if (!(template instanceof HTMLTemplateElement)) return;
-
-  const resolved = resolveValue(listExpr, scope);
-  const items = Array.isArray(resolved) ? resolved : [];
-
-  Array.from(element.children).forEach((child) => {
-    if ((child as HTMLElement).hasAttribute("data-list-item")) {
-      child.remove();
-    }
-  });
-
-  const fragment = document.createDocumentFragment();
-  items.forEach((item, index) => {
-    const clone = template.content.cloneNode(true) as DocumentFragment;
-    Array.from(clone.childNodes).forEach((node) => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        (node as HTMLElement).setAttribute("data-list-item", "");
-      }
-    });
-    applyBindingsToFragment(clone, { ...scope, item, index });
-    fragment.appendChild(clone);
-  });
-
-  element.appendChild(fragment);
-};
-
-const applyBindingsToFragment = (
-  fragment: DocumentFragment,
-  scope: BindingScope,
-) => {
-  let elements = collectElements(fragment);
-  elements.forEach((element) => applyListBinding(element, scope));
-  elements = collectElements(fragment);
-  applyAttributeBindings(elements, scope);
-};
-
-export const applyBindings = (root: Bored, scope: BindingScope) => {
-  let elements = collectElements(root);
-  elements.forEach((element) => applyListBinding(element, scope));
-  elements = collectElements(root);
-  applyAttributeBindings(elements, scope);
 };

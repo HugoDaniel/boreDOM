@@ -12,15 +12,8 @@
     if (typeof require !== "undefined") return require.apply(this, arguments);
     throw Error('Dynamic require of "' + x + '" is not supported');
   });
-  var __esm = (fn, res) => function __init() {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-  };
   var __commonJS = (cb, mod) => function __require2() {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-  };
-  var __export = (target, all) => {
-    for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
   };
   var __copyProps = (to, from, except, desc) => {
     if (from && typeof from === "object" || typeof from === "function") {
@@ -22390,753 +22383,15 @@
     }
   });
 
-  // src/utils/flatten.ts
-  function flatten(obj, ignore = []) {
-    const stack = [{
-      path: [],
-      obj
-    }];
-    const result = [];
-    const visited = /* @__PURE__ */ new WeakSet();
-    while (stack.length > 0) {
-      const { path, obj: obj2 } = stack.pop();
-      if (visited.has(obj2)) continue;
-      visited.add(obj2);
-      for (const key in obj2) {
-        if (ignore.includes(key)) continue;
-        const value = obj2[key];
-        const newPath = path.concat(key);
-        if (typeof value === "object" && value !== null && !visited.has(value)) {
-          stack.push({
-            path: newPath,
-            obj: value
-          });
-        }
-        result.push({ path: newPath, value });
-      }
-    }
-    return result;
-  }
-  var init_flatten = __esm({
-    "src/utils/flatten.ts"() {
-      "use strict";
-    }
-  });
-
-  // src/vision.ts
-  function isVisible(element) {
-    if (element.hasAttribute("hidden")) return false;
-    if (element.style.display === "none") return false;
-    if (element.style.visibility === "hidden") return false;
-    if (element.getAttribute("aria-hidden") === "true") return false;
-    return true;
-  }
-  function getSemanticDOM(element) {
-    if (!(element instanceof HTMLElement)) return null;
-    const tagName = element.tagName.toLowerCase();
-    if (IGNORED_TAGS.has(tagName)) return null;
-    if (!isVisible(element)) return null;
-    const node = { tagName };
-    const attributes = {};
-    let hasAttrs = false;
-    for (const attr of Array.from(element.attributes)) {
-      const name = attr.name;
-      if (IMPORTANT_ATTRS.has(name) || name.startsWith("aria-") || name.startsWith("data-")) {
-        if (name === "checked" || name === "disabled") {
-          attributes[name] = element[name];
-        } else if (name === "value" && (tagName === "input" || tagName === "textarea" || tagName === "select")) {
-          attributes[name] = element.value;
-        } else {
-          attributes[name] = attr.value;
-        }
-        hasAttrs = true;
-      }
-    }
-    if (hasAttrs) node.attributes = attributes;
-    let text = "";
-    for (const child of Array.from(element.childNodes)) {
-      if (child.nodeType === Node.TEXT_NODE) {
-        const val = child.nodeValue?.trim();
-        if (val) text += val + " ";
-      }
-    }
-    text = text.trim();
-    if (text) node.text = text;
-    const children = [];
-    for (const child of Array.from(element.children)) {
-      const semanticChild = getSemanticDOM(child);
-      if (semanticChild) {
-        children.push(semanticChild);
-      }
-    }
-    if (children.length > 0) node.children = children;
-    if (tagName === "div" && !hasAttrs && !text && children.length === 0) return null;
-    return node;
-  }
-  var IGNORED_TAGS, IMPORTANT_ATTRS;
-  var init_vision = __esm({
-    "src/vision.ts"() {
-      "use strict";
-      IGNORED_TAGS = /* @__PURE__ */ new Set([
-        "script",
-        "style",
-        "noscript",
-        "template",
-        "link",
-        "meta",
-        "head",
-        "title"
-      ]);
-      IMPORTANT_ATTRS = /* @__PURE__ */ new Set([
-        "id",
-        "class",
-        "type",
-        "value",
-        "checked",
-        "disabled",
-        "placeholder",
-        "href",
-        "src",
-        "alt",
-        "title",
-        "role"
-      ]);
-    }
-  });
-
-  // src/patch.ts
-  function applyPatch(state, patch) {
-    const undoStack = [];
-    try {
-      for (const op of patch) {
-        const inverse = applyOp(state, op);
-        if (inverse) undoStack.push(inverse);
-      }
-      return { success: true };
-    } catch (e) {
-      for (let i = undoStack.length - 1; i >= 0; i--) {
-        try {
-          applyOp(state, undoStack[i]);
-        } catch (rollbackError) {
-          console.error("Critical: Rollback failed", rollbackError);
-        }
-      }
-      return { success: false, error: e.message || String(e) };
-    }
-  }
-  function deepEqual2(a, b) {
-    if (a === b) return true;
-    if (typeof a !== "object" || a === null || typeof b !== "object" || b === null) return false;
-    if (Array.isArray(a) !== Array.isArray(b)) return false;
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-    if (keysA.length !== keysB.length) return false;
-    for (const key of keysA) {
-      if (!keysB.includes(key) || !deepEqual2(a[key], b[key])) return false;
-    }
-    return true;
-  }
-  function parsePath2(path) {
-    if (path === "") return [];
-    if (path === "/") return [""];
-    return path.split("/").slice(1).map(
-      (segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~")
-    );
-  }
-  function applyOp(root, op) {
-    const parts = parsePath2(op.path);
-    if (parts.length === 0) {
-      throw new Error("Cannot operate on root state directly");
-    }
-    const key = parts.pop();
-    let target = root;
-    for (const segment of parts) {
-      if (target === void 0 || target === null) {
-        throw new Error(`Path not found: ${op.path}`);
-      }
-      if (Array.isArray(target)) {
-        const index = parseInt(segment, 10);
-        if (isNaN(index)) throw new Error(`Invalid array index: ${segment}`);
-        target = target[index];
-      } else {
-        target = target[segment];
-      }
-    }
-    if (target === void 0 || target === null) {
-      throw new Error(`Path not found: ${op.path}`);
-    }
-    if (op.op === "test") {
-      let valueToCheck;
-      if (Array.isArray(target)) {
-        if (key === "-") {
-          valueToCheck = void 0;
-        } else {
-          const index = parseInt(key, 10);
-          if (isNaN(index) || index < 0 || index >= target.length) {
-            valueToCheck = void 0;
-          } else {
-            valueToCheck = target[index];
-          }
-        }
-      } else {
-        valueToCheck = target[key];
-      }
-      if (!deepEqual2(valueToCheck, op.value)) {
-        throw new Error(`Test failed at ${op.path}: expected ${JSON.stringify(op.value)}, got ${JSON.stringify(valueToCheck)}`);
-      }
-      return null;
-    }
-    if (Array.isArray(target)) {
-      if (key === "-") {
-        if (op.op === "add") {
-          target.push(op.value);
-          return { op: "remove", path: op.path.replace(/-$/, (target.length - 1).toString()) };
-        } else {
-          throw new Error("Can only add to '-' index");
-        }
-      }
-      const index = parseInt(key, 10);
-      if (isNaN(index) || index < 0) {
-        throw new Error(`Invalid array index: ${key}`);
-      }
-      if (op.op === "add") {
-        if (index > target.length) throw new Error("Index out of bounds");
-        target.splice(index, 0, op.value);
-        return { op: "remove", path: op.path };
-      } else if (op.op === "remove") {
-        if (index >= target.length) throw new Error("Index out of bounds");
-        const oldValue = target[index];
-        target.splice(index, 1);
-        return { op: "add", path: op.path, value: oldValue };
-      } else if (op.op === "replace") {
-        if (index >= target.length) throw new Error("Index out of bounds");
-        const oldValue = target[index];
-        target[index] = op.value;
-        return { op: "replace", path: op.path, value: oldValue };
-      }
-    } else {
-      if (op.op === "add") {
-        const oldValue = target[key];
-        const existed = Object.prototype.hasOwnProperty.call(target, key);
-        target[key] = op.value;
-        return existed ? { op: "replace", path: op.path, value: oldValue } : { op: "remove", path: op.path };
-      } else if (op.op === "replace") {
-        if (!Object.prototype.hasOwnProperty.call(target, key)) {
-          throw new Error(`Path not found: ${op.path}`);
-        }
-        const oldValue = target[key];
-        target[key] = op.value;
-        return { op: "replace", path: op.path, value: oldValue };
-      } else if (op.op === "remove") {
-        if (!Object.prototype.hasOwnProperty.call(target, key)) {
-          throw new Error(`Path not found: ${op.path}`);
-        }
-        const oldValue = target[key];
-        delete target[key];
-        return { op: "add", path: op.path, value: oldValue };
-      }
-    }
-    return null;
-  }
-  var init_patch = __esm({
-    "src/patch.ts"() {
-      "use strict";
-    }
-  });
-
-  // src/console-api.ts
-  function setCurrentAppState(state, webComponentFn, registerComponentFn) {
-    currentAppState = state;
-    if (webComponentFn) storedWebComponent = webComponentFn;
-    if (registerComponentFn) storedRegisterComponent = registerComponentFn;
-  }
-  function getCurrentAppState() {
-    return currentAppState;
-  }
-  function storeComponentContext(element, context) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("api")) return;
-    componentContexts.set(element, context);
-  }
-  function isWebComponentResult(fn) {
-    return typeof fn === "function" && fn[WEB_COMPONENT_MARKER] === true;
-  }
-  function define2(tagName, template, logic) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      console.warn("[boreDOM] define() is not available in production build");
-      return false;
-    }
-    if (!isDebugEnabled("api")) {
-      console.warn("[boreDOM] define() is disabled (debug.api is false)");
-      return false;
-    }
-    if (!currentAppState) {
-      throw new Error("[boreDOM] Cannot define component before inflictBoreDOM()");
-    }
-    if (!tagName.includes("-")) {
-      throw new Error(`[boreDOM] Invalid tag name "${tagName}": must contain a hyphen`);
-    }
-    if (customElements.get(tagName)) {
-      throw new Error(`[boreDOM] Component "${tagName}" is already defined`);
-    }
-    if (!storedWebComponent || !storedRegisterComponent) {
-      throw new Error("[boreDOM] Console API not initialized. Call inflictBoreDOM() first.");
-    }
-    const appState = currentAppState;
-    const webComponentFn = storedWebComponent;
-    const registerComponentFn = storedRegisterComponent;
-    const templateEl = document.createElement("template");
-    templateEl.innerHTML = template;
-    templateEl.setAttribute("data-component", tagName);
-    document.body.appendChild(templateEl);
-    const componentLogic = isWebComponentResult(logic) ? logic : webComponentFn(logic);
-    appState.internal.components.set(tagName, componentLogic);
-    appState.internal.customTags.push(tagName);
-    registerComponentFn(tagName);
-    initializeExistingElements(tagName, componentLogic);
-    if (isDebugEnabled("console")) {
-      console.log(
-        "%c\u2705 boreDOM: Defined %c<%s>",
-        "color: #27ae60; font-weight: bold",
-        "color: #4ecdc4; font-weight: bold",
-        tagName
-      );
-    }
-    return true;
-  }
-  function initializeExistingElements(tagName, logic) {
-    if (!currentAppState) return;
-    const elements = Array.from(document.querySelectorAll(tagName));
-    const failedCount = { count: 0 };
-    elements.forEach((elem, index) => {
-      if (elem instanceof HTMLElement && "renderCallback" in elem) {
-        try {
-          const detail = { index, name: tagName, data: void 0 };
-          const renderCallback = logic(currentAppState, detail);
-          elem.renderCallback = renderCallback;
-          renderCallback(elem);
-        } catch (error) {
-          failedCount.count++;
-          if (isDebugEnabled("console")) {
-            console.error(
-              `[boreDOM] Failed to initialize <${tagName}> instance ${index}:`,
-              error
-            );
-          }
-        }
-      }
-    });
-    if (failedCount.count > 0 && isDebugEnabled("console")) {
-      console.warn(
-        `[boreDOM] ${failedCount.count} of ${elements.length} <${tagName}> instances failed to initialize`
-      );
-    }
-  }
-  function operate(selectorOrElement, index = 0) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      console.warn("[boreDOM] operate() is not available in production build");
-      return void 0;
-    }
-    if (!isDebugEnabled("api")) {
-      console.warn("[boreDOM] operate() is disabled (debug.api is false)");
-      return void 0;
-    }
-    let element = null;
-    if (typeof selectorOrElement === "string") {
-      const elements = Array.from(document.querySelectorAll(selectorOrElement)).filter((el) => el instanceof HTMLElement);
-      element = elements[index] ?? null;
-    } else {
-      element = selectorOrElement;
-    }
-    if (!element) {
-      if (isDebugEnabled("console")) {
-        console.warn(`[boreDOM] operate(): No element found for "${selectorOrElement}"`);
-      }
-      return void 0;
-    }
-    const context = componentContexts.get(element);
-    if (!context) {
-      if (isDebugEnabled("console")) {
-        console.warn(`[boreDOM] operate(): Element is not a boreDOM component or not initialized`);
-      }
-      return void 0;
-    }
-    return context;
-  }
-  function exportComponent(selector) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      console.warn("[boreDOM] exportComponent() is not available in production build");
-      return null;
-    }
-    if (!isDebugEnabled("api")) {
-      console.warn("[boreDOM] exportComponent() is disabled (debug.api is false)");
-      return null;
-    }
-    const ctx = operate(selector);
-    if (!ctx) return null;
-    const templateEl = document.querySelector(`template[data-component="${ctx.detail.name}"]`);
-    const templateHtml = templateEl?.innerHTML ?? void 0;
-    try {
-      return {
-        component: ctx.detail.name,
-        state: JSON.parse(JSON.stringify(ctx.state)),
-        template: templateHtml,
-        timestamp: (/* @__PURE__ */ new Date()).toISOString()
-      };
-    } catch (e) {
-      if (isDebugEnabled("console")) {
-        console.warn(
-          `[boreDOM] exportComponent: Unable to serialize state for <${ctx.detail.name}>:`,
-          e instanceof Error ? e.message : e
-        );
-      }
-      return {
-        component: ctx.detail.name,
-        state: "[Unable to serialize - contains circular references or functions]",
-        template: templateHtml,
-        timestamp: (/* @__PURE__ */ new Date()).toISOString()
-      };
-    }
-  }
-  var WEB_COMPONENT_MARKER, currentAppState, storedWebComponent, storedRegisterComponent, componentContexts, consoleAPI;
-  var init_console_api = __esm({
-    "src/console-api.ts"() {
-      "use strict";
-      init_debug();
-      WEB_COMPONENT_MARKER = Symbol("boreDOM.webComponent");
-      currentAppState = null;
-      storedWebComponent = null;
-      storedRegisterComponent = null;
-      componentContexts = /* @__PURE__ */ new WeakMap();
-      consoleAPI = {
-        define: define2,
-        operate,
-        exportComponent
-      };
-    }
-  });
-
-  // src/version.ts
-  var VERSION;
-  var init_version = __esm({
-    "src/version.ts"() {
-      "use strict";
-      VERSION = "0.25.25";
-    }
-  });
-
-  // src/llm.ts
-  var llm_exports = {};
-  __export(llm_exports, {
-    llmAPI: () => llmAPI
-  });
-  var isLLMEnabled, _vision, _transact, llmAPI;
-  var init_llm = __esm({
-    "src/llm.ts"() {
-      "use strict";
-      init_vision();
-      init_patch();
-      init_console_api();
-      init_flatten();
-      init_version();
-      isLLMEnabled = typeof __LLM__ !== "undefined" ? __LLM__ : typeof __DEBUG__ === "undefined" || __DEBUG__;
-      _vision = (root) => {
-        return getSemanticDOM(root || document.body);
-      };
-      _transact = (patch) => {
-        const appState = getCurrentAppState();
-        if (!appState || !appState.app) {
-          return { success: false, error: "No app state found" };
-        }
-        return applyPatch(appState.app, patch);
-      };
-      llmAPI = {
-        /**
-         * Returns a lightweight, semantic JSON tree of the DOM.
-         * Use this to "see" the UI structure, attributes, and text without
-         * the noise of full DOM nodes. Hidden elements and scripts are ignored.
-         * 
-         * @returns {SemanticNode | null} The root node of the semantic tree.
-         */
-        vision: isLLMEnabled ? _vision : () => null,
-        /**
-         * Safely modifies the app state using a JSON Patch transaction.
-         * Supports operations: "add", "remove", "replace", "test".
-         * 
-         * ATOMICITY: If any operation fails (including a "test"), the entire
-         * transaction is rolled back, and the state remains unchanged.
-         * 
-         * REACTIVITY: Successful patches automatically trigger DOM updates.
-         * 
-         * @param {JSONPatchOp[]} patch - Array of patch operations.
-         * @returns {TransactionResult} { success: true } or { success: false, error: string }
-         */
-        transact: isLLMEnabled ? _transact : () => ({ success: false, error: "Production mode" }),
-        /**
-         * Returns a compact, LLM-friendly summary of the app.
-         * Includes framework/version, component list, and state paths.
-         */
-        compact: isLLMEnabled ? () => {
-          const appState = getCurrentAppState();
-          if (!appState || !appState.app) return null;
-          const state = appState.app;
-          const paths = flatten(state).map((entry) => entry.path.join("."));
-          const sample = {};
-          Object.entries(state).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-              sample[key] = `[${value.length}]`;
-            } else if (value && typeof value === "object") {
-              sample[key] = "{...}";
-            } else {
-              sample[key] = value;
-            }
-          });
-          const components = Array.from(appState.internal.components.entries()).map(([tag, logic]) => ({ tag, hasLogic: Boolean(logic) }));
-          return {
-            framework: { name: "boreDOM", version: VERSION },
-            state: { paths, sample },
-            components
-          };
-        } : () => null
-      };
-    }
-  });
-
-  // src/debug.ts
-  function isDebugEnabled(feature) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      if (feature === "errorBoundary") {
-        return debugConfig.errorBoundary ?? true;
-      }
-      return false;
-    }
-    const value = debugConfig[feature];
-    if (feature === "strict") {
-      return value ?? false;
-    }
-    return value ?? true;
-  }
-  function setDebugConfig(config3) {
-    if (typeof config3 === "boolean") {
-      const enabled = config3;
-      debugConfig = {
-        console: enabled,
-        globals: enabled,
-        errorBoundary: true,
-        // Always keep error boundary for safety
-        visualIndicators: enabled,
-        errorHistory: enabled,
-        versionLog: enabled,
-        api: enabled,
-        methodMissing: enabled,
-        templateInference: enabled,
-        strict: false,
-        // Strict mode only enabled explicitly
-        outputFormat: "human",
-        // Always human format by default
-        llm: enabled
-        // LLM API follows debug mode
-      };
-    } else {
-      debugConfig = { ...debugConfig, ...config3 };
-    }
-  }
-  function getDebugConfig() {
-    return { ...debugConfig };
-  }
-  function exposeGlobals(ctx) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("globals")) return;
-    if (typeof window === "undefined") return;
-    const w = window;
-    w.$state = ctx.state;
-    w.$refs = ctx.refs;
-    w.$slots = ctx.slots;
-    w.$self = ctx.element;
-    w.$error = ctx.error;
-    w.$component = ctx.component;
-    w.$rerender = ctx.rerender;
-  }
-  function clearGlobals() {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("globals")) return;
-    if (typeof window === "undefined") return;
-    const w = window;
-    delete w.$state;
-    delete w.$refs;
-    delete w.$slots;
-    delete w.$self;
-    delete w.$error;
-    delete w.$component;
-    delete w.$rerender;
-  }
-  function logError(ctx) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("console")) return;
-    if (debugConfig.outputFormat === "llm") {
-      Promise.resolve().then(() => (init_llm(), llm_exports)).then(({ formatErrorForLLM }) => {
-        console.log(formatErrorForLLM(ctx));
-      });
-      return;
-    }
-    console.log(
-      "%c\u{1F534} boreDOM: Error in %c<%s>%c render",
-      "color: #ff6b6b; font-weight: bold",
-      "color: #4ecdc4; font-weight: bold",
-      ctx.component,
-      "color: #ff6b6b"
-    );
-    console.error(ctx.error);
-    if (isDebugEnabled("globals")) {
-      console.log("%c\u{1F4CB} Debug context loaded:", "color: #95a5a6; font-weight: bold");
-      console.log("   $state     \u2192", ctx.state);
-      console.log("   $refs      \u2192", ctx.refs);
-      console.log("   $slots     \u2192", ctx.slots);
-      console.log("   $self      \u2192", ctx.element);
-      console.log("%c\u{1F4A1} Quick fixes:", "color: #f39c12; font-weight: bold");
-      console.log("   $state.propertyName = value");
-      console.log("   $rerender()");
-      console.log("%c\u{1F4E4} When fixed:", "color: #27ae60; font-weight: bold");
-      console.log(`   boreDOM.export('${ctx.component}')`);
-    }
-  }
-  function logErrorMinimal(component3, error) {
-    console.error(`[boreDOM] Render error in <${component3}>: ${error.message}`);
-  }
-  function logInitError(component3, error) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("console")) return;
-    console.log(
-      "%c\u{1F534} boreDOM: Error in %c<%s>%c init",
-      "color: #ff6b6b; font-weight: bold",
-      "color: #4ecdc4; font-weight: bold",
-      component3,
-      "color: #ff6b6b"
-    );
-    console.error(error);
-  }
-  function storeError(ctx) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("errorHistory")) return;
-    errors.set(ctx.component, ctx);
-    lastError = ctx;
-  }
-  function clearError(component3) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("errorHistory")) return;
-    if (component3) {
-      errors.delete(component3);
-      if (lastError?.component === component3) {
-        lastError = null;
-      }
-    } else if (lastError) {
-      errors.delete(lastError.component);
-      lastError = null;
-    }
-  }
-  function markComponentError(element) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("visualIndicators")) return;
-    element.setAttribute("data-boredom-error", "true");
-  }
-  function clearComponentErrorMark(element) {
-    element.removeAttribute("data-boredom-error");
-  }
-  function exportState(tagName) {
-    const ctx = tagName ? errors.get(tagName) : lastError;
-    if (!ctx) return null;
-    try {
-      return {
-        component: ctx.component,
-        state: JSON.parse(JSON.stringify(ctx.state)),
-        timestamp: new Date(ctx.timestamp).toISOString(),
-        error: ctx.error.message
-      };
-    } catch (e) {
-      if (isDebugEnabled("console")) {
-        console.warn(
-          `[boreDOM] exportState: Unable to serialize state for <${ctx.component}>:`,
-          e instanceof Error ? e.message : e
-        );
-      }
-      return {
-        component: ctx.component,
-        state: "[Unable to serialize - contains circular references or functions]",
-        timestamp: new Date(ctx.timestamp).toISOString(),
-        error: ctx.error.message
-      };
-    }
-  }
-  var debugConfig, errors, lastError, debugAPI;
-  var init_debug = __esm({
-    "src/debug.ts"() {
-      "use strict";
-      debugConfig = {
-        console: true,
-        globals: true,
-        errorBoundary: true,
-        visualIndicators: true,
-        errorHistory: true,
-        versionLog: true,
-        api: true,
-        methodMissing: true,
-        templateInference: true,
-        strict: false,
-        outputFormat: "human",
-        llm: true
-      };
-      errors = /* @__PURE__ */ new Map();
-      lastError = null;
-      debugAPI = {
-        /** Map of all current errors by component name */
-        get errors() {
-          return errors;
-        },
-        /** Most recent error context */
-        get lastError() {
-          return lastError;
-        },
-        /** Re-render a specific component or the last errored one */
-        rerender(tagName) {
-          const ctx = tagName ? errors.get(tagName) : lastError;
-          if (ctx) {
-            ctx.rerender();
-          } else {
-            console.warn("[boreDOM] No error context found to rerender");
-          }
-        },
-        /** Clear error state for a component */
-        clearError(tagName) {
-          const ctx = tagName ? errors.get(tagName) : lastError;
-          if (ctx) {
-            clearComponentErrorMark(ctx.element);
-            clearError(tagName);
-            clearGlobals();
-          } else if (isDebugEnabled("console")) {
-            console.warn(
-              tagName ? `[boreDOM] clearError: No error found for <${tagName}>` : "[boreDOM] clearError: No error to clear"
-            );
-          }
-        },
-        /** Export state snapshot */
-        export: exportState,
-        /** Current debug configuration (read-only) */
-        get config() {
-          return getDebugConfig();
-        }
-      };
-    }
-  });
-
   // node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js
   var __defProp2 = Object.defineProperty;
   var __name = (target, value) => __defProp2(target, "name", { value, configurable: true });
-  var __export2 = (target, all) => {
+  var __export = (target, all) => {
     for (var name in all)
       __defProp2(target, name, { get: all[name], enumerable: true });
   };
   var utils_exports = {};
-  __export2(utils_exports, {
+  __export(utils_exports, {
     addChainableMethod: () => addChainableMethod,
     addLengthGuard: () => addLengthGuard,
     addMethod: () => addMethod,
@@ -23169,7 +22424,7 @@
     type: () => type
   });
   var check_error_exports = {};
-  __export2(check_error_exports, {
+  __export(check_error_exports, {
     compatibleConstructor: () => compatibleConstructor,
     compatibleInstance: () => compatibleInstance,
     compatibleMessage: () => compatibleMessage,
@@ -26284,7 +25539,7 @@
     );
   };
   var should_exports = {};
-  __export2(should_exports, {
+  __export(should_exports, {
     Should: () => Should,
     should: () => should
   });
@@ -30456,6 +29711,19 @@
   var import_mocha = __toESM(require_mocha());
 
   // src/dom.ts
+  var isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
+  var parseCustomEventNames = (value) => value.split("'").filter(
+    (s) => s.length > 2 && !(s.includes("(") || s.includes(",") || s.includes(")"))
+  );
+  var parseDirectEventNames = (value) => value.split(/[\s,]+/g).map((s) => s.trim()).filter(Boolean);
+  var parseEventNames = (value) => {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return [];
+    if (!isLLMBuild && (trimmed.includes("dispatch(") || trimmed.includes("'"))) {
+      return parseCustomEventNames(value);
+    }
+    return parseDirectEventNames(value);
+  };
   var dynamicImportScripts = async (names) => {
     const result = /* @__PURE__ */ new Map();
     for (let i = 0; i < names.length; ++i) {
@@ -30484,8 +29752,7 @@
     return result;
   };
   var registerTemplates = async (webComponentFactory, options) => {
-    const isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
-    const shouldMirrorAttributes = options?.mirrorAttributes ?? !isLLMBuild;
+    const shouldMirrorAttributes = !isLLMBuild && (options?.mirrorAttributes ?? true);
     const names = [];
     const inlineLogic = /* @__PURE__ */ new Map();
     const templates = Array.from(queryAll("template[data-component]")).filter((elem) => elem instanceof HTMLElement);
@@ -30602,8 +29869,121 @@
   var Bored = class extends HTMLElement {
   };
   var component = (tag, props = {}) => {
-    const isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
     if (customElements.get(tag)) return;
+    const traverse = (root, f, { traverseShadowRoot, query: query2 } = {}) => {
+      const nodes = Array.from(
+        traverseShadowRoot ? root.shadowRoot?.querySelectorAll(query2 ?? "*") ?? [] : []
+      ).concat(Array.from(root.querySelectorAll(query2 ?? "*"))).filter((n) => n instanceof HTMLElement);
+      nodes.forEach(f);
+    };
+    const addDispatchers = (host, node, eventName, customEventNames) => {
+      if (customEventNames.length === 0) return;
+      customEventNames.forEach((customEventName) => {
+        node.addEventListener(
+          eventName,
+          (e) => dispatch(customEventName, {
+            event: e,
+            dispatcher: node,
+            component: host,
+            index: host.parentElement ? Array.from(host.parentElement.children).indexOf(host) : -1
+          })
+        );
+      });
+    };
+    const createDispatchers = (host) => {
+      traverse(host, (node) => {
+        for (let i = 0; i < node.attributes.length; i++) {
+          const attribute = node.attributes[i];
+          const attributeName = attribute.name;
+          if (!isLLMBuild && attributeName.startsWith("on-")) {
+            const eventName = attributeName.slice(3);
+            addDispatchers(
+              host,
+              node,
+              eventName,
+              parseEventNames(attribute.value)
+            );
+            node.removeAttribute(attributeName);
+            continue;
+          }
+          if (attributeName === "data-dispatch" || attributeName.startsWith("data-dispatch-")) {
+            const eventName = attributeName === "data-dispatch" ? "click" : attributeName.slice("data-dispatch-".length);
+            addDispatchers(
+              host,
+              node,
+              eventName,
+              parseEventNames(attribute.value)
+            );
+            node.removeAttribute(attributeName);
+            continue;
+          }
+          if (!isLLMBuild && isStartsWithOn(attributeName)) {
+            const eventNames = parseCustomEventNames(attribute.value);
+            if (eventNames.length > 0) {
+              addDispatchers(host, node, getEventName(attributeName), eventNames);
+            }
+            node.setAttribute(
+              `data-${attributeName}-dispatches`,
+              eventNames.join()
+            );
+            node.removeAttribute(attributeName);
+          }
+        }
+      }, { traverseShadowRoot: true });
+    };
+    const initInstance = (host) => {
+      const template = query(`[data-component="${tag}"]`) ?? create("template");
+      const templateShadowRootMode = !isLLMBuild ? template.getAttribute("shadowrootmode") : null;
+      const useShadowRoot = !isLLMBuild && (props.style || props.shadow || templateShadowRootMode);
+      if (useShadowRoot) {
+        const shadowRootMode = props.shadowrootmode ?? templateShadowRootMode ?? "open";
+        const shadowRoot = host.attachShadow({ mode: shadowRootMode });
+        if (props.style) {
+          const style = create("style");
+          style.textContent = props.style;
+          shadowRoot.appendChild(style);
+        }
+        if (props.shadow) {
+          const tmp = create("template");
+          tmp.innerHTML = props.shadow;
+          shadowRoot.appendChild(tmp.content.cloneNode(true));
+        } else if (templateShadowRootMode) {
+          shadowRoot.appendChild(template.content.cloneNode(true));
+        }
+      }
+      if (template && !templateShadowRootMode) {
+        host.appendChild(template.content.cloneNode(true));
+      }
+      if (props.onSlotChange) {
+        traverse(host, (elem) => {
+          if (!(elem instanceof HTMLSlotElement)) return;
+          elem.addEventListener("slotchange", (e) => props.onSlotChange?.(e));
+        }, { traverseShadowRoot: true });
+      }
+      if (isFunction(props.onClick)) {
+        host.addEventListener("click", props.onClick);
+      }
+      for (const [key, value] of Object.entries(props)) {
+        if (!isLLMBuild && isStartsWithOn(key)) {
+          if (!isFunction(value)) continue;
+          host.addEventListener(getEventName(key), value);
+        } else if (!isLLMBuild && isStartsWithQueriedOn(key)) {
+          const queries2 = value;
+          if (!isObject(queries2)) continue;
+          const eventName = getEventName(key);
+          for (const [query2, handler] of Object.entries(queries2)) {
+            traverse(host, (node) => {
+              node.addEventListener(eventName, handler);
+            }, { traverseShadowRoot: true, query: query2 });
+          }
+        }
+      }
+      if (props.attributes && Array.isArray(props.attributes)) {
+        props.attributes.forEach(([attr, value]) => host.setAttribute(attr, value));
+      }
+      createDispatchers(host);
+      host.isInitialized = true;
+    };
     customElements.define(
       tag,
       class extends Bored {
@@ -30617,144 +29997,14 @@
           super();
         }
         isBored = true;
-        traverse(f, { traverseShadowRoot, query: query2 } = {}) {
-          Array.from(
-            traverseShadowRoot ? this.shadowRoot?.querySelectorAll(query2 ?? "*") ?? [] : []
-          ).concat(Array.from(this.querySelectorAll(query2 ?? "*"))).filter((n) => n instanceof HTMLElement).forEach(f);
-        }
-        #parseCustomEventNames(str) {
-          return str.split("'").filter(
-            (s) => s.length > 2 && !(s.includes("(") || s.includes(",") || s.includes(")"))
-          );
-        }
-        #parseDirectEventNames(str) {
-          return str.split(/[\s,]+/g).map((s) => s.trim()).filter(Boolean);
-        }
-        #parseEventNames(str) {
-          const trimmed = str.trim();
-          if (trimmed.length === 0) return [];
-          if (trimmed.includes("dispatch(") || trimmed.includes("'")) {
-            return this.#parseCustomEventNames(str);
-          }
-          return this.#parseDirectEventNames(str);
-        }
-        #createDispatchers() {
-          let host;
-          this.traverse((node) => {
-            if (node instanceof HTMLElement) {
-              const isWebComponent = customElements.get(
-                node.tagName.toLowerCase()
-              );
-              if (isWebComponent) host = node;
-              for (let i = 0; i < node.attributes.length; i++) {
-                const attribute = node.attributes[i];
-                const attributeName = attribute.name;
-                const addDispatchers = (eventName, customEventNames) => {
-                  if (customEventNames.length === 0) return;
-                  customEventNames.forEach((customEventName) => {
-                    node.addEventListener(
-                      eventName,
-                      (e) => dispatch(customEventName, {
-                        event: e,
-                        dispatcher: node,
-                        component: this,
-                        index: this.parentElement ? Array.from(this.parentElement.children).indexOf(
-                          this
-                        ) : -1
-                      })
-                    );
-                  });
-                };
-                if (attributeName.startsWith("on-")) {
-                  const eventName = attributeName.slice(3);
-                  const eventNames = this.#parseEventNames(attribute.value);
-                  addDispatchers(eventName, eventNames);
-                  node.removeAttribute(attributeName);
-                  continue;
-                }
-                if (attributeName === "data-dispatch" || attributeName.startsWith("data-dispatch-")) {
-                  const eventName = attributeName === "data-dispatch" ? "click" : attributeName.slice("data-dispatch-".length);
-                  const eventNames = this.#parseEventNames(attribute.value);
-                  addDispatchers(eventName, eventNames);
-                  node.removeAttribute(attributeName);
-                  continue;
-                }
-                if (!isLLMBuild && isStartsWithOn(attribute.name)) {
-                  const eventNames = this.#parseCustomEventNames(attribute.value);
-                  if (eventNames.length > 0) {
-                    addDispatchers(getEventName(attribute.name), eventNames);
-                  }
-                  node.setAttribute(
-                    `data-${attributeName}-dispatches`,
-                    eventNames.join()
-                  );
-                  node.removeAttribute(attributeName);
-                }
-              }
-            }
-          }, { traverseShadowRoot: true });
-        }
         isInitialized = false;
-        #init() {
-          let template = query(`[data-component="${tag}"]`) ?? create("template");
-          const isTemplateShadowRoot = isLLMBuild ? null : template.getAttribute("shadowrootmode");
-          const isShadowRootNeeded = !isLLMBuild && (props.style || props.shadow || isTemplateShadowRoot);
-          if (isShadowRootNeeded) {
-            const shadowRootMode = props.shadowrootmode ?? isTemplateShadowRoot ?? "open";
-            const shadowRoot = this.attachShadow({ mode: shadowRootMode });
-            if (props.style) {
-              const style = create("style");
-              style.textContent = props.style;
-              shadowRoot.appendChild(style);
-            }
-            if (props.shadow) {
-              const tmp = create("template");
-              tmp.innerHTML = props.shadow;
-              shadowRoot.appendChild(tmp.content.cloneNode(true));
-            } else if (isTemplateShadowRoot) {
-              shadowRoot.appendChild(template.content.cloneNode(true));
-            }
-          }
-          if (template && !isTemplateShadowRoot) {
-            this.appendChild(template.content.cloneNode(true));
-          }
-          if (props.onSlotChange) {
-            this.traverse((elem) => {
-              if (!(elem instanceof HTMLSlotElement)) return;
-              elem.addEventListener("slotchange", (e) => props.onSlotChange?.(e));
-            }, { traverseShadowRoot: true });
-          }
-          if (isFunction(props.onClick)) {
-            this.addEventListener("click", props.onClick);
-          }
-          for (const [key, value] of Object.entries(props)) {
-            if (isStartsWithOn(key)) {
-              if (!isFunction(value)) continue;
-              this.addEventListener(getEventName(key), value);
-            } else if (isStartsWithQueriedOn(key)) {
-              if (isLLMBuild) continue;
-              const queries2 = value;
-              if (!isObject(queries2)) continue;
-              const eventName = getEventName(key);
-              for (const [query2, handler] of Object.entries(queries2)) {
-                this.traverse((node) => {
-                  node.addEventListener(eventName, handler);
-                }, { traverseShadowRoot: true, query: query2 });
-              }
-            }
-          }
-          if (props.attributes && Array.isArray(props.attributes)) {
-            props.attributes.map(
-              ([attr, value]) => this.setAttribute(attr, value)
-            );
-          }
-          this.#createDispatchers();
-          this.isInitialized = true;
+        traverse(f, options = {}) {
+          traverse(this, f, options);
         }
         renderCallback = (_) => {
         };
         connectedCallback() {
-          if (!this.isInitialized) this.#init();
+          if (!this.isInitialized) initInstance(this);
           this.renderCallback(this);
           props.connectedCallback?.(this);
         }
@@ -30790,8 +30040,33 @@
     return result;
   }
 
-  // src/bore.ts
-  init_flatten();
+  // src/utils/flatten.ts
+  function flatten(obj, ignore = []) {
+    const stack = [{
+      path: [],
+      obj
+    }];
+    const result = [];
+    const visited = /* @__PURE__ */ new WeakSet();
+    while (stack.length > 0) {
+      const { path, obj: obj2 } = stack.pop();
+      if (visited.has(obj2)) continue;
+      visited.add(obj2);
+      for (const key in obj2) {
+        if (ignore.includes(key)) continue;
+        const value = obj2[key];
+        const newPath = path.concat(key);
+        if (typeof value === "object" && value !== null && !visited.has(value)) {
+          stack.push({
+            path: newPath,
+            obj: value
+          });
+        }
+        result.push({ path: newPath, value });
+      }
+    }
+    return result;
+  }
 
   // src/utils/isPojo.ts
   function isPOJO(arg) {
@@ -30810,6 +30085,7 @@
     const data = {};
     for (const [key, value] of Object.entries(element.dataset)) {
       if (key.startsWith("prop")) continue;
+      if (value === void 0) continue;
       data[key] = value;
     }
     return data;
@@ -31114,13 +30390,395 @@
     return createComponent(name);
   }
 
-  // src/index.ts
-  init_debug();
-  init_console_api();
+  // src/debug.ts
+  var debugConfig = {
+    console: true,
+    globals: true,
+    errorBoundary: true,
+    visualIndicators: true,
+    errorHistory: true,
+    versionLog: true,
+    api: true,
+    methodMissing: true,
+    templateInference: true,
+    strict: false,
+    outputFormat: "human",
+    llm: true
+  };
+  var errors = /* @__PURE__ */ new Map();
+  var lastError = null;
+  function isDebugEnabled(feature) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+      if (feature === "errorBoundary") {
+        return debugConfig.errorBoundary ?? true;
+      }
+      return false;
+    }
+    const value = debugConfig[feature];
+    if (feature === "strict") {
+      return value ?? false;
+    }
+    return value ?? true;
+  }
+  function setDebugConfig(config3) {
+    if (typeof config3 === "boolean") {
+      const enabled = config3;
+      debugConfig = {
+        console: enabled,
+        globals: enabled,
+        errorBoundary: true,
+        // Always keep error boundary for safety
+        visualIndicators: enabled,
+        errorHistory: enabled,
+        versionLog: enabled,
+        api: enabled,
+        methodMissing: enabled,
+        templateInference: enabled,
+        strict: false,
+        // Strict mode only enabled explicitly
+        outputFormat: "human",
+        // Always human format by default
+        llm: enabled
+        // LLM API follows debug mode
+      };
+    } else {
+      debugConfig = { ...debugConfig, ...config3 };
+    }
+  }
+  function getDebugConfig() {
+    return { ...debugConfig };
+  }
+  function exposeGlobals(ctx) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+    if (!isDebugEnabled("globals")) return;
+    if (typeof window === "undefined") return;
+    const w = window;
+    w.$state = ctx.state;
+    w.$refs = ctx.refs;
+    w.$slots = ctx.slots;
+    w.$self = ctx.element;
+    w.$error = ctx.error;
+    w.$component = ctx.component;
+    w.$rerender = ctx.rerender;
+  }
+  function clearGlobals() {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+    if (!isDebugEnabled("globals")) return;
+    if (typeof window === "undefined") return;
+    const w = window;
+    delete w.$state;
+    delete w.$refs;
+    delete w.$slots;
+    delete w.$self;
+    delete w.$error;
+    delete w.$component;
+    delete w.$rerender;
+  }
+  function logError(ctx) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+    if (!isDebugEnabled("console")) return;
+    if (debugConfig.outputFormat === "llm") {
+      console.log(JSON.stringify({
+        type: "error",
+        component: ctx.component,
+        message: ctx.error?.message,
+        stack: ctx.error?.stack
+      }));
+      return;
+    }
+    console.log(
+      "%c\u{1F534} boreDOM: Error in %c<%s>%c render",
+      "color: #ff6b6b; font-weight: bold",
+      "color: #4ecdc4; font-weight: bold",
+      ctx.component,
+      "color: #ff6b6b"
+    );
+    console.error(ctx.error);
+    if (isDebugEnabled("globals")) {
+      console.log("%c\u{1F4CB} Debug context loaded:", "color: #95a5a6; font-weight: bold");
+      console.log("   $state     \u2192", ctx.state);
+      console.log("   $refs      \u2192", ctx.refs);
+      console.log("   $slots     \u2192", ctx.slots);
+      console.log("   $self      \u2192", ctx.element);
+      console.log("%c\u{1F4A1} Quick fixes:", "color: #f39c12; font-weight: bold");
+      console.log("   $state.propertyName = value");
+      console.log("   $rerender()");
+      console.log("%c\u{1F4E4} When fixed:", "color: #27ae60; font-weight: bold");
+      console.log(`   boreDOM.export('${ctx.component}')`);
+    }
+  }
+  function logErrorMinimal(component3, error) {
+    console.error(`[boreDOM] Render error in <${component3}>: ${error.message}`);
+  }
+  function logInitError(component3, error) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+    if (!isDebugEnabled("console")) return;
+    console.log(
+      "%c\u{1F534} boreDOM: Error in %c<%s>%c init",
+      "color: #ff6b6b; font-weight: bold",
+      "color: #4ecdc4; font-weight: bold",
+      component3,
+      "color: #ff6b6b"
+    );
+    console.error(error);
+  }
+  function storeError(ctx) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+    if (!isDebugEnabled("errorHistory")) return;
+    errors.set(ctx.component, ctx);
+    lastError = ctx;
+  }
+  function clearError(component3) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+    if (!isDebugEnabled("errorHistory")) return;
+    if (component3) {
+      errors.delete(component3);
+      if (lastError?.component === component3) {
+        lastError = null;
+      }
+    } else if (lastError) {
+      errors.delete(lastError.component);
+      lastError = null;
+    }
+  }
+  function markComponentError(element) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+    if (!isDebugEnabled("visualIndicators")) return;
+    element.setAttribute("data-boredom-error", "true");
+  }
+  function clearComponentErrorMark(element) {
+    element.removeAttribute("data-boredom-error");
+  }
+  function exportState(tagName) {
+    const ctx = tagName ? errors.get(tagName) : lastError;
+    if (!ctx) return null;
+    try {
+      return {
+        component: ctx.component,
+        state: JSON.parse(JSON.stringify(ctx.state)),
+        timestamp: new Date(ctx.timestamp).toISOString(),
+        error: ctx.error.message
+      };
+    } catch (e) {
+      if (isDebugEnabled("console")) {
+        console.warn(
+          `[boreDOM] exportState: Unable to serialize state for <${ctx.component}>:`,
+          e instanceof Error ? e.message : e
+        );
+      }
+      return {
+        component: ctx.component,
+        state: "[Unable to serialize - contains circular references or functions]",
+        timestamp: new Date(ctx.timestamp).toISOString(),
+        error: ctx.error.message
+      };
+    }
+  }
+  var debugAPI = {
+    /** Map of all current errors by component name */
+    get errors() {
+      return errors;
+    },
+    /** Most recent error context */
+    get lastError() {
+      return lastError;
+    },
+    /** Re-render a specific component or the last errored one */
+    rerender(tagName) {
+      const ctx = tagName ? errors.get(tagName) : lastError;
+      if (ctx) {
+        ctx.rerender();
+      } else {
+        console.warn("[boreDOM] No error context found to rerender");
+      }
+    },
+    /** Clear error state for a component */
+    clearError(tagName) {
+      const ctx = tagName ? errors.get(tagName) : lastError;
+      if (ctx) {
+        clearComponentErrorMark(ctx.element);
+        clearError(tagName);
+        clearGlobals();
+      } else if (isDebugEnabled("console")) {
+        console.warn(
+          tagName ? `[boreDOM] clearError: No error found for <${tagName}>` : "[boreDOM] clearError: No error to clear"
+        );
+      }
+    },
+    /** Export state snapshot */
+    export: exportState,
+    /** Current debug configuration (read-only) */
+    get config() {
+      return getDebugConfig();
+    }
+  };
+
+  // src/console-api.ts
+  var WEB_COMPONENT_MARKER = Symbol("boreDOM.webComponent");
+  var currentAppState = null;
+  var storedWebComponent = null;
+  var storedRegisterComponent = null;
+  var componentContexts = /* @__PURE__ */ new WeakMap();
+  function setCurrentAppState(state, webComponentFn, registerComponentFn) {
+    currentAppState = state;
+    if (webComponentFn) storedWebComponent = webComponentFn;
+    if (registerComponentFn) storedRegisterComponent = registerComponentFn;
+  }
+  function getCurrentAppState() {
+    return currentAppState;
+  }
+  function storeComponentContext(element, context) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+    if (!isDebugEnabled("api")) return;
+    componentContexts.set(element, context);
+  }
+  function isWebComponentResult(fn) {
+    return typeof fn === "function" && fn[WEB_COMPONENT_MARKER] === true;
+  }
+  function define2(tagName, template, logic) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+      console.warn("[boreDOM] define() is not available in production build");
+      return false;
+    }
+    if (!isDebugEnabled("api")) {
+      console.warn("[boreDOM] define() is disabled (debug.api is false)");
+      return false;
+    }
+    if (!currentAppState) {
+      throw new Error("[boreDOM] Cannot define component before inflictBoreDOM()");
+    }
+    if (!tagName.includes("-")) {
+      throw new Error(`[boreDOM] Invalid tag name "${tagName}": must contain a hyphen`);
+    }
+    if (customElements.get(tagName)) {
+      throw new Error(`[boreDOM] Component "${tagName}" is already defined`);
+    }
+    if (!storedWebComponent || !storedRegisterComponent) {
+      throw new Error("[boreDOM] Console API not initialized. Call inflictBoreDOM() first.");
+    }
+    const appState = currentAppState;
+    const webComponentFn = storedWebComponent;
+    const registerComponentFn = storedRegisterComponent;
+    const templateEl = document.createElement("template");
+    templateEl.innerHTML = template;
+    templateEl.setAttribute("data-component", tagName);
+    document.body.appendChild(templateEl);
+    const componentLogic = isWebComponentResult(logic) ? logic : webComponentFn(logic);
+    appState.internal.components.set(tagName, componentLogic);
+    appState.internal.customTags.push(tagName);
+    registerComponentFn(tagName);
+    initializeExistingElements(tagName, componentLogic);
+    if (isDebugEnabled("console")) {
+      console.log(
+        "%c\u2705 boreDOM: Defined %c<%s>",
+        "color: #27ae60; font-weight: bold",
+        "color: #4ecdc4; font-weight: bold",
+        tagName
+      );
+    }
+    return true;
+  }
+  function initializeExistingElements(tagName, logic) {
+    if (!currentAppState) return;
+    const elements = Array.from(document.querySelectorAll(tagName));
+    const failedCount = { count: 0 };
+    elements.forEach((elem, index) => {
+      if (elem instanceof HTMLElement && "renderCallback" in elem) {
+        try {
+          const detail = { index, name: tagName, data: void 0 };
+          const renderCallback = logic(currentAppState, detail);
+          elem.renderCallback = renderCallback;
+          renderCallback(elem);
+        } catch (error) {
+          failedCount.count++;
+          if (isDebugEnabled("console")) {
+            console.error(
+              `[boreDOM] Failed to initialize <${tagName}> instance ${index}:`,
+              error
+            );
+          }
+        }
+      }
+    });
+    if (failedCount.count > 0 && isDebugEnabled("console")) {
+      console.warn(
+        `[boreDOM] ${failedCount.count} of ${elements.length} <${tagName}> instances failed to initialize`
+      );
+    }
+  }
+  function operate(selectorOrElement, index = 0) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+      console.warn("[boreDOM] operate() is not available in production build");
+      return void 0;
+    }
+    if (!isDebugEnabled("api")) {
+      console.warn("[boreDOM] operate() is disabled (debug.api is false)");
+      return void 0;
+    }
+    let element = null;
+    if (typeof selectorOrElement === "string") {
+      const elements = Array.from(document.querySelectorAll(selectorOrElement)).filter((el) => el instanceof HTMLElement);
+      element = elements[index] ?? null;
+    } else {
+      element = selectorOrElement;
+    }
+    if (!element) {
+      if (isDebugEnabled("console")) {
+        console.warn(`[boreDOM] operate(): No element found for "${selectorOrElement}"`);
+      }
+      return void 0;
+    }
+    const context = componentContexts.get(element);
+    if (!context) {
+      if (isDebugEnabled("console")) {
+        console.warn(`[boreDOM] operate(): Element is not a boreDOM component or not initialized`);
+      }
+      return void 0;
+    }
+    return context;
+  }
+  function exportComponent(selector) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+      console.warn("[boreDOM] exportComponent() is not available in production build");
+      return null;
+    }
+    if (!isDebugEnabled("api")) {
+      console.warn("[boreDOM] exportComponent() is disabled (debug.api is false)");
+      return null;
+    }
+    const ctx = operate(selector);
+    if (!ctx) return null;
+    const templateEl = document.querySelector(`template[data-component="${ctx.detail.name}"]`);
+    const templateHtml = templateEl?.innerHTML ?? void 0;
+    try {
+      return {
+        component: ctx.detail.name,
+        state: JSON.parse(JSON.stringify(ctx.state)),
+        template: templateHtml,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    } catch (e) {
+      if (isDebugEnabled("console")) {
+        console.warn(
+          `[boreDOM] exportComponent: Unable to serialize state for <${ctx.detail.name}>:`,
+          e instanceof Error ? e.message : e
+        );
+      }
+      return {
+        component: ctx.detail.name,
+        state: "[Unable to serialize - contains circular references or functions]",
+        template: templateHtml,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    }
+  }
+  var consoleAPI = {
+    define: define2,
+    operate,
+    exportComponent
+  };
 
   // src/inside-out.ts
-  init_debug();
-  init_console_api();
   var userDefinedHelpers = /* @__PURE__ */ new Map();
   var missingFunctions = /* @__PURE__ */ new Map();
   var lastMissing = null;
@@ -31427,8 +31085,280 @@ ${propsSlots || defaultSlot}
     inferTemplate
   };
 
-  // src/index.ts
-  init_llm();
+  // src/vision.ts
+  var IGNORED_TAGS = /* @__PURE__ */ new Set([
+    "script",
+    "style",
+    "noscript",
+    "template",
+    "link",
+    "meta",
+    "head",
+    "title"
+  ]);
+  var IMPORTANT_ATTRS = /* @__PURE__ */ new Set([
+    "id",
+    "class",
+    "type",
+    "value",
+    "checked",
+    "disabled",
+    "placeholder",
+    "href",
+    "src",
+    "alt",
+    "title",
+    "role"
+  ]);
+  function isVisible(element) {
+    if (element.hasAttribute("hidden")) return false;
+    if (element.style.display === "none") return false;
+    if (element.style.visibility === "hidden") return false;
+    if (element.getAttribute("aria-hidden") === "true") return false;
+    return true;
+  }
+  function getSemanticDOM(element) {
+    if (!(element instanceof HTMLElement)) return null;
+    const tagName = element.tagName.toLowerCase();
+    if (IGNORED_TAGS.has(tagName)) return null;
+    if (!isVisible(element)) return null;
+    const node = { tagName };
+    const attributes = {};
+    let hasAttrs = false;
+    for (const attr of Array.from(element.attributes)) {
+      const name = attr.name;
+      if (IMPORTANT_ATTRS.has(name) || name.startsWith("aria-") || name.startsWith("data-")) {
+        if (name === "checked" || name === "disabled") {
+          attributes[name] = element[name];
+        } else if (name === "value" && (tagName === "input" || tagName === "textarea" || tagName === "select")) {
+          attributes[name] = element.value;
+        } else {
+          attributes[name] = attr.value;
+        }
+        hasAttrs = true;
+      }
+    }
+    if (hasAttrs) node.attributes = attributes;
+    let text = "";
+    for (const child of Array.from(element.childNodes)) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const val = child.nodeValue?.trim();
+        if (val) text += val + " ";
+      }
+    }
+    text = text.trim();
+    if (text) node.text = text;
+    const children = [];
+    for (const child of Array.from(element.children)) {
+      const semanticChild = getSemanticDOM(child);
+      if (semanticChild) {
+        children.push(semanticChild);
+      }
+    }
+    if (children.length > 0) node.children = children;
+    if (tagName === "div" && !hasAttrs && !text && children.length === 0) return null;
+    return node;
+  }
+
+  // src/patch.ts
+  function applyPatch(state, patch) {
+    const undoStack = [];
+    try {
+      for (const op of patch) {
+        const inverse = applyOp(state, op);
+        if (inverse) undoStack.push(inverse);
+      }
+      return { success: true };
+    } catch (e) {
+      for (let i = undoStack.length - 1; i >= 0; i--) {
+        try {
+          applyOp(state, undoStack[i]);
+        } catch (rollbackError) {
+          console.error("Critical: Rollback failed", rollbackError);
+        }
+      }
+      return { success: false, error: e.message || String(e) };
+    }
+  }
+  function deepEqual2(a, b) {
+    if (a === b) return true;
+    if (typeof a !== "object" || a === null || typeof b !== "object" || b === null) return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+      if (!keysB.includes(key) || !deepEqual2(a[key], b[key])) return false;
+    }
+    return true;
+  }
+  function parsePath2(path) {
+    if (path === "") return [];
+    if (path === "/") return [""];
+    return path.split("/").slice(1).map(
+      (segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~")
+    );
+  }
+  function applyOp(root, op) {
+    const parts = parsePath2(op.path);
+    if (parts.length === 0) {
+      throw new Error("Cannot operate on root state directly");
+    }
+    const key = parts.pop();
+    let target = root;
+    for (const segment of parts) {
+      if (target === void 0 || target === null) {
+        throw new Error(`Path not found: ${op.path}`);
+      }
+      if (Array.isArray(target)) {
+        const index = parseInt(segment, 10);
+        if (isNaN(index)) throw new Error(`Invalid array index: ${segment}`);
+        target = target[index];
+      } else {
+        target = target[segment];
+      }
+    }
+    if (target === void 0 || target === null) {
+      throw new Error(`Path not found: ${op.path}`);
+    }
+    if (op.op === "test") {
+      let valueToCheck;
+      if (Array.isArray(target)) {
+        if (key === "-") {
+          valueToCheck = void 0;
+        } else {
+          const index = parseInt(key, 10);
+          if (isNaN(index) || index < 0 || index >= target.length) {
+            valueToCheck = void 0;
+          } else {
+            valueToCheck = target[index];
+          }
+        }
+      } else {
+        valueToCheck = target[key];
+      }
+      if (!deepEqual2(valueToCheck, op.value)) {
+        throw new Error(`Test failed at ${op.path}: expected ${JSON.stringify(op.value)}, got ${JSON.stringify(valueToCheck)}`);
+      }
+      return null;
+    }
+    if (Array.isArray(target)) {
+      if (key === "-") {
+        if (op.op === "add") {
+          target.push(op.value);
+          return { op: "remove", path: op.path.replace(/-$/, (target.length - 1).toString()) };
+        } else {
+          throw new Error("Can only add to '-' index");
+        }
+      }
+      const index = parseInt(key, 10);
+      if (isNaN(index) || index < 0) {
+        throw new Error(`Invalid array index: ${key}`);
+      }
+      if (op.op === "add") {
+        if (index > target.length) throw new Error("Index out of bounds");
+        target.splice(index, 0, op.value);
+        return { op: "remove", path: op.path };
+      } else if (op.op === "remove") {
+        if (index >= target.length) throw new Error("Index out of bounds");
+        const oldValue = target[index];
+        target.splice(index, 1);
+        return { op: "add", path: op.path, value: oldValue };
+      } else if (op.op === "replace") {
+        if (index >= target.length) throw new Error("Index out of bounds");
+        const oldValue = target[index];
+        target[index] = op.value;
+        return { op: "replace", path: op.path, value: oldValue };
+      }
+    } else {
+      if (op.op === "add") {
+        const oldValue = target[key];
+        const existed = Object.prototype.hasOwnProperty.call(target, key);
+        target[key] = op.value;
+        return existed ? { op: "replace", path: op.path, value: oldValue } : { op: "remove", path: op.path };
+      } else if (op.op === "replace") {
+        if (!Object.prototype.hasOwnProperty.call(target, key)) {
+          throw new Error(`Path not found: ${op.path}`);
+        }
+        const oldValue = target[key];
+        target[key] = op.value;
+        return { op: "replace", path: op.path, value: oldValue };
+      } else if (op.op === "remove") {
+        if (!Object.prototype.hasOwnProperty.call(target, key)) {
+          throw new Error(`Path not found: ${op.path}`);
+        }
+        const oldValue = target[key];
+        delete target[key];
+        return { op: "add", path: op.path, value: oldValue };
+      }
+    }
+    return null;
+  }
+
+  // src/version.ts
+  var VERSION = "0.25.25";
+
+  // src/llm.ts
+  var isLLMEnabled = typeof __LLM__ !== "undefined" ? __LLM__ : typeof __DEBUG__ === "undefined" || __DEBUG__;
+  var _vision = (root) => {
+    return getSemanticDOM(root || document.body);
+  };
+  var _transact = (patch) => {
+    const appState = getCurrentAppState();
+    if (!appState || !appState.app) {
+      return { success: false, error: "No app state found" };
+    }
+    return applyPatch(appState.app, patch);
+  };
+  var llmAPI = {
+    /**
+     * Returns a lightweight, semantic JSON tree of the DOM.
+     * Use this to "see" the UI structure, attributes, and text without
+     * the noise of full DOM nodes. Hidden elements and scripts are ignored.
+     * 
+     * @returns {SemanticNode | null} The root node of the semantic tree.
+     */
+    vision: isLLMEnabled ? _vision : () => null,
+    /**
+     * Safely modifies the app state using a JSON Patch transaction.
+     * Supports operations: "add", "remove", "replace", "test".
+     * 
+     * ATOMICITY: If any operation fails (including a "test"), the entire
+     * transaction is rolled back, and the state remains unchanged.
+     * 
+     * REACTIVITY: Successful patches automatically trigger DOM updates.
+     * 
+     * @param {JSONPatchOp[]} patch - Array of patch operations.
+     * @returns {TransactionResult} { success: true } or { success: false, error: string }
+     */
+    transact: isLLMEnabled ? _transact : () => ({ success: false, error: "Production mode" }),
+    /**
+     * Returns a compact, LLM-friendly summary of the app.
+     * Includes framework/version, component list, and state paths.
+     */
+    compact: isLLMEnabled ? () => {
+      const appState = getCurrentAppState();
+      if (!appState || !appState.app) return null;
+      const state = appState.app;
+      const paths = flatten(state).map((entry) => entry.path.join("."));
+      const sample = {};
+      Object.entries(state).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          sample[key] = `[${value.length}]`;
+        } else if (value && typeof value === "object") {
+          sample[key] = "{...}";
+        } else {
+          sample[key] = value;
+        }
+      });
+      const components = Array.from(appState.internal.components.entries()).map(([tag, logic]) => ({ tag, hasLogic: Boolean(logic) }));
+      return {
+        framework: { name: "boreDOM", version: VERSION },
+        state: { paths, sample },
+        components
+      };
+    } : () => null
+  };
 
   // src/bindings.ts
   var toCamelCase = (value) => value.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
@@ -31454,24 +31384,6 @@ ${propsSlots || defaultSlot}
     if (raw.startsWith("detail.")) return resolvePath(scope.detail, raw.slice(7));
     if (raw.startsWith("self.")) return resolvePath(scope.self, raw.slice(5));
     return resolvePath(scope.state, raw);
-  };
-  var collectElements = (root) => {
-    const elements = [];
-    if (root instanceof DocumentFragment) {
-      const walker = document.createTreeWalker(
-        root,
-        NodeFilter.SHOW_ELEMENT
-      );
-      while (walker.nextNode()) {
-        elements.push(walker.currentNode);
-      }
-      return elements;
-    }
-    elements.push(root);
-    root.traverse((elem) => {
-      elements.push(elem);
-    }, { traverseShadowRoot: true });
-    return elements;
   };
   var getClassBase = (element) => {
     const stored = element.getAttribute("data-class-base");
@@ -31507,11 +31419,48 @@ ${propsSlots || defaultSlot}
       element.className = base.trim();
     }
   };
-  var applyAttributeBindings = (elements, scope) => {
+  var applyBindings = (root, scope) => {
+    const elements = [];
+    if (root instanceof DocumentFragment) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      while (walker.nextNode()) {
+        elements.push(walker.currentNode);
+      }
+    } else {
+      elements.push(root);
+      root.traverse((elem) => {
+        elements.push(elem);
+      }, { traverseShadowRoot: true });
+    }
     const skipListItems = scope.item === void 0;
     elements.forEach((element) => {
       if (element instanceof HTMLTemplateElement) return;
       if (skipListItems && element.closest("[data-list-item]")) return;
+      const listExpr = element.getAttribute("data-list");
+      if (listExpr) {
+        const template = element.querySelector("template[data-item]");
+        if (template instanceof HTMLTemplateElement) {
+          const resolved = resolveValue(listExpr, scope);
+          const items = Array.isArray(resolved) ? resolved : [];
+          Array.from(element.children).forEach((child) => {
+            if (child.hasAttribute("data-list-item")) {
+              child.remove();
+            }
+          });
+          const fragment = document.createDocumentFragment();
+          items.forEach((item, index) => {
+            const clone = template.content.cloneNode(true);
+            Array.from(clone.childNodes).forEach((node) => {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                node.setAttribute("data-list-item", "");
+              }
+            });
+            applyBindings(clone, { ...scope, item, index });
+            fragment.appendChild(clone);
+          });
+          element.appendChild(fragment);
+        }
+      }
       const textBinding = element.getAttribute("data-text");
       if (textBinding) {
         const value = resolveValue(textBinding, scope);
@@ -31574,50 +31523,11 @@ ${propsSlots || defaultSlot}
       }
     });
   };
-  var applyListBinding = (element, scope) => {
-    const listExpr = element.getAttribute("data-list");
-    if (!listExpr) return;
-    const template = element.querySelector("template[data-item]");
-    if (!(template instanceof HTMLTemplateElement)) return;
-    const resolved = resolveValue(listExpr, scope);
-    const items = Array.isArray(resolved) ? resolved : [];
-    Array.from(element.children).forEach((child) => {
-      if (child.hasAttribute("data-list-item")) {
-        child.remove();
-      }
-    });
-    const fragment = document.createDocumentFragment();
-    items.forEach((item, index) => {
-      const clone = template.content.cloneNode(true);
-      Array.from(clone.childNodes).forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          node.setAttribute("data-list-item", "");
-        }
-      });
-      applyBindingsToFragment(clone, { ...scope, item, index });
-      fragment.appendChild(clone);
-    });
-    element.appendChild(fragment);
-  };
-  var applyBindingsToFragment = (fragment, scope) => {
-    let elements = collectElements(fragment);
-    elements.forEach((element) => applyListBinding(element, scope));
-    elements = collectElements(fragment);
-    applyAttributeBindings(elements, scope);
-  };
-  var applyBindings = (root, scope) => {
-    let elements = collectElements(root);
-    elements.forEach((element) => applyListBinding(element, scope));
-    elements = collectElements(root);
-    applyAttributeBindings(elements, scope);
-  };
 
   // src/index.ts
-  init_debug();
-  init_version();
-  init_version();
   var hasLoggedVersion = false;
-  var debugApiEnabled = typeof __DEBUG__ === "undefined" || __DEBUG__;
+  var isLLMBuild2 = typeof __LLM__ !== "undefined" && __LLM__;
+  var debugApiEnabled = !isLLMBuild2 && (typeof __DEBUG__ === "undefined" || __DEBUG__);
   var html = (strings, ...values) => {
     let result = "";
     for (let i = 0; i < strings.length; i++) {
@@ -31780,7 +31690,9 @@ ${propsSlots || defaultSlot}
     }
     setCurrentAppState(proxifiedState, webComponent, registerComponent);
     runComponentsInitializer(proxifiedState);
-    observeUndefinedElements();
+    if (!isLLMBuild2) {
+      observeUndefinedElements();
+    }
     return proxifiedState.app;
   }
   function webComponent(initFunction) {
@@ -31830,7 +31742,7 @@ ${propsSlots || defaultSlot}
       }
       renderFunction = (renderState) => {
         const componentName = detail?.name ?? c.tagName.toLowerCase();
-        const helpers = createRenderHelpers(
+        const helpers = isLLMBuild2 ? {} : createRenderHelpers(
           componentName,
           c,
           () => renderFunction(renderState)
@@ -31909,7 +31821,6 @@ ${propsSlots || defaultSlot}
   }
 
   // tests/dom.test.ts
-  init_flatten();
   function renderHTML(html2) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
@@ -35505,7 +35416,6 @@ ${propsSlots || defaultSlot}
   }
 
   // tests/patch-concurrency.test.ts
-  init_patch();
   function patch_concurrency_test_default() {
     describe("Patch Concurrency & Atomicity", () => {
       it("should pass 'test' operation when values match", () => {

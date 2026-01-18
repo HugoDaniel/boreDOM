@@ -54,9 +54,12 @@ export type { BoreDOMConfig, DebugOptions, ErrorContext } from "./types";
 // Build-time flags
 declare const __SINGLE_FILE__: boolean;
 declare const __DEBUG__: boolean;
+declare const __LLM__: boolean;
 
 let hasLoggedVersion = false;
-const debugApiEnabled = typeof __DEBUG__ === "undefined" || __DEBUG__;
+const isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
+const debugApiEnabled = !isLLMBuild &&
+  (typeof __DEBUG__ === "undefined" || __DEBUG__);
 
 export const html = (
   strings: TemplateStringsArray,
@@ -295,7 +298,9 @@ export async function inflictBoreDOM<S>(
   runComponentsInitializer(proxifiedState);
 
   // Start observing for undefined custom elements (Phase 3 template inference)
-  observeUndefinedElements();
+  if (!isLLMBuild) {
+    observeUndefinedElements();
+  }
 
   // When no initial state is provided, return undefined. This still
   // initializes components, event wiring, and subscriptions.
@@ -385,11 +390,13 @@ export function webComponent<S>(
       const componentName = detail?.name ?? c.tagName.toLowerCase();
       
       // Create helpers proxy for method-missing (Phase 3)
-      const helpers = createRenderHelpers(
-        componentName,
-        c,
-        () => renderFunction(renderState)
-      );
+      const helpers = isLLMBuild
+        ? {}
+        : createRenderHelpers(
+          componentName,
+          c,
+          () => renderFunction(renderState),
+        );
 
       // Create a READ-ONLY accessor for the renderer to record paths accurately
       // and prevent mutations during render
