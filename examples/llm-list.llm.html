@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boreDOM LLM Lists</title>
+
+  <!-- STYLES -->
+  <style>
+    :root {
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      color: #18202a;
+      background: #f7f4ef;
+    }
+    body {
+      margin: 0;
+      padding: 2rem;
+    }
+    .board {
+      max-width: 820px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 1.5rem 2rem;
+      box-shadow: 0 12px 30px rgba(16, 24, 40, 0.08);
+      display: grid;
+      gap: 1.5rem;
+    }
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .stats {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.95rem;
+      color: #52606d;
+    }
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    input[type="text"] {
+      border-radius: 10px;
+      border: 1px solid #d7dce0;
+      padding: 0.5rem 0.75rem;
+      min-width: 220px;
+    }
+    button {
+      border: none;
+      background: #0f6aeb;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 0.75rem;
+    }
+    .card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border-radius: 14px;
+      background: #f4f6f8;
+    }
+    .card.done {
+      background: #e7f7ed;
+      color: #386a4c;
+      text-decoration: line-through;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <task-board></task-board>
+  </main>
+
+  <!-- STATE -->
+  <script type="application/json" id="initial-state">
+    {
+      "nextId": 4,
+      "newTitle": "",
+      "stats": { "total": 3, "done": 1 },
+      "tasks": [
+        { "id": 1, "title": "Ship landing page", "done": true },
+        { "id": 2, "title": "Draft onboarding flow", "done": false },
+        { "id": 3, "title": "Record demo video", "done": false }
+      ]
+    }
+  </script>
+
+  <!-- COMPONENTS -->
+  <template data-component="task-board">
+    <section class="board">
+      <header>
+        <h1>LLM List Rendering</h1>
+        <div class="stats">
+          <span>Total: <strong data-text="state.stats.total"></strong></span>
+          <span>Done: <strong data-text="state.stats.done"></strong></span>
+        </div>
+      </header>
+
+      <div class="controls">
+        <input
+          type="text"
+          placeholder="New task"
+          data-value="state.newTitle"
+          data-dispatch-input="editTitle"
+        >
+        <button data-dispatch="addTask">Add</button>
+      </div>
+
+      <ul data-list="state.tasks">
+        <template data-item>
+          <task-card
+            data-prop-id="item.id"
+            data-prop-title="item.title"
+            data-prop-done="item.done"
+          ></task-card>
+        </template>
+      </ul>
+    </section>
+  </template>
+
+  <template data-component="task-card">
+    <li class="card" data-class="done:detail.data.done">
+      <input type="checkbox" data-checked="detail.data.done" disabled>
+      <span data-text="detail.data.title"></span>
+      <button data-dispatch="toggleDone">Toggle</button>
+    </li>
+
+    <script type="module">
+      export default ({ on, state, detail }) => {
+        const findTask = () => state.tasks.find((task) => task.id === detail.data.id)
+
+        on("toggleDone", () => {
+          const task = findTask()
+          if (task) {
+            task.done = !task.done
+            state.stats.done = state.tasks.filter((item) => item.done).length
+          }
+        })
+
+        return () => {}
+      }
+    </script>
+  </template>
+
+  <!-- RUNTIME -->
+  <script type="module">
+    import { inflictBoreDOM, webComponent } from "../dist/boreDOM.llm.js"
+
+    const state = JSON.parse(
+      document.getElementById("initial-state").textContent || "{}"
+    )
+
+    await inflictBoreDOM(state, {
+      "task-board": webComponent(({ on, state }) => {
+        const updateStats = () => {
+          state.stats.total = state.tasks.length
+          state.stats.done = state.tasks.filter((task) => task.done).length
+        }
+
+        on("editTitle", ({ e }) => {
+          const target = e.event.target
+          if (target && "value" in target) {
+            state.newTitle = target.value
+          }
+        })
+
+        on("addTask", () => {
+          const title = state.newTitle.trim()
+          if (!title) return
+          state.tasks.push({ id: state.nextId++, title, done: false })
+          state.newTitle = ""
+          updateStats()
+        })
+
+        updateStats()
+        return () => {}
+      })
+    })
+  </script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boreDOM LLM Ops</title>
+
+  <!-- STYLES -->
+  <style>
+    :root {
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      color: #101418;
+      background: #f4f2ee;
+    }
+    body {
+      margin: 0;
+      padding: 2rem;
+    }
+    .shell {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 20px 40px rgba(16, 24, 40, 0.08);
+      display: grid;
+      gap: 1.5rem;
+    }
+    .row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    button {
+      border: none;
+      background: #0b6fe8;
+      color: #fff;
+      padding: 0.45rem 1rem;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary {
+      background: #e9eef4;
+      color: #1b2733;
+    }
+    pre {
+      white-space: pre-wrap;
+      background: #f3f4f7;
+      padding: 1rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <llm-ops></llm-ops>
+  </main>
+
+  <!-- STATE -->
+  <script type="application/json" id="initial-state">
+    {
+      "count": 1,
+      "lastPatch": "No patches yet",
+      "lastAction": "Idle",
+      "visionSummary": ""
+    }
+  </script>
+
+  <!-- COMPONENTS -->
+  <template data-component="llm-ops">
+    <section class="shell">
+      <header>
+        <h1>LLM Operations</h1>
+        <p>Count: <strong data-text="state.count"></strong></p>
+      </header>
+
+      <div class="row">
+        <button data-dispatch="patchPlus">Patch +1</button>
+        <button class="secondary" data-dispatch="snapshot">Compact Snapshot</button>
+        <button class="secondary" data-dispatch="vision">Vision</button>
+      </div>
+
+      <action-log></action-log>
+
+      <section>
+        <h2>Vision Output</h2>
+        <pre data-text="state.visionSummary"></pre>
+      </section>
+    </section>
+  </template>
+
+  <!-- RUNTIME -->
+  <script type="module">
+    import { boreDOM, inflictBoreDOM, component, html, webComponent } from "../dist/boreDOM.llm.js"
+
+    component(
+      "action-log",
+      html`
+        <section>
+          <h2>Last Action</h2>
+          <pre data-text="state.lastAction"></pre>
+          <h2>Last Patch</h2>
+          <pre data-text="state.lastPatch"></pre>
+        </section>
+      `,
+      () => () => {}
+    )
+
+    const state = JSON.parse(
+      document.getElementById("initial-state").textContent || "{}"
+    )
+
+    await inflictBoreDOM(state, {
+      "llm-ops": webComponent(({ on, state }) => {
+        on("patchPlus", () => {
+          const result = boreDOM.llm.transact([
+            { op: "replace", path: "/count", value: state.count + 1 }
+          ])
+          state.lastPatch = JSON.stringify(result, null, 2)
+          state.lastAction = "Applied patch +1"
+        })
+
+        on("snapshot", () => {
+          state.lastAction = "Generated compact snapshot"
+          state.lastPatch = JSON.stringify(boreDOM.llm.compact(), null, 2)
+        })
+
+        on("vision", () => {
+          state.lastAction = "Captured vision tree"
+          state.visionSummary = JSON.stringify(boreDOM.llm.vision(), null, 2)
+        })
+
+        return () => {}
+      })
+    })
+  </script>
+</body>
+</html>

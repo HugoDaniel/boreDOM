@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boreDOM LLM Basics</title>
+
+  <!-- STYLES -->
+  <style>
+    :root {
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      color: #1f2933;
+      background: #f5f3ef;
+    }
+    body {
+      margin: 0;
+      padding: 2rem;
+    }
+    .panel {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 1.5rem 2rem;
+      box-shadow: 0 20px 40px rgba(31, 41, 51, 0.08);
+      display: grid;
+      gap: 1.5rem;
+    }
+    .row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    button {
+      border: none;
+      background: #1f5dd9;
+      color: #fff;
+      padding: 0.5rem 0.9rem;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary {
+      background: #e4e7eb;
+      color: #1f2933;
+    }
+    input[type="text"] {
+      border-radius: 10px;
+      border: 1px solid #cfd4da;
+      padding: 0.5rem 0.75rem;
+      min-width: 220px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .badge.calm {
+      background: #d7f3df;
+      color: #1d6b38;
+    }
+    .badge.hot {
+      background: #ffe0d2;
+      color: #b2441a;
+    }
+    .status {
+      display: grid;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: #f4f5f7;
+      border-radius: 12px;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <llm-basics></llm-basics>
+  </main>
+
+  <!-- STATE -->
+  <script type="application/json" id="initial-state">
+    {
+      "count": 2,
+      "countLabel": "2",
+      "mode": "calm",
+      "showDetails": true,
+      "name": "Ada",
+      "agreed": false,
+      "statusLine": "Ready"
+    }
+  </script>
+
+  <!-- COMPONENTS -->
+  <template data-component="llm-basics">
+    <section class="panel">
+      <div class="row">
+        <h1>LLM Basics</h1>
+        <span class="badge" data-class="state.mode" data-text="state.mode"></span>
+      </div>
+
+      <div class="row">
+        <button data-dispatch="decrement">-</button>
+        <strong data-text="state.countLabel"></strong>
+        <button data-dispatch="increment">+</button>
+        <button class="secondary" data-dispatch="toggleDetails">Toggle details</button>
+      </div>
+
+      <div class="status" data-show="state.showDetails">
+        <div>Welcome, <span data-text="state.name"></span>!</div>
+        <div data-text="state.statusLine"></div>
+      </div>
+
+      <div class="row">
+        <input
+          type="text"
+          placeholder="Type a name"
+          data-value="state.name"
+          data-dispatch-input="nameInput"
+        >
+        <label>
+          <input type="checkbox" data-checked="state.agreed" data-dispatch-change="toggleAgree">
+          I agree
+        </label>
+      </div>
+
+      <script type="module">
+        export default ({ on, state }) => {
+          const updateLabel = () => {
+            state.countLabel = String(state.count)
+            state.mode = state.count > 4 ? "hot" : "calm"
+            state.statusLine = state.agreed
+              ? `Agreement locked at ${state.count}`
+              : `Count is ${state.count}`
+          }
+
+          on("increment", () => {
+            state.count += 1
+            updateLabel()
+          })
+
+          on("decrement", () => {
+            state.count -= 1
+            updateLabel()
+          })
+
+          on("toggleDetails", () => {
+            state.showDetails = !state.showDetails
+          })
+
+          on("nameInput", ({ e }) => {
+            const target = e.event.target
+            if (target && "value" in target) {
+              state.name = target.value || "Anon"
+            }
+          })
+
+          on("toggleAgree", () => {
+            state.agreed = !state.agreed
+            updateLabel()
+          })
+
+          updateLabel()
+          return () => {}
+        }
+      </script>
+    </section>
+  </template>
+
+  <!-- RUNTIME -->
+  <script type="module">
+    import { inflictBoreDOM } from "../dist/boreDOM.llm.js"
+
+    const state = JSON.parse(
+      document.getElementById("initial-state").textContent || "{}"
+    )
+
+    await inflictBoreDOM(state)
+  </script>
+</body>
+</html>
