@@ -16,23 +16,18 @@ import type {
   Slots,
 } from "./types"
 import { isDebugEnabled } from "./debug"
+import {
+  WEB_COMPONENT_MARKER,
+  getCurrentAppState,
+  getStoredRegisterComponent,
+  getStoredWebComponent,
+  setCurrentAppState,
+} from "./runtime-state"
 
 // Build-time flag (replaced by esbuild in prod builds with --define:__DEBUG__=false)
 declare const __DEBUG__: boolean
 
-/**
- * Symbol marker to identify functions created by webComponent().
- * Used to distinguish webComponent results from raw InitFunctions.
- * Exported for use by index.ts when marking webComponent results.
- */
-export const WEB_COMPONENT_MARKER = Symbol("boreDOM.webComponent")
-
-// Module-level storage for appState (set by inflictBoreDOM)
-let currentAppState: AppState<any> | null = null
-
-// Stored function references to avoid circular import issues
-let storedWebComponent: typeof import("./index").webComponent | null = null
-let storedRegisterComponent: typeof import("./dom").registerComponent | null = null
+export { WEB_COMPONENT_MARKER, setCurrentAppState, getCurrentAppState } from "./runtime-state"
 
 // WeakMap to store component contexts by element
 const componentContexts = new WeakMap<HTMLElement, ComponentContext>()
@@ -76,24 +71,6 @@ export interface ExportedComponent {
  * Called by inflictBoreDOM after initialization.
  * @internal
  */
-export function setCurrentAppState<S>(
-  state: AppState<S>,
-  webComponentFn?: typeof import("./index").webComponent,
-  registerComponentFn?: typeof import("./dom").registerComponent
-): void {
-  currentAppState = state
-  if (webComponentFn) storedWebComponent = webComponentFn
-  if (registerComponentFn) storedRegisterComponent = registerComponentFn
-}
-
-/**
- * Get the current appState.
- * @internal
- */
-export function getCurrentAppState<S>(): AppState<S> | null {
-  return currentAppState as AppState<S> | null
-}
-
 /**
  * Store component context for later retrieval via operate().
  * Called during component initialization.
@@ -163,7 +140,8 @@ export function define<S>(
   }
 
   // Validation
-  if (!currentAppState) {
+  const appState = getCurrentAppState()
+  if (!appState) {
     throw new Error("[boreDOM] Cannot define component before inflictBoreDOM()")
   }
   if (!tagName.includes("-")) {
@@ -174,14 +152,11 @@ export function define<S>(
   }
 
   // Ensure function references are available
-  if (!storedWebComponent || !storedRegisterComponent) {
+  const webComponentFn = getStoredWebComponent()
+  const registerComponentFn = getStoredRegisterComponent()
+  if (!webComponentFn || !registerComponentFn) {
     throw new Error("[boreDOM] Console API not initialized. Call inflictBoreDOM() first.")
   }
-
-  // Store validated references to avoid non-null assertions
-  const appState = currentAppState
-  const webComponentFn = storedWebComponent
-  const registerComponentFn = storedRegisterComponent
 
   // Create template element and append to document
   const templateEl = document.createElement("template")
@@ -224,7 +199,8 @@ function initializeExistingElements<S>(
   tagName: string,
   logic: (appState: AppState<S>, detail?: any) => (c: any) => void
 ): void {
-  if (!currentAppState) return
+  const appState = getCurrentAppState()
+  if (!appState) return
 
   const elements = Array.from(document.querySelectorAll(tagName))
   const failedCount = { count: 0 }
@@ -233,7 +209,7 @@ function initializeExistingElements<S>(
     if (elem instanceof HTMLElement && "renderCallback" in elem) {
       try {
         const detail: WebComponentDetail = { index, name: tagName, data: undefined }
-        const renderCallback = logic(currentAppState as AppState<S>, detail)
+        const renderCallback = logic(appState as AppState<S>, detail)
         ;(elem as any).renderCallback = renderCallback
         renderCallback(elem as any)
       } catch (error) {

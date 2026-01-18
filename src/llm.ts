@@ -1,6 +1,6 @@
 import { getSemanticDOM } from "./vision";
 import { applyPatch } from "./patch";
-import { getCurrentAppState } from "./console-api";
+import { getCurrentAppState } from "./runtime-state";
 import { flatten } from "./utils/flatten";
 import { VERSION } from "./version";
 import type { JSONPatchOp, TransactionResult, SemanticNode } from "./types";

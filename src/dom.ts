@@ -25,14 +25,16 @@ const parseDirectEventNames = (value: string) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-const parseEventNames = (value: string) => {
-  const trimmed = value.trim();
-  if (trimmed.length === 0) return [];
-  if (!isLLMBuild && (trimmed.includes("dispatch(") || trimmed.includes("'"))) {
-    return parseCustomEventNames(value);
-  }
-  return parseDirectEventNames(value);
-};
+const parseEventNames = isLLMBuild
+  ? parseDirectEventNames
+  : (value: string) => {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return [];
+    if (trimmed.includes("dispatch(") || trimmed.includes("'")) {
+      return parseCustomEventNames(value);
+    }
+    return parseDirectEventNames(value);
+  };
 
 /**
  * It dynamically imports all scripts that have a filename that matches the
@@ -365,13 +367,38 @@ export const component = <T>(tag: string, props: {
     });
   };
 
-  const createDispatchers = (host: HTMLElement) => {
+  const createDispatchersLLM = (host: HTMLElement) => {
     traverse(host, (node) => {
       for (let i = 0; i < node.attributes.length; i++) {
         const attribute = node.attributes[i];
         const attributeName = attribute.name;
 
-        if (!isLLMBuild && attributeName.startsWith("on-")) {
+        if (
+          attributeName === "data-dispatch" ||
+          attributeName.startsWith("data-dispatch-")
+        ) {
+          const eventName = attributeName === "data-dispatch"
+            ? "click"
+            : attributeName.slice("data-dispatch-".length);
+          addDispatchers(
+            host,
+            node,
+            eventName,
+            parseEventNames(attribute.value),
+          );
+          node.removeAttribute(attributeName);
+        }
+      }
+    }, { traverseShadowRoot: true });
+  };
+
+  const createDispatchersFull = (host: HTMLElement) => {
+    traverse(host, (node) => {
+      for (let i = 0; i < node.attributes.length; i++) {
+        const attribute = node.attributes[i];
+        const attributeName = attribute.name;
+
+        if (attributeName.startsWith("on-")) {
           const eventName = attributeName.slice(3);
           addDispatchers(
             host,
@@ -400,7 +427,7 @@ export const component = <T>(tag: string, props: {
           continue;
         }
 
-        if (!isLLMBuild && isStartsWithOn(attributeName)) {
+        if (isStartsWithOn(attributeName)) {
           const eventNames = parseCustomEventNames(attribute.value);
           if (eventNames.length > 0) {
             addDispatchers(host, node, getEventName(attributeName), eventNames);
@@ -416,14 +443,30 @@ export const component = <T>(tag: string, props: {
     }, { traverseShadowRoot: true });
   };
 
-  const initInstance = (host: Bored) => {
+  const createDispatchers = isLLMBuild
+    ? createDispatchersLLM
+    : createDispatchersFull;
+
+  const initInstanceLLM = (host: Bored) => {
     const template = query(`[data-component="${tag}"]`) as HTMLTemplateElement ??
       create("template");
-    const templateShadowRootMode = !isLLMBuild
-      ? template.getAttribute("shadowrootmode") as ShadowRootMode | null
-      : null;
-    const useShadowRoot = !isLLMBuild &&
-      (props.style || props.shadow || templateShadowRootMode);
+    host.appendChild(template.content.cloneNode(true));
+
+    if (props.attributes && Array.isArray(props.attributes)) {
+      props.attributes.forEach(([attr, value]) => host.setAttribute(attr, value));
+    }
+
+    createDispatchers(host);
+    host.isInitialized = true;
+  };
+
+  const initInstanceFull = (host: Bored) => {
+    const template = query(`[data-component="${tag}"]`) as HTMLTemplateElement ??
+      create("template");
+    const templateShadowRootMode = template.getAttribute("shadowrootmode") as
+      | ShadowRootMode
+      | null;
+    const useShadowRoot = props.style || props.shadow || templateShadowRootMode;
 
     if (useShadowRoot) {
       const shadowRootMode = props.shadowrootmode ?? templateShadowRootMode ??
@@ -461,10 +504,10 @@ export const component = <T>(tag: string, props: {
     }
 
     for (const [key, value] of Object.entries(props)) {
-      if (!isLLMBuild && isStartsWithOn(key)) {
+      if (isStartsWithOn(key)) {
         if (!isFunction(value)) continue;
         host.addEventListener(getEventName(key) as any, value);
-      } else if (!isLLMBuild && isStartsWithQueriedOn(key)) {
+      } else if (isStartsWithQueriedOn(key)) {
         const queries = value;
         if (!isObject(queries)) continue;
         const eventName = getEventName(key);
@@ -483,6 +526,8 @@ export const component = <T>(tag: string, props: {
     createDispatchers(host);
     host.isInitialized = true;
   };
+
+  const initInstance = isLLMBuild ? initInstanceLLM : initInstanceFull;
 
   customElements.define(
     tag,

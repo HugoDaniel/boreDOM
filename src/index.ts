@@ -29,11 +29,10 @@ import {
   clearComponentErrorMark,
 } from "./debug";
 import {
-  setCurrentAppState,
   storeComponentContext,
   consoleAPI,
-  WEB_COMPONENT_MARKER,
 } from "./console-api";
+import { setCurrentAppState, WEB_COMPONENT_MARKER } from "./runtime-state";
 import {
   createRenderHelpers,
   observeUndefinedElements,

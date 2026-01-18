@@ -1,4 +1,17 @@
 // src/dom.ts
+var isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
+var parseCustomEventNames = (value) => value.split("'").filter(
+  (s) => s.length > 2 && !(s.includes("(") || s.includes(",") || s.includes(")"))
+);
+var parseDirectEventNames = (value) => value.split(/[\s,]+/g).map((s) => s.trim()).filter(Boolean);
+var parseEventNames = isLLMBuild ? parseDirectEventNames : (value) => {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return [];
+  if (trimmed.includes("dispatch(") || trimmed.includes("'")) {
+    return parseCustomEventNames(value);
+  }
+  return parseDirectEventNames(value);
+};
 var dynamicImportScripts = async (names) => {
   const result = /* @__PURE__ */ new Map();
   for (let i = 0; i < names.length; ++i) {
@@ -27,8 +40,7 @@ var dynamicImportScripts = async (names) => {
   return result;
 };
 var registerTemplates = async (webComponentFactory, options) => {
-  const isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
-  const shouldMirrorAttributes = options?.mirrorAttributes ?? !isLLMBuild;
+  const shouldMirrorAttributes = !isLLMBuild && (options?.mirrorAttributes ?? true);
   const names = [];
   const inlineLogic = /* @__PURE__ */ new Map();
   const templates = Array.from(queryAll("template[data-component]")).filter((elem) => elem instanceof HTMLElement);
@@ -152,8 +164,150 @@ var getEventName = (s) => {
 var Bored = class extends HTMLElement {
 };
 var component = (tag, props = {}) => {
-  const isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
   if (customElements.get(tag)) return;
+  const traverse = (root, f, { traverseShadowRoot, query: query2 } = {}) => {
+    const nodes = Array.from(
+      traverseShadowRoot ? root.shadowRoot?.querySelectorAll(query2 ?? "*") ?? [] : []
+    ).concat(Array.from(root.querySelectorAll(query2 ?? "*"))).filter((n) => n instanceof HTMLElement);
+    nodes.forEach(f);
+  };
+  const addDispatchers = (host, node, eventName, customEventNames) => {
+    if (customEventNames.length === 0) return;
+    customEventNames.forEach((customEventName) => {
+      node.addEventListener(
+        eventName,
+        (e) => dispatch(customEventName, {
+          event: e,
+          dispatcher: node,
+          component: host,
+          index: host.parentElement ? Array.from(host.parentElement.children).indexOf(host) : -1
+        })
+      );
+    });
+  };
+  const createDispatchersLLM = (host) => {
+    traverse(host, (node) => {
+      for (let i = 0; i < node.attributes.length; i++) {
+        const attribute = node.attributes[i];
+        const attributeName = attribute.name;
+        if (attributeName === "data-dispatch" || attributeName.startsWith("data-dispatch-")) {
+          const eventName = attributeName === "data-dispatch" ? "click" : attributeName.slice("data-dispatch-".length);
+          addDispatchers(
+            host,
+            node,
+            eventName,
+            parseEventNames(attribute.value)
+          );
+          node.removeAttribute(attributeName);
+        }
+      }
+    }, { traverseShadowRoot: true });
+  };
+  const createDispatchersFull = (host) => {
+    traverse(host, (node) => {
+      for (let i = 0; i < node.attributes.length; i++) {
+        const attribute = node.attributes[i];
+        const attributeName = attribute.name;
+        if (attributeName.startsWith("on-")) {
+          const eventName = attributeName.slice(3);
+          addDispatchers(
+            host,
+            node,
+            eventName,
+            parseEventNames(attribute.value)
+          );
+          node.removeAttribute(attributeName);
+          continue;
+        }
+        if (attributeName === "data-dispatch" || attributeName.startsWith("data-dispatch-")) {
+          const eventName = attributeName === "data-dispatch" ? "click" : attributeName.slice("data-dispatch-".length);
+          addDispatchers(
+            host,
+            node,
+            eventName,
+            parseEventNames(attribute.value)
+          );
+          node.removeAttribute(attributeName);
+          continue;
+        }
+        if (isStartsWithOn(attributeName)) {
+          const eventNames = parseCustomEventNames(attribute.value);
+          if (eventNames.length > 0) {
+            addDispatchers(host, node, getEventName(attributeName), eventNames);
+          }
+          node.setAttribute(
+            `data-${attributeName}-dispatches`,
+            eventNames.join()
+          );
+          node.removeAttribute(attributeName);
+        }
+      }
+    }, { traverseShadowRoot: true });
+  };
+  const createDispatchers = isLLMBuild ? createDispatchersLLM : createDispatchersFull;
+  const initInstanceLLM = (host) => {
+    const template = query(`[data-component="${tag}"]`) ?? create("template");
+    host.appendChild(template.content.cloneNode(true));
+    if (props.attributes && Array.isArray(props.attributes)) {
+      props.attributes.forEach(([attr, value]) => host.setAttribute(attr, value));
+    }
+    createDispatchers(host);
+    host.isInitialized = true;
+  };
+  const initInstanceFull = (host) => {
+    const template = query(`[data-component="${tag}"]`) ?? create("template");
+    const templateShadowRootMode = template.getAttribute("shadowrootmode");
+    const useShadowRoot = props.style || props.shadow || templateShadowRootMode;
+    if (useShadowRoot) {
+      const shadowRootMode = props.shadowrootmode ?? templateShadowRootMode ?? "open";
+      const shadowRoot = host.attachShadow({ mode: shadowRootMode });
+      if (props.style) {
+        const style = create("style");
+        style.textContent = props.style;
+        shadowRoot.appendChild(style);
+      }
+      if (props.shadow) {
+        const tmp = create("template");
+        tmp.innerHTML = props.shadow;
+        shadowRoot.appendChild(tmp.content.cloneNode(true));
+      } else if (templateShadowRootMode) {
+        shadowRoot.appendChild(template.content.cloneNode(true));
+      }
+    }
+    if (template && !templateShadowRootMode) {
+      host.appendChild(template.content.cloneNode(true));
+    }
+    if (props.onSlotChange) {
+      traverse(host, (elem) => {
+        if (!(elem instanceof HTMLSlotElement)) return;
+        elem.addEventListener("slotchange", (e) => props.onSlotChange?.(e));
+      }, { traverseShadowRoot: true });
+    }
+    if (isFunction(props.onClick)) {
+      host.addEventListener("click", props.onClick);
+    }
+    for (const [key, value] of Object.entries(props)) {
+      if (isStartsWithOn(key)) {
+        if (!isFunction(value)) continue;
+        host.addEventListener(getEventName(key), value);
+      } else if (isStartsWithQueriedOn(key)) {
+        const queries = value;
+        if (!isObject(queries)) continue;
+        const eventName = getEventName(key);
+        for (const [query2, handler] of Object.entries(queries)) {
+          traverse(host, (node) => {
+            node.addEventListener(eventName, handler);
+          }, { traverseShadowRoot: true, query: query2 });
+        }
+      }
+    }
+    if (props.attributes && Array.isArray(props.attributes)) {
+      props.attributes.forEach(([attr, value]) => host.setAttribute(attr, value));
+    }
+    createDispatchers(host);
+    host.isInitialized = true;
+  };
+  const initInstance = isLLMBuild ? initInstanceLLM : initInstanceFull;
   customElements.define(
     tag,
     class extends Bored {
@@ -167,144 +321,14 @@ var component = (tag, props = {}) => {
         super();
       }
       isBored = true;
-      traverse(f, { traverseShadowRoot, query: query2 } = {}) {
-        Array.from(
-          traverseShadowRoot ? this.shadowRoot?.querySelectorAll(query2 ?? "*") ?? [] : []
-        ).concat(Array.from(this.querySelectorAll(query2 ?? "*"))).filter((n) => n instanceof HTMLElement).forEach(f);
-      }
-      #parseCustomEventNames(str) {
-        return str.split("'").filter(
-          (s) => s.length > 2 && !(s.includes("(") || s.includes(",") || s.includes(")"))
-        );
-      }
-      #parseDirectEventNames(str) {
-        return str.split(/[\s,]+/g).map((s) => s.trim()).filter(Boolean);
-      }
-      #parseEventNames(str) {
-        const trimmed = str.trim();
-        if (trimmed.length === 0) return [];
-        if (trimmed.includes("dispatch(") || trimmed.includes("'")) {
-          return this.#parseCustomEventNames(str);
-        }
-        return this.#parseDirectEventNames(str);
-      }
-      #createDispatchers() {
-        let host;
-        this.traverse((node) => {
-          if (node instanceof HTMLElement) {
-            const isWebComponent = customElements.get(
-              node.tagName.toLowerCase()
-            );
-            if (isWebComponent) host = node;
-            for (let i = 0; i < node.attributes.length; i++) {
-              const attribute = node.attributes[i];
-              const attributeName = attribute.name;
-              const addDispatchers = (eventName, customEventNames) => {
-                if (customEventNames.length === 0) return;
-                customEventNames.forEach((customEventName) => {
-                  node.addEventListener(
-                    eventName,
-                    (e) => dispatch(customEventName, {
-                      event: e,
-                      dispatcher: node,
-                      component: this,
-                      index: this.parentElement ? Array.from(this.parentElement.children).indexOf(
-                        this
-                      ) : -1
-                    })
-                  );
-                });
-              };
-              if (attributeName.startsWith("on-")) {
-                const eventName = attributeName.slice(3);
-                const eventNames = this.#parseEventNames(attribute.value);
-                addDispatchers(eventName, eventNames);
-                node.removeAttribute(attributeName);
-                continue;
-              }
-              if (attributeName === "data-dispatch" || attributeName.startsWith("data-dispatch-")) {
-                const eventName = attributeName === "data-dispatch" ? "click" : attributeName.slice("data-dispatch-".length);
-                const eventNames = this.#parseEventNames(attribute.value);
-                addDispatchers(eventName, eventNames);
-                node.removeAttribute(attributeName);
-                continue;
-              }
-              if (!isLLMBuild && isStartsWithOn(attribute.name)) {
-                const eventNames = this.#parseCustomEventNames(attribute.value);
-                if (eventNames.length > 0) {
-                  addDispatchers(getEventName(attribute.name), eventNames);
-                }
-                node.setAttribute(
-                  `data-${attributeName}-dispatches`,
-                  eventNames.join()
-                );
-                node.removeAttribute(attributeName);
-              }
-            }
-          }
-        }, { traverseShadowRoot: true });
-      }
       isInitialized = false;
-      #init() {
-        let template = query(`[data-component="${tag}"]`) ?? create("template");
-        const isTemplateShadowRoot = isLLMBuild ? null : template.getAttribute("shadowrootmode");
-        const isShadowRootNeeded = !isLLMBuild && (props.style || props.shadow || isTemplateShadowRoot);
-        if (isShadowRootNeeded) {
-          const shadowRootMode = props.shadowrootmode ?? isTemplateShadowRoot ?? "open";
-          const shadowRoot = this.attachShadow({ mode: shadowRootMode });
-          if (props.style) {
-            const style = create("style");
-            style.textContent = props.style;
-            shadowRoot.appendChild(style);
-          }
-          if (props.shadow) {
-            const tmp = create("template");
-            tmp.innerHTML = props.shadow;
-            shadowRoot.appendChild(tmp.content.cloneNode(true));
-          } else if (isTemplateShadowRoot) {
-            shadowRoot.appendChild(template.content.cloneNode(true));
-          }
-        }
-        if (template && !isTemplateShadowRoot) {
-          this.appendChild(template.content.cloneNode(true));
-        }
-        if (props.onSlotChange) {
-          this.traverse((elem) => {
-            if (!(elem instanceof HTMLSlotElement)) return;
-            elem.addEventListener("slotchange", (e) => props.onSlotChange?.(e));
-          }, { traverseShadowRoot: true });
-        }
-        if (isFunction(props.onClick)) {
-          this.addEventListener("click", props.onClick);
-        }
-        for (const [key, value] of Object.entries(props)) {
-          if (isStartsWithOn(key)) {
-            if (!isFunction(value)) continue;
-            this.addEventListener(getEventName(key), value);
-          } else if (isStartsWithQueriedOn(key)) {
-            if (isLLMBuild) continue;
-            const queries = value;
-            if (!isObject(queries)) continue;
-            const eventName = getEventName(key);
-            for (const [query2, handler] of Object.entries(queries)) {
-              this.traverse((node) => {
-                node.addEventListener(eventName, handler);
-              }, { traverseShadowRoot: true, query: query2 });
-            }
-          }
-        }
-        if (props.attributes && Array.isArray(props.attributes)) {
-          props.attributes.map(
-            ([attr, value]) => this.setAttribute(attr, value)
-          );
-        }
-        this.#createDispatchers();
-        this.isInitialized = true;
+      traverse(f, options = {}) {
+        traverse(this, f, options);
       }
       renderCallback = (_) => {
       };
       connectedCallback() {
-        if (!this.isInitialized) this.#init();
+        if (!this.isInitialized) initInstance(this);
         this.renderCallback(this);
         props.connectedCallback?.(this);
       }
@@ -913,12 +937,11 @@ var debugAPI = {
   }
 };
 
-// src/console-api.ts
+// src/runtime-state.ts
 var WEB_COMPONENT_MARKER = Symbol("boreDOM.webComponent");
 var currentAppState = null;
 var storedWebComponent = null;
 var storedRegisterComponent = null;
-var componentContexts = /* @__PURE__ */ new WeakMap();
 function setCurrentAppState(state, webComponentFn, registerComponentFn) {
   currentAppState = state;
   if (webComponentFn) storedWebComponent = webComponentFn;
@@ -927,6 +950,15 @@ function setCurrentAppState(state, webComponentFn, registerComponentFn) {
 function getCurrentAppState() {
   return currentAppState;
 }
+function getStoredWebComponent() {
+  return storedWebComponent;
+}
+function getStoredRegisterComponent() {
+  return storedRegisterComponent;
+}
+
+// src/console-api.ts
+var componentContexts = /* @__PURE__ */ new WeakMap();
 function storeComponentContext(element, context) {
   if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
   if (!isDebugEnabled("api")) return;
@@ -944,7 +976,8 @@ function define(tagName, template, logic) {
     console.warn("[boreDOM] define() is disabled (debug.api is false)");
     return false;
   }
-  if (!currentAppState) {
+  const appState = getCurrentAppState();
+  if (!appState) {
     throw new Error("[boreDOM] Cannot define component before inflictBoreDOM()");
   }
   if (!tagName.includes("-")) {
@@ -953,12 +986,11 @@ function define(tagName, template, logic) {
   if (customElements.get(tagName)) {
     throw new Error(`[boreDOM] Component "${tagName}" is already defined`);
   }
-  if (!storedWebComponent || !storedRegisterComponent) {
+  const webComponentFn = getStoredWebComponent();
+  const registerComponentFn = getStoredRegisterComponent();
+  if (!webComponentFn || !registerComponentFn) {
     throw new Error("[boreDOM] Console API not initialized. Call inflictBoreDOM() first.");
   }
-  const appState = currentAppState;
-  const webComponentFn = storedWebComponent;
-  const registerComponentFn = storedRegisterComponent;
   const templateEl = document.createElement("template");
   templateEl.innerHTML = template;
   templateEl.setAttribute("data-component", tagName);
@@ -979,14 +1011,15 @@ function define(tagName, template, logic) {
   return true;
 }
 function initializeExistingElements(tagName, logic) {
-  if (!currentAppState) return;
+  const appState = getCurrentAppState();
+  if (!appState) return;
   const elements = Array.from(document.querySelectorAll(tagName));
   const failedCount = { count: 0 };
   elements.forEach((elem, index) => {
     if (elem instanceof HTMLElement && "renderCallback" in elem) {
       try {
         const detail = { index, name: tagName, data: void 0 };
-        const renderCallback = logic(currentAppState, detail);
+        const renderCallback = logic(appState, detail);
         elem.renderCallback = renderCallback;
         renderCallback(elem);
       } catch (error) {
@@ -1671,24 +1704,6 @@ var resolveValue = (expr, scope) => {
   if (raw.startsWith("self.")) return resolvePath(scope.self, raw.slice(5));
   return resolvePath(scope.state, raw);
 };
-var collectElements = (root) => {
-  const elements = [];
-  if (root instanceof DocumentFragment) {
-    const walker = document.createTreeWalker(
-      root,
-      NodeFilter.SHOW_ELEMENT
-    );
-    while (walker.nextNode()) {
-      elements.push(walker.currentNode);
-    }
-    return elements;
-  }
-  elements.push(root);
-  root.traverse((elem) => {
-    elements.push(elem);
-  }, { traverseShadowRoot: true });
-  return elements;
-};
 var getClassBase = (element) => {
   const stored = element.getAttribute("data-class-base");
   if (stored !== null) return stored;
@@ -1723,11 +1738,48 @@ var applyClassBinding = (element, expr, scope) => {
     element.className = base.trim();
   }
 };
-var applyAttributeBindings = (elements, scope) => {
+var applyBindings = (root, scope) => {
+  const elements = [];
+  if (root instanceof DocumentFragment) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    while (walker.nextNode()) {
+      elements.push(walker.currentNode);
+    }
+  } else {
+    elements.push(root);
+    root.traverse((elem) => {
+      elements.push(elem);
+    }, { traverseShadowRoot: true });
+  }
   const skipListItems = scope.item === void 0;
   elements.forEach((element) => {
     if (element instanceof HTMLTemplateElement) return;
     if (skipListItems && element.closest("[data-list-item]")) return;
+    const listExpr = element.getAttribute("data-list");
+    if (listExpr) {
+      const template = element.querySelector("template[data-item]");
+      if (template instanceof HTMLTemplateElement) {
+        const resolved = resolveValue(listExpr, scope);
+        const items = Array.isArray(resolved) ? resolved : [];
+        Array.from(element.children).forEach((child) => {
+          if (child.hasAttribute("data-list-item")) {
+            child.remove();
+          }
+        });
+        const fragment = document.createDocumentFragment();
+        items.forEach((item, index) => {
+          const clone = template.content.cloneNode(true);
+          Array.from(clone.childNodes).forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              node.setAttribute("data-list-item", "");
+            }
+          });
+          applyBindings(clone, { ...scope, item, index });
+          fragment.appendChild(clone);
+        });
+        element.appendChild(fragment);
+      }
+    }
     const textBinding = element.getAttribute("data-text");
     if (textBinding) {
       const value = resolveValue(textBinding, scope);
@@ -1790,47 +1842,11 @@ var applyAttributeBindings = (elements, scope) => {
     }
   });
 };
-var applyListBinding = (element, scope) => {
-  const listExpr = element.getAttribute("data-list");
-  if (!listExpr) return;
-  const template = element.querySelector("template[data-item]");
-  if (!(template instanceof HTMLTemplateElement)) return;
-  const resolved = resolveValue(listExpr, scope);
-  const items = Array.isArray(resolved) ? resolved : [];
-  Array.from(element.children).forEach((child) => {
-    if (child.hasAttribute("data-list-item")) {
-      child.remove();
-    }
-  });
-  const fragment = document.createDocumentFragment();
-  items.forEach((item, index) => {
-    const clone = template.content.cloneNode(true);
-    Array.from(clone.childNodes).forEach((node) => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        node.setAttribute("data-list-item", "");
-      }
-    });
-    applyBindingsToFragment(clone, { ...scope, item, index });
-    fragment.appendChild(clone);
-  });
-  element.appendChild(fragment);
-};
-var applyBindingsToFragment = (fragment, scope) => {
-  let elements = collectElements(fragment);
-  elements.forEach((element) => applyListBinding(element, scope));
-  elements = collectElements(fragment);
-  applyAttributeBindings(elements, scope);
-};
-var applyBindings = (root, scope) => {
-  let elements = collectElements(root);
-  elements.forEach((element) => applyListBinding(element, scope));
-  elements = collectElements(root);
-  applyAttributeBindings(elements, scope);
-};
 
 // src/index.ts
 var hasLoggedVersion = false;
-var debugApiEnabled = typeof __DEBUG__ === "undefined" || __DEBUG__;
+var isLLMBuild2 = typeof __LLM__ !== "undefined" && __LLM__;
+var debugApiEnabled = !isLLMBuild2 && (typeof __DEBUG__ === "undefined" || __DEBUG__);
 var html = (strings, ...values) => {
   let result = "";
   for (let i = 0; i < strings.length; i++) {
@@ -1993,7 +2009,9 @@ async function inflictBoreDOM(state, componentsLogic, config) {
   }
   setCurrentAppState(proxifiedState, webComponent, registerComponent);
   runComponentsInitializer(proxifiedState);
-  observeUndefinedElements();
+  if (!isLLMBuild2) {
+    observeUndefinedElements();
+  }
   return proxifiedState.app;
 }
 function webComponent(initFunction) {
@@ -2043,7 +2061,7 @@ function webComponent(initFunction) {
     }
     renderFunction = (renderState) => {
       const componentName = detail?.name ?? c.tagName.toLowerCase();
-      const helpers = createRenderHelpers(
+      const helpers = isLLMBuild2 ? {} : createRenderHelpers(
         componentName,
         c,
         () => renderFunction(renderState)
