@@ -154,6 +154,7 @@ async function run() {
   const { server, port } = await startServer();
   const browser = await chromium.launch({ headless: !flags.headed });
   const page = await browser.newPage();
+  page.on('console', msg => console.log('PAGE LOG:', msg.text()));
 
   try {
     if (!flags.json) {
