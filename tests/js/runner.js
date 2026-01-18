@@ -613,10 +613,10 @@
           list2.pop();
         }
         function arrayClone(arr, i) {
-          var copy2 = new Array(i);
+          var copy = new Array(i);
           while (i--)
-            copy2[i] = arr[i];
-          return copy2;
+            copy[i] = arr[i];
+          return copy;
         }
         function unwrapListeners(arr) {
           var ret = new Array(arr.length);
@@ -1929,7 +1929,7 @@
         Buffer$1.prototype.writeDoubleBE = function writeDoubleBE(value, offset, noAssert) {
           return writeDouble$1(this, value, offset, false, noAssert);
         };
-        Buffer$1.prototype.copy = function copy2(target, targetStart, start, end) {
+        Buffer$1.prototype.copy = function copy(target, targetStart, start, end) {
           if (!start) start = 0;
           if (!end && end !== 0) end = this.length;
           if (targetStart >= target.length) targetStart = target.length;
@@ -2271,12 +2271,12 @@
         function umask() {
           return 0;
         }
-        var performance2 = global$2.performance || {};
-        var performanceNow = performance2.now || performance2.mozNow || performance2.msNow || performance2.oNow || performance2.webkitNow || function() {
+        var performance = global$2.performance || {};
+        var performanceNow = performance.now || performance.mozNow || performance.msNow || performance.oNow || performance.webkitNow || function() {
           return (/* @__PURE__ */ new Date()).getTime();
         };
         function hrtime(previousTimestamp) {
-          var clocktime = performanceNow.call(performance2) * 1e-3;
+          var clocktime = performanceNow.call(performance) * 1e-3;
           var seconds = Math.floor(clocktime);
           var nanoseconds = Math.floor(clocktime % 1 * 1e9);
           if (previousTimestamp) {
@@ -4538,25 +4538,25 @@
             components.reverse();
             var componentPos = 0, componentLen = components.length, newPos = 0, oldPos = 0;
             for (; componentPos < componentLen; componentPos++) {
-              var component2 = components[componentPos];
-              if (!component2.removed) {
-                if (!component2.added && useLongestToken) {
-                  var value = newString.slice(newPos, newPos + component2.count);
+              var component3 = components[componentPos];
+              if (!component3.removed) {
+                if (!component3.added && useLongestToken) {
+                  var value = newString.slice(newPos, newPos + component3.count);
                   value = value.map(function(value2, i) {
                     var oldValue = oldString[oldPos + i];
                     return oldValue.length > value2.length ? oldValue : value2;
                   });
-                  component2.value = diff2.join(value);
+                  component3.value = diff2.join(value);
                 } else {
-                  component2.value = diff2.join(newString.slice(newPos, newPos + component2.count));
+                  component3.value = diff2.join(newString.slice(newPos, newPos + component3.count));
                 }
-                newPos += component2.count;
-                if (!component2.added) {
-                  oldPos += component2.count;
+                newPos += component3.count;
+                if (!component3.added) {
+                  oldPos += component3.count;
                 }
               } else {
-                component2.value = diff2.join(oldString.slice(oldPos, oldPos + component2.count));
-                oldPos += component2.count;
+                component3.value = diff2.join(oldString.slice(oldPos, oldPos + component3.count));
+                oldPos += component3.count;
                 if (componentPos && components[componentPos - 1].added) {
                   var tmp = components[componentPos - 1];
                   components[componentPos - 1] = components[componentPos];
@@ -4902,7 +4902,7 @@
         function diffArrays(oldArr, newArr, callback) {
           return arrayDiff.diff(oldArr, newArr, callback);
         }
-        var apply3 = {};
+        var apply2 = {};
         var parse$2 = {};
         Object.defineProperty(parse$2, "__esModule", {
           value: true
@@ -5046,17 +5046,17 @@
             };
           }
         })(distanceIterator);
-        Object.defineProperty(apply3, "__esModule", {
+        Object.defineProperty(apply2, "__esModule", {
           value: true
         });
-        apply3.applyPatch = applyPatch;
-        apply3.applyPatches = applyPatches;
+        apply2.applyPatch = applyPatch2;
+        apply2.applyPatches = applyPatches;
         var _parse$1 = parse$2;
         var _distanceIterator = _interopRequireDefault(distanceIterator);
         function _interopRequireDefault(obj) {
           return obj && obj.__esModule ? obj : { "default": obj };
         }
-        function applyPatch(source, uniDiff) {
+        function applyPatch2(source, uniDiff) {
           var options = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {};
           if (typeof uniDiff === "string") {
             uniDiff = /*istanbul ignore start*/
@@ -5170,7 +5170,7 @@
               if (err) {
                 return options.complete(err);
               }
-              var updatedContent = applyPatch(data, index, options);
+              var updatedContent = applyPatch2(data, index, options);
               options.patched(index, updatedContent, function(err2) {
                 if (err2) {
                   return options.complete(err2);
@@ -6099,7 +6099,7 @@
           var _css = css;
           var _json = json$1;
           var _array2 = array$1;
-          var _apply = apply3;
+          var _apply = apply2;
           var _parse2 = parse$2;
           var _merge = merge$1;
           var _reverse = reverse;
@@ -7520,7 +7520,7 @@
         Buffer2.prototype.writeDoubleBE = function writeDoubleBE(value, offset, noAssert) {
           return writeDouble(this, value, offset, false, noAssert);
         };
-        Buffer2.prototype.copy = function copy2(target, targetStart, start, end) {
+        Buffer2.prototype.copy = function copy(target, targetStart, start, end) {
           if (!start) start = 0;
           if (!end && end !== 0) end = this.length;
           if (targetStart >= target.length) targetStart = target.length;
@@ -7879,13 +7879,13 @@
               "useNamedReferences": false,
               "decimal": false
             };
-            var decode = function(html2, options) {
+            var decode = function(html3, options) {
               options = merge2(options, decode.options);
               var strict = options.strict;
-              if (strict && regexInvalidEntity.test(html2)) {
+              if (strict && regexInvalidEntity.test(html3)) {
                 parseError("malformed character reference");
               }
-              return html2.replace(regexDecode, function($0, $1, $2, $3, $4, $5, $6, $7, $8) {
+              return html3.replace(regexDecode, function($0, $1, $2, $3, $4, $5, $6, $7, $8) {
                 var codePoint;
                 var semicolon;
                 var decDigits;
@@ -7974,8 +7974,8 @@
           var he$1 = he.exports;
           const MOCHA_ID_PROP_NAME2 = "__mocha_id__";
           exports2.inherits = util.inherits;
-          exports2.escape = function(html2) {
-            return he$1.encode(String(html2), { useNamedReferences: false });
+          exports2.escape = function(html3) {
+            return he$1.encode(String(html3), { useNamedReferences: false });
           };
           exports2.isString = function(obj) {
             return typeof obj === "string";
@@ -11225,7 +11225,7 @@
           }
           JSONReporter.description = "single JSON object";
         })(json);
-        var html = { exports: {} };
+        var html2 = { exports: {} };
         (function(module3, exports2) {
           var Base = base$1.exports;
           var utils2 = utils$3;
@@ -11433,11 +11433,11 @@
           function error(msg) {
             document.body.appendChild(fragment('<div id="mocha-error">%s</div>', msg));
           }
-          function fragment(html2) {
+          function fragment(html3) {
             var args = arguments;
             var div = document.createElement("div");
             var i = 1;
-            div.innerHTML = html2.replace(/%([se])/g, function(_, type3) {
+            div.innerHTML = html3.replace(/%([se])/g, function(_, type3) {
               switch (type3) {
                 case "s":
                   return String(args[i++]);
@@ -11477,7 +11477,7 @@
             }
           }
           HTML.browserOnly = true;
-        })(html);
+        })(html2);
         var list = { exports: {} };
         (function(module3, exports2) {
           var Base = base$1.exports;
@@ -12121,7 +12121,7 @@
           exports2.Doc = exports2.doc = doc.exports;
           exports2.TAP = exports2.tap = tap.exports;
           exports2.JSON = exports2.json = json.exports;
-          exports2.HTML = exports2.html = html.exports;
+          exports2.HTML = exports2.html = html2.exports;
           exports2.List = exports2.list = list.exports;
           exports2.Min = exports2.min = min.exports;
           exports2.Spec = exports2.spec = spec.exports;
@@ -12277,7 +12277,7 @@
         var createMissingArgumentError = errors2.createMissingArgumentError;
         var createUnsupportedError = errors2.createUnsupportedError;
         var createForbiddenExclusivityError = errors2.createForbiddenExclusivityError;
-        var common = function(suites, context3, mocha3) {
+        var common = function(suites, context2, mocha3) {
           function shouldBeTested(suite2) {
             return !mocha3.options.grep || mocha3.options.grep && mocha3.options.grep.test(suite2.fullTitle()) && !mocha3.options.invert;
           }
@@ -12414,7 +12414,7 @@
                * @param {string} title
                */
               skip: function(title2) {
-                context3.test(title2);
+                context2.test(title2);
               }
             }
           };
@@ -12423,35 +12423,35 @@
         var EVENT_FILE_PRE_REQUIRE$2 = suite.exports.constants.EVENT_FILE_PRE_REQUIRE;
         bdd.exports = function bddInterface(suite2) {
           var suites = [suite2];
-          suite2.on(EVENT_FILE_PRE_REQUIRE$2, function(context3, file, mocha3) {
-            var common$12 = common(suites, context3, mocha3);
-            context3.before = common$12.before;
-            context3.after = common$12.after;
-            context3.beforeEach = common$12.beforeEach;
-            context3.afterEach = common$12.afterEach;
-            context3.run = mocha3.options.delay && common$12.runWithSuite(suite2);
-            context3.describe = context3.context = function(title2, fn) {
+          suite2.on(EVENT_FILE_PRE_REQUIRE$2, function(context2, file, mocha3) {
+            var common$12 = common(suites, context2, mocha3);
+            context2.before = common$12.before;
+            context2.after = common$12.after;
+            context2.beforeEach = common$12.beforeEach;
+            context2.afterEach = common$12.afterEach;
+            context2.run = mocha3.options.delay && common$12.runWithSuite(suite2);
+            context2.describe = context2.context = function(title2, fn) {
               return common$12.suite.create({
                 title: title2,
                 file,
                 fn
               });
             };
-            context3.xdescribe = context3.xcontext = context3.describe.skip = function(title2, fn) {
+            context2.xdescribe = context2.xcontext = context2.describe.skip = function(title2, fn) {
               return common$12.suite.skip({
                 title: title2,
                 file,
                 fn
               });
             };
-            context3.describe.only = function(title2, fn) {
+            context2.describe.only = function(title2, fn) {
               return common$12.suite.only({
                 title: title2,
                 file,
                 fn
               });
             };
-            context3.it = context3.specify = function(title2, fn) {
+            context2.it = context2.specify = function(title2, fn) {
               var suite3 = suites[0];
               if (suite3.isPending()) {
                 fn = null;
@@ -12461,11 +12461,11 @@
               suite3.addTest(test3);
               return test3;
             };
-            context3.it.only = function(title2, fn) {
-              return common$12.test.only(mocha3, context3.it(title2, fn));
+            context2.it.only = function(title2, fn) {
+              return common$12.test.only(mocha3, context2.it(title2, fn));
             };
-            context3.xit = context3.xspecify = context3.it.skip = function(title2) {
-              return context3.it(title2);
+            context2.xit = context2.xspecify = context2.it.skip = function(title2) {
+              return context2.it(title2);
             };
           });
         };
@@ -12475,35 +12475,35 @@
         var EVENT_FILE_PRE_REQUIRE$1 = suite.exports.constants.EVENT_FILE_PRE_REQUIRE;
         tdd.exports = function(suite2) {
           var suites = [suite2];
-          suite2.on(EVENT_FILE_PRE_REQUIRE$1, function(context3, file, mocha3) {
-            var common$12 = common(suites, context3, mocha3);
-            context3.setup = common$12.beforeEach;
-            context3.teardown = common$12.afterEach;
-            context3.suiteSetup = common$12.before;
-            context3.suiteTeardown = common$12.after;
-            context3.run = mocha3.options.delay && common$12.runWithSuite(suite2);
-            context3.suite = function(title2, fn) {
+          suite2.on(EVENT_FILE_PRE_REQUIRE$1, function(context2, file, mocha3) {
+            var common$12 = common(suites, context2, mocha3);
+            context2.setup = common$12.beforeEach;
+            context2.teardown = common$12.afterEach;
+            context2.suiteSetup = common$12.before;
+            context2.suiteTeardown = common$12.after;
+            context2.run = mocha3.options.delay && common$12.runWithSuite(suite2);
+            context2.suite = function(title2, fn) {
               return common$12.suite.create({
                 title: title2,
                 file,
                 fn
               });
             };
-            context3.suite.skip = function(title2, fn) {
+            context2.suite.skip = function(title2, fn) {
               return common$12.suite.skip({
                 title: title2,
                 file,
                 fn
               });
             };
-            context3.suite.only = function(title2, fn) {
+            context2.suite.only = function(title2, fn) {
               return common$12.suite.only({
                 title: title2,
                 file,
                 fn
               });
             };
-            context3.test = function(title2, fn) {
+            context2.test = function(title2, fn) {
               var suite3 = suites[0];
               if (suite3.isPending()) {
                 fn = null;
@@ -12513,10 +12513,10 @@
               suite3.addTest(test3);
               return test3;
             };
-            context3.test.only = function(title2, fn) {
-              return common$12.test.only(mocha3, context3.test(title2, fn));
+            context2.test.only = function(title2, fn) {
+              return common$12.test.only(mocha3, context2.test(title2, fn));
             };
-            context3.test.skip = common$12.test.skip;
+            context2.test.skip = common$12.test.skip;
           });
         };
         tdd.exports.description = `traditional "suite"/"test" instead of BDD's "describe"/"it"`;
@@ -12525,14 +12525,14 @@
         var EVENT_FILE_PRE_REQUIRE = suite.exports.constants.EVENT_FILE_PRE_REQUIRE;
         qunit.exports = function qUnitInterface(suite2) {
           var suites = [suite2];
-          suite2.on(EVENT_FILE_PRE_REQUIRE, function(context3, file, mocha3) {
-            var common$12 = common(suites, context3, mocha3);
-            context3.before = common$12.before;
-            context3.after = common$12.after;
-            context3.beforeEach = common$12.beforeEach;
-            context3.afterEach = common$12.afterEach;
-            context3.run = mocha3.options.delay && common$12.runWithSuite(suite2);
-            context3.suite = function(title2) {
+          suite2.on(EVENT_FILE_PRE_REQUIRE, function(context2, file, mocha3) {
+            var common$12 = common(suites, context2, mocha3);
+            context2.before = common$12.before;
+            context2.after = common$12.after;
+            context2.beforeEach = common$12.beforeEach;
+            context2.afterEach = common$12.afterEach;
+            context2.run = mocha3.options.delay && common$12.runWithSuite(suite2);
+            context2.suite = function(title2) {
               if (suites.length > 1) {
                 suites.shift();
               }
@@ -12542,7 +12542,7 @@
                 fn: false
               });
             };
-            context3.suite.only = function(title2) {
+            context2.suite.only = function(title2) {
               if (suites.length > 1) {
                 suites.shift();
               }
@@ -12552,16 +12552,16 @@
                 fn: false
               });
             };
-            context3.test = function(title2, fn) {
+            context2.test = function(title2, fn) {
               var test3 = new Test$1(title2, fn);
               test3.file = file;
               suites[0].addTest(test3);
               return test3;
             };
-            context3.test.only = function(title2, fn) {
-              return common$12.test.only(mocha3, context3.test(title2, fn));
+            context2.test.only = function(title2, fn) {
+              return common$12.test.only(mocha3, context2.test(title2, fn));
             };
-            context3.test.skip = common$12.test.skip;
+            context2.test.skip = common$12.test.skip;
           });
         };
         qunit.exports.description = "QUnit style";
@@ -12608,7 +12608,7 @@
         interfaces.tdd = tdd.exports;
         interfaces.qunit = qunit.exports;
         interfaces.exports = exports$1.exports;
-        var context2 = Context;
+        var context = Context;
         function Context() {
         }
         Context.prototype.runnable = function(runnable2) {
@@ -12702,7 +12702,7 @@
           exports2.interfaces = interfaces;
           exports2.reporters = builtinReporters;
           exports2.Runnable = runnable;
-          exports2.Context = context2;
+          exports2.Context = context;
           exports2.Runner = runner2;
           exports2.Suite = Suite2;
           exports2.Hook = hook;
@@ -12867,8 +12867,8 @@
               }
             }
             bindInterface(this.suite);
-            this.suite.on(EVENT_FILE_PRE_REQUIRE2, function(context3) {
-              currentContext = context3;
+            this.suite.on(EVENT_FILE_PRE_REQUIRE2, function(context2) {
+              currentContext = context2;
             });
             return this;
           };
@@ -13100,13 +13100,13 @@
               }
             };
             const runAsync = async (runner4) => {
-              const context3 = this.options.enableGlobalSetup && this.hasGlobalSetupFixtures() ? await this.runGlobalSetup(runner4) : {};
+              const context2 = this.options.enableGlobalSetup && this.hasGlobalSetupFixtures() ? await this.runGlobalSetup(runner4) : {};
               const failureCount = await runner4.runAsync({
                 files: this.files,
                 options
               });
               if (this.options.enableGlobalTeardown && this.hasGlobalTeardownFixtures()) {
-                await this.runGlobalTeardown(runner4, { context: context3 });
+                await this.runGlobalTeardown(runner4, { context: context2 });
               }
               return failureCount;
             };
@@ -13171,29 +13171,29 @@
             debug3("configured %d global teardown functions", teardownFns.length);
             return this;
           };
-          Mocha2.prototype.runGlobalSetup = async function runGlobalSetup(context3 = {}) {
+          Mocha2.prototype.runGlobalSetup = async function runGlobalSetup(context2 = {}) {
             const { globalSetup } = this.options;
             if (globalSetup && globalSetup.length) {
               debug3("run(): global setup starting");
-              await this._runGlobalFixtures(globalSetup, context3);
+              await this._runGlobalFixtures(globalSetup, context2);
               debug3("run(): global setup complete");
             }
-            return context3;
+            return context2;
           };
-          Mocha2.prototype.runGlobalTeardown = async function runGlobalTeardown(context3 = {}) {
+          Mocha2.prototype.runGlobalTeardown = async function runGlobalTeardown(context2 = {}) {
             const { globalTeardown } = this.options;
             if (globalTeardown && globalTeardown.length) {
               debug3("run(): global teardown starting");
-              await this._runGlobalFixtures(globalTeardown, context3);
+              await this._runGlobalFixtures(globalTeardown, context2);
             }
             debug3("run(): global teardown complete");
-            return context3;
+            return context2;
           };
-          Mocha2.prototype._runGlobalFixtures = async function _runGlobalFixtures(fixtureFns = [], context3 = {}) {
+          Mocha2.prototype._runGlobalFixtures = async function _runGlobalFixtures(fixtureFns = [], context2 = {}) {
             for await (const fixtureFn of fixtureFns) {
-              await fixtureFn.call(context3);
+              await fixtureFn.call(context2);
             }
-            return context3;
+            return context2;
           };
           Mocha2.prototype.enableGlobalSetup = function enableGlobalSetup(enabled = true) {
             this.options.enableGlobalSetup = Boolean(enabled);
@@ -14196,7 +14196,7 @@
             }
             return false;
           }
-          function typeOf2(object) {
+          function typeOf(object) {
             if (typeof object === "object" && object !== null) {
               var $$typeof = object.$$typeof;
               switch ($$typeof) {
@@ -14260,37 +14260,37 @@
             return false;
           }
           function isContextConsumer(object) {
-            return typeOf2(object) === REACT_CONTEXT_TYPE;
+            return typeOf(object) === REACT_CONTEXT_TYPE;
           }
           function isContextProvider(object) {
-            return typeOf2(object) === REACT_PROVIDER_TYPE;
+            return typeOf(object) === REACT_PROVIDER_TYPE;
           }
           function isElement2(object) {
             return typeof object === "object" && object !== null && object.$$typeof === REACT_ELEMENT_TYPE;
           }
           function isForwardRef(object) {
-            return typeOf2(object) === REACT_FORWARD_REF_TYPE;
+            return typeOf(object) === REACT_FORWARD_REF_TYPE;
           }
           function isFragment(object) {
-            return typeOf2(object) === REACT_FRAGMENT_TYPE;
+            return typeOf(object) === REACT_FRAGMENT_TYPE;
           }
           function isLazy(object) {
-            return typeOf2(object) === REACT_LAZY_TYPE;
+            return typeOf(object) === REACT_LAZY_TYPE;
           }
           function isMemo(object) {
-            return typeOf2(object) === REACT_MEMO_TYPE;
+            return typeOf(object) === REACT_MEMO_TYPE;
           }
           function isPortal(object) {
-            return typeOf2(object) === REACT_PORTAL_TYPE;
+            return typeOf(object) === REACT_PORTAL_TYPE;
           }
           function isProfiler(object) {
-            return typeOf2(object) === REACT_PROFILER_TYPE;
+            return typeOf(object) === REACT_PROFILER_TYPE;
           }
           function isStrictMode(object) {
-            return typeOf2(object) === REACT_STRICT_MODE_TYPE;
+            return typeOf(object) === REACT_STRICT_MODE_TYPE;
           }
           function isSuspense(object) {
-            return typeOf2(object) === REACT_SUSPENSE_TYPE;
+            return typeOf(object) === REACT_SUSPENSE_TYPE;
           }
           exports.ContextConsumer = ContextConsumer;
           exports.ContextProvider = ContextProvider;
@@ -14317,7 +14317,7 @@
           exports.isStrictMode = isStrictMode;
           exports.isSuspense = isSuspense;
           exports.isValidElementType = isValidElementType;
-          exports.typeOf = typeOf2;
+          exports.typeOf = typeOf;
         })();
       }
     }
@@ -14599,23 +14599,23 @@
         if (val === null) {
           return "null";
         }
-        const typeOf2 = typeof val;
-        if (typeOf2 === "number") {
+        const typeOf = typeof val;
+        if (typeOf === "number") {
           return printNumber(val);
         }
-        if (typeOf2 === "bigint") {
+        if (typeOf === "bigint") {
           return printBigInt(val);
         }
-        if (typeOf2 === "string") {
+        if (typeOf === "string") {
           if (escapeString) {
             return '"' + val.replace(/"|\\/g, "\\$&") + '"';
           }
           return '"' + val + '"';
         }
-        if (typeOf2 === "function") {
+        if (typeOf === "function") {
           return printFunction(val, printFunctionName);
         }
-        if (typeOf2 === "symbol") {
+        if (typeOf === "symbol") {
           return printSymbol(val);
         }
         const toStringed = toString2.call(val);
@@ -22390,6 +22390,260 @@
     }
   });
 
+  // src/utils/flatten.ts
+  function flatten(obj, ignore = []) {
+    const stack = [{
+      path: [],
+      obj
+    }];
+    const result = [];
+    const visited = /* @__PURE__ */ new WeakSet();
+    while (stack.length > 0) {
+      const { path, obj: obj2 } = stack.pop();
+      if (visited.has(obj2)) continue;
+      visited.add(obj2);
+      for (const key in obj2) {
+        if (ignore.includes(key)) continue;
+        const value = obj2[key];
+        const newPath = path.concat(key);
+        if (typeof value === "object" && value !== null && !visited.has(value)) {
+          stack.push({
+            path: newPath,
+            obj: value
+          });
+        }
+        result.push({ path: newPath, value });
+      }
+    }
+    return result;
+  }
+  var init_flatten = __esm({
+    "src/utils/flatten.ts"() {
+      "use strict";
+    }
+  });
+
+  // src/vision.ts
+  function isVisible(element) {
+    if (element.hasAttribute("hidden")) return false;
+    if (element.style.display === "none") return false;
+    if (element.style.visibility === "hidden") return false;
+    if (element.getAttribute("aria-hidden") === "true") return false;
+    return true;
+  }
+  function getSemanticDOM(element) {
+    if (!(element instanceof HTMLElement)) return null;
+    const tagName = element.tagName.toLowerCase();
+    if (IGNORED_TAGS.has(tagName)) return null;
+    if (!isVisible(element)) return null;
+    const node = { tagName };
+    const attributes = {};
+    let hasAttrs = false;
+    for (const attr of Array.from(element.attributes)) {
+      const name = attr.name;
+      if (IMPORTANT_ATTRS.has(name) || name.startsWith("aria-") || name.startsWith("data-")) {
+        if (name === "checked" || name === "disabled") {
+          attributes[name] = element[name];
+        } else if (name === "value" && (tagName === "input" || tagName === "textarea" || tagName === "select")) {
+          attributes[name] = element.value;
+        } else {
+          attributes[name] = attr.value;
+        }
+        hasAttrs = true;
+      }
+    }
+    if (hasAttrs) node.attributes = attributes;
+    let text = "";
+    for (const child of Array.from(element.childNodes)) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const val = child.nodeValue?.trim();
+        if (val) text += val + " ";
+      }
+    }
+    text = text.trim();
+    if (text) node.text = text;
+    const children = [];
+    for (const child of Array.from(element.children)) {
+      const semanticChild = getSemanticDOM(child);
+      if (semanticChild) {
+        children.push(semanticChild);
+      }
+    }
+    if (children.length > 0) node.children = children;
+    if (tagName === "div" && !hasAttrs && !text && children.length === 0) return null;
+    return node;
+  }
+  var IGNORED_TAGS, IMPORTANT_ATTRS;
+  var init_vision = __esm({
+    "src/vision.ts"() {
+      "use strict";
+      IGNORED_TAGS = /* @__PURE__ */ new Set([
+        "script",
+        "style",
+        "noscript",
+        "template",
+        "link",
+        "meta",
+        "head",
+        "title"
+      ]);
+      IMPORTANT_ATTRS = /* @__PURE__ */ new Set([
+        "id",
+        "class",
+        "type",
+        "value",
+        "checked",
+        "disabled",
+        "placeholder",
+        "href",
+        "src",
+        "alt",
+        "title",
+        "role"
+      ]);
+    }
+  });
+
+  // src/patch.ts
+  function applyPatch(state, patch) {
+    const undoStack = [];
+    try {
+      for (const op of patch) {
+        const inverse = applyOp(state, op);
+        if (inverse) undoStack.push(inverse);
+      }
+      return { success: true };
+    } catch (e) {
+      for (let i = undoStack.length - 1; i >= 0; i--) {
+        try {
+          applyOp(state, undoStack[i]);
+        } catch (rollbackError) {
+          console.error("Critical: Rollback failed", rollbackError);
+        }
+      }
+      return { success: false, error: e.message || String(e) };
+    }
+  }
+  function deepEqual2(a, b) {
+    if (a === b) return true;
+    if (typeof a !== "object" || a === null || typeof b !== "object" || b === null) return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+      if (!keysB.includes(key) || !deepEqual2(a[key], b[key])) return false;
+    }
+    return true;
+  }
+  function parsePath2(path) {
+    if (path === "") return [];
+    if (path === "/") return [""];
+    return path.split("/").slice(1).map(
+      (segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~")
+    );
+  }
+  function applyOp(root, op) {
+    const parts = parsePath2(op.path);
+    if (parts.length === 0) {
+      throw new Error("Cannot operate on root state directly");
+    }
+    const key = parts.pop();
+    let target = root;
+    for (const segment of parts) {
+      if (target === void 0 || target === null) {
+        throw new Error(`Path not found: ${op.path}`);
+      }
+      if (Array.isArray(target)) {
+        const index = parseInt(segment, 10);
+        if (isNaN(index)) throw new Error(`Invalid array index: ${segment}`);
+        target = target[index];
+      } else {
+        target = target[segment];
+      }
+    }
+    if (target === void 0 || target === null) {
+      throw new Error(`Path not found: ${op.path}`);
+    }
+    if (op.op === "test") {
+      let valueToCheck;
+      if (Array.isArray(target)) {
+        if (key === "-") {
+          valueToCheck = void 0;
+        } else {
+          const index = parseInt(key, 10);
+          if (isNaN(index) || index < 0 || index >= target.length) {
+            valueToCheck = void 0;
+          } else {
+            valueToCheck = target[index];
+          }
+        }
+      } else {
+        valueToCheck = target[key];
+      }
+      if (!deepEqual2(valueToCheck, op.value)) {
+        throw new Error(`Test failed at ${op.path}: expected ${JSON.stringify(op.value)}, got ${JSON.stringify(valueToCheck)}`);
+      }
+      return null;
+    }
+    if (Array.isArray(target)) {
+      if (key === "-") {
+        if (op.op === "add") {
+          target.push(op.value);
+          return { op: "remove", path: op.path.replace(/-$/, (target.length - 1).toString()) };
+        } else {
+          throw new Error("Can only add to '-' index");
+        }
+      }
+      const index = parseInt(key, 10);
+      if (isNaN(index) || index < 0) {
+        throw new Error(`Invalid array index: ${key}`);
+      }
+      if (op.op === "add") {
+        if (index > target.length) throw new Error("Index out of bounds");
+        target.splice(index, 0, op.value);
+        return { op: "remove", path: op.path };
+      } else if (op.op === "remove") {
+        if (index >= target.length) throw new Error("Index out of bounds");
+        const oldValue = target[index];
+        target.splice(index, 1);
+        return { op: "add", path: op.path, value: oldValue };
+      } else if (op.op === "replace") {
+        if (index >= target.length) throw new Error("Index out of bounds");
+        const oldValue = target[index];
+        target[index] = op.value;
+        return { op: "replace", path: op.path, value: oldValue };
+      }
+    } else {
+      if (op.op === "add") {
+        const oldValue = target[key];
+        const existed = Object.prototype.hasOwnProperty.call(target, key);
+        target[key] = op.value;
+        return existed ? { op: "replace", path: op.path, value: oldValue } : { op: "remove", path: op.path };
+      } else if (op.op === "replace") {
+        if (!Object.prototype.hasOwnProperty.call(target, key)) {
+          throw new Error(`Path not found: ${op.path}`);
+        }
+        const oldValue = target[key];
+        target[key] = op.value;
+        return { op: "replace", path: op.path, value: oldValue };
+      } else if (op.op === "remove") {
+        if (!Object.prototype.hasOwnProperty.call(target, key)) {
+          throw new Error(`Path not found: ${op.path}`);
+        }
+        const oldValue = target[key];
+        delete target[key];
+        return { op: "add", path: op.path, value: oldValue };
+      }
+    }
+    return null;
+  }
+  var init_patch = __esm({
+    "src/patch.ts"() {
+      "use strict";
+    }
+  });
+
   // src/console-api.ts
   function setCurrentAppState(state, webComponentFn, registerComponentFn) {
     currentAppState = state;
@@ -22399,10 +22653,10 @@
   function getCurrentAppState() {
     return currentAppState;
   }
-  function storeComponentContext(element, context2) {
+  function storeComponentContext(element, context) {
     if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
     if (!isDebugEnabled("api")) return;
-    componentContexts.set(element, context2);
+    componentContexts.set(element, context);
   }
   function isWebComponentResult(fn) {
     return typeof fn === "function" && fn[WEB_COMPONENT_MARKER] === true;
@@ -22500,14 +22754,14 @@
       }
       return void 0;
     }
-    const context2 = componentContexts.get(element);
-    if (!context2) {
+    const context = componentContexts.get(element);
+    if (!context) {
       if (isDebugEnabled("console")) {
         console.warn(`[boreDOM] operate(): Element is not a boreDOM component or not initialized`);
       }
       return void 0;
     }
-    return context2;
+    return context;
   }
   function exportComponent(selector) {
     if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
@@ -22562,325 +22816,6 @@
     }
   });
 
-  // src/inside-out.ts
-  function createRenderHelpers(componentName, element, rerender) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      return {};
-    }
-    if (!isDebugEnabled("methodMissing")) {
-      return {};
-    }
-    return new Proxy({}, {
-      get(_target, prop) {
-        if (typeof prop === "symbol" || prop === "then" || prop === "toJSON") {
-          return void 0;
-        }
-        if (userDefinedHelpers.has(prop)) {
-          const helper = userDefinedHelpers.get(prop);
-          return (...args) => {
-            const result = helper(...args);
-            if (typeof __DEBUG__ === "undefined" || __DEBUG__) {
-              trackFunctionCall(prop, args, result);
-            }
-            return result;
-          };
-        }
-        return (...args) => {
-          const ctx = {
-            name: prop,
-            args,
-            component: componentName,
-            element,
-            timestamp: Date.now(),
-            define: (impl) => {
-              defineHelper(prop, impl);
-              rerender();
-            }
-          };
-          logMissingFunction(ctx);
-          storeMissingFunction(ctx);
-          exposeMissingGlobals(ctx);
-          return void 0;
-        };
-      },
-      has(_target, prop) {
-        return typeof prop === "string" && userDefinedHelpers.has(prop);
-      }
-    });
-  }
-  function defineHelper(name, implementation) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("methodMissing")) return;
-    userDefinedHelpers.set(name, implementation);
-    if (isDebugEnabled("console")) {
-      console.log(
-        "%c\u2705 boreDOM: Defined helper %c%s",
-        "color: #27ae60; font-weight: bold",
-        "color: #9b59b6; font-weight: bold",
-        name
-      );
-    }
-  }
-  function clearHelper(name) {
-    userDefinedHelpers.delete(name);
-  }
-  function clearMissingFunctions() {
-    missingFunctions.clear();
-    lastMissing = null;
-  }
-  function logMissingFunction(ctx) {
-    if (!isDebugEnabled("console")) return;
-    console.log(
-      "%c\u26A0\uFE0F boreDOM: Missing function %c%s%c in <%s>",
-      "color: #f39c12; font-weight: bold",
-      "color: #9b59b6; font-weight: bold",
-      ctx.name,
-      "color: #f39c12",
-      ctx.component
-    );
-    if (ctx.args.length > 0) {
-      console.log("   Arguments:", ctx.args);
-    }
-    console.log("%c\u{1F4A1} Define it:", "color: #3498db; font-weight: bold");
-    console.log(`   $defineMissing((${generateArgNames(ctx.args)}) => { ... })`);
-    console.log(
-      `   boreDOM.defineHelper('${ctx.name}', (${generateArgNames(ctx.args)}) => { ... })`
-    );
-  }
-  function generateArgNames(args) {
-    if (args.length === 0) return "";
-    return args.map((arg, i) => {
-      if (arg === null || arg === void 0) return `arg${i}`;
-      if (Array.isArray(arg)) return "items";
-      if (typeof arg === "object") {
-        if ("name" in arg && "email" in arg) return "user";
-        if ("id" in arg && "title" in arg) return "item";
-        if ("id" in arg) return "record";
-        return "data";
-      }
-      if (typeof arg === "string") return "text";
-      if (typeof arg === "number") return "count";
-      if (typeof arg === "boolean") return "flag";
-      return `arg${i}`;
-    }).join(", ");
-  }
-  function storeMissingFunction(ctx) {
-    if (!isDebugEnabled("errorHistory")) return;
-    const existing = missingFunctions.get(ctx.name) || [];
-    if (existing.length >= 10) {
-      existing.shift();
-    }
-    existing.push(ctx);
-    missingFunctions.set(ctx.name, existing);
-    lastMissing = ctx;
-  }
-  function exposeMissingGlobals(ctx) {
-    if (!isDebugEnabled("globals")) return;
-    if (typeof window === "undefined") return;
-    const w = window;
-    w.$missingName = ctx.name;
-    w.$missingArgs = ctx.args;
-    w.$missingComponent = ctx.component;
-    w.$defineMissing = ctx.define;
-  }
-  function clearMissingGlobals() {
-    if (typeof window === "undefined") return;
-    const w = window;
-    delete w.$missingName;
-    delete w.$missingArgs;
-    delete w.$missingComponent;
-    delete w.$defineMissing;
-  }
-  function inferTemplate(tagName, element) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return null;
-    if (!isDebugEnabled("templateInference")) return null;
-    if (isDebugEnabled("strict")) return null;
-    const props = {};
-    const slots = [];
-    if (element) {
-      for (const attr of Array.from(element.attributes)) {
-        if (attr.name.startsWith("data-")) continue;
-        if (["class", "id", "style"].includes(attr.name)) continue;
-        const camelName = kebabToCamel(attr.name);
-        props[camelName] = parseAttributeValue(attr.value);
-      }
-      for (const child of Array.from(element.children)) {
-        const slotName = child.getAttribute("slot");
-        if (slotName && !slots.includes(slotName)) {
-          slots.push(slotName);
-        }
-      }
-    }
-    const propsSlots = Object.keys(props).map((p) => `    <slot name="${camelToKebab(p)}">${formatValue(props[p])}</slot>`).join("\n");
-    const defaultSlot = slots.length === 0 && Object.keys(props).length === 0 ? '    <slot name="content">Loading...</slot>' : "";
-    const template = `<div class="${tagName}-skeleton" data-inferred>
-${propsSlots || defaultSlot}
-  </div>`;
-    return { tagName, template, props, slots };
-  }
-  function registerInferredComponent(tagName, element) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return false;
-    if (!isDebugEnabled("templateInference")) return false;
-    if (customElements.get(tagName)) return false;
-    if (!getCurrentAppState()) return false;
-    const inference = inferTemplate(tagName, element);
-    if (!inference) return false;
-    const { template, props } = inference;
-    inferredTemplates.set(tagName, inference);
-    logInferredComponent(tagName, props);
-    try {
-      define2(
-        tagName,
-        template,
-        // Stub render that logs what it receives
-        ({ state }) => ({ slots }) => {
-          if (isDebugEnabled("console")) {
-            console.log(
-              "%c\u{1F52E} boreDOM: Inferred <%s> rendering",
-              "color: #9b59b6; font-weight: bold",
-              tagName
-            );
-            console.log("   Inferred props:", props);
-            console.log("   App state:", state);
-          }
-          for (const [key, value] of Object.entries(props)) {
-            const slotKey = camelToKebab(key);
-            if (slots[slotKey]) {
-              slots[slotKey] = String(value);
-            }
-          }
-        }
-      );
-      return true;
-    } catch (e) {
-      if (isDebugEnabled("console")) {
-        console.warn(`[boreDOM] Failed to register inferred <${tagName}>:`, e);
-      }
-      return false;
-    }
-  }
-  function logInferredComponent(tagName, props) {
-    if (!isDebugEnabled("console")) return;
-    console.log(
-      "%c\u{1F52E} boreDOM: Inferring template for %c<%s>",
-      "color: #9b59b6; font-weight: bold",
-      "color: #4ecdc4; font-weight: bold",
-      tagName
-    );
-    if (Object.keys(props).length > 0) {
-      console.log("%c\u{1F4CB} Inferred props from attributes:", "color: #95a5a6");
-      for (const [key, value] of Object.entries(props)) {
-        console.log(`   ${key}: ${JSON.stringify(value)}`);
-      }
-    }
-    console.log("%c\u{1F4A1} Define properly with:", "color: #3498db; font-weight: bold");
-    console.log(
-      `   boreDOM.define('${tagName}', '<your template>', ({ state }) => ({ slots }) => { ... })`
-    );
-  }
-  function observeUndefinedElements() {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("templateInference")) return;
-    if (typeof window === "undefined") return;
-    if (templateObserver) return;
-    templateObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of Array.from(mutation.addedNodes)) {
-          if (node instanceof HTMLElement && node.tagName.includes("-")) {
-            const tagName = node.tagName.toLowerCase();
-            if (!customElements.get(tagName)) {
-              const template = document.querySelector(
-                `template[data-component="${tagName}"]`
-              );
-              if (!template) {
-                queueMicrotask(() => {
-                  if (!customElements.get(tagName)) {
-                    registerInferredComponent(tagName, node);
-                  }
-                });
-              }
-            }
-          }
-        }
-      }
-    });
-    templateObserver.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-  function stopObservingUndefinedElements() {
-    if (templateObserver) {
-      templateObserver.disconnect();
-      templateObserver = null;
-    }
-  }
-  function kebabToCamel(str) {
-    return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-  }
-  function camelToKebab(str) {
-    return str.replace(/([A-Z])/g, "-$1").toLowerCase();
-  }
-  function parseAttributeValue(value) {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    const num = Number(value);
-    if (!isNaN(num) && value !== "") return num;
-    if (value.startsWith("{") || value.startsWith("[")) {
-      try {
-        return JSON.parse(value);
-      } catch {
-        return value;
-      }
-    }
-    return value;
-  }
-  function formatValue(value) {
-    if (value === null || value === void 0) return "";
-    if (typeof value === "object") return JSON.stringify(value);
-    return String(value);
-  }
-  var userDefinedHelpers, missingFunctions, lastMissing, inferredTemplates, templateObserver, insideOutAPI;
-  var init_inside_out = __esm({
-    "src/inside-out.ts"() {
-      "use strict";
-      init_debug();
-      init_console_api();
-      init_type_inference();
-      userDefinedHelpers = /* @__PURE__ */ new Map();
-      missingFunctions = /* @__PURE__ */ new Map();
-      lastMissing = null;
-      inferredTemplates = /* @__PURE__ */ new Map();
-      templateObserver = null;
-      insideOutAPI = {
-        /** Map of missing function calls by function name */
-        get missingFunctions() {
-          return missingFunctions;
-        },
-        /** Most recent missing function context */
-        get lastMissing() {
-          return lastMissing;
-        },
-        /** Define a helper function available to all render functions */
-        defineHelper,
-        /** Get all defined helpers */
-        get helpers() {
-          return new Map(userDefinedHelpers);
-        },
-        /** Clear a helper definition */
-        clearHelper,
-        /** Clear all missing function records */
-        clearMissingFunctions,
-        /** Map of inferred templates by tag name */
-        get inferredTemplates() {
-          return inferredTemplates;
-        },
-        /** Manually infer template for a tag (useful for testing) */
-        inferTemplate
-      };
-    }
-  });
-
   // src/version.ts
   var VERSION;
   var init_version = __esm({
@@ -22890,1012 +22825,79 @@ ${propsSlots || defaultSlot}
     }
   });
 
-  // src/validation.ts
-  function setValidationAppState(state) {
-    currentAppState2 = state;
-  }
-  function getValidationAppState() {
-    return currentAppState2;
-  }
-  function createStateSnapshot() {
-    if (!currentAppState2) return null;
-    return deepClone(currentAppState2.app);
-  }
-  function restoreStateSnapshot(snapshot) {
-    if (!currentAppState2 || !snapshot) return;
-    const current = currentAppState2.app;
-    if (!current) return;
-    for (const key of Object.keys(current)) {
-      if (!(key in snapshot)) {
-        delete current[key];
-      }
-    }
-    for (const [key, value] of Object.entries(snapshot)) {
-      current[key] = deepClone(value);
-    }
-  }
-  function deepClone(obj, seen = /* @__PURE__ */ new WeakMap()) {
-    if (obj === null || typeof obj !== "object") return obj;
-    if (seen.has(obj)) return seen.get(obj);
-    if (obj instanceof Date) return new Date(obj);
-    if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags);
-    if (obj instanceof Map) {
-      const clonedMap = /* @__PURE__ */ new Map();
-      seen.set(obj, clonedMap);
-      for (const [key, value] of obj.entries()) {
-        clonedMap.set(deepClone(key, seen), deepClone(value, seen));
-      }
-      return clonedMap;
-    }
-    if (obj instanceof Set) {
-      const clonedSet = /* @__PURE__ */ new Set();
-      seen.set(obj, clonedSet);
-      for (const value of obj) {
-        clonedSet.add(deepClone(value, seen));
-      }
-      return clonedSet;
-    }
-    if (Array.isArray(obj)) {
-      const clonedArr = new Array(obj.length);
-      seen.set(obj, clonedArr);
-      for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-          clonedArr[key] = deepClone(obj[key], seen);
-        }
-      }
-      return clonedArr;
-    }
-    const cloned = {};
-    seen.set(obj, cloned);
-    for (const [key, value] of Object.entries(obj)) {
-      cloned[key] = deepClone(value, seen);
-    }
-    return cloned;
-  }
-  function validateSyntax(code) {
-    const issues = [];
-    try {
-      new Function("state", "boreDOM", code);
-    } catch (e) {
-      const error = e;
-      issues.push({
-        type: "syntax",
-        message: error.message,
-        location: extractLocation(error),
-        severity: "error"
-      });
-    }
-    return issues;
-  }
-  function extractLocation(error) {
-    const posMatch = error.message.match(/at position (\d+)/);
-    if (posMatch) return `position ${posMatch[1]}`;
-    const lineMatch = error.message.match(/line (\d+)/);
-    if (lineMatch) return `line ${lineMatch[1]}`;
-    return void 0;
-  }
-  function validateReferences(code) {
-    const issues = [];
-    if (!currentAppState2) return issues;
-    const state = currentAppState2.app;
-    const knownPaths = getKnownStatePaths(state);
-    const knownHelpers = getKnownHelpers();
-    const stateRefs = extractStateReferences(code);
-    for (const ref of stateRefs) {
-      if (!isValidPath(ref, knownPaths)) {
-        const suggestion = findSimilarPath(ref, knownPaths);
-        issues.push({
-          type: "reference",
-          message: `${ref} is undefined`,
-          suggestion: suggestion ? `Did you mean ${suggestion}?` : void 0,
-          severity: "error"
-        });
-      }
-    }
-    const helperRefs = extractHelperReferences(code);
-    for (const ref of helperRefs) {
-      if (!knownHelpers.includes(ref)) {
-        const suggestion = findSimilar(ref, knownHelpers);
-        issues.push({
-          type: "reference",
-          message: `Helper '${ref}' is not defined`,
-          suggestion: suggestion ? `Did you mean '${suggestion}'?` : void 0,
-          severity: "error"
-        });
-      }
-    }
-    return issues;
-  }
-  function extractStateReferences(code) {
-    const refs = [];
-    const regex = /state\.([\w.[\]]+)/g;
-    let match;
-    while ((match = regex.exec(code)) !== null) {
-      let path = match[1];
-      const methodPattern = /\.(push|pop|shift|unshift|map|filter|reduce|forEach|find|findIndex|some|every|indexOf|includes|splice|slice|concat|join|reverse|sort|flat|flatMap|at|fill|copyWithin|entries|keys|values|length|size|get|set|has|delete|add|clear|toString|valueOf|toJSON)$/;
-      path = path.replace(methodPattern, "");
-      if (path) {
-        refs.push(`state.${path}`);
-      }
-    }
-    return [...new Set(refs)];
-  }
-  function extractHelperReferences(code) {
-    const refs = [];
-    const regex = /helpers\.(\w+)\s*\(/g;
-    let match;
-    while ((match = regex.exec(code)) !== null) {
-      refs.push(match[1]);
-    }
-    return [...new Set(refs)];
-  }
-  function getKnownStatePaths(state, prefix = "state", seen = /* @__PURE__ */ new WeakSet()) {
-    const paths = [prefix];
-    if (state === null || state === void 0) return paths;
-    if (typeof state !== "object") return paths;
-    if (seen.has(state)) return paths;
-    seen.add(state);
-    for (const key of Object.keys(state)) {
-      const path = `${prefix}.${key}`;
-      paths.push(path);
-      const value = state[key];
-      if (Array.isArray(value)) {
-        paths.push(path);
-        if (value.length > 0 && value[0] && typeof value[0] === "object") {
-          paths.push(...getKnownStatePaths(value[0], `${path}[0]`, seen));
-        }
-      } else if (value && typeof value === "object") {
-        paths.push(...getKnownStatePaths(value, path, seen));
-      }
-    }
-    return paths;
-  }
-  function isValidPath(ref, knownPaths) {
-    if (knownPaths.includes(ref)) return true;
-    const basePath = ref.replace(/\[\d+\]/g, "");
-    if (knownPaths.includes(basePath)) return true;
-    const arrayBasePath = ref.replace(/\[\d+\]\.[\w.]+$/, "");
-    if (knownPaths.includes(arrayBasePath) || knownPaths.includes(`${arrayBasePath}[0]`)) return true;
-    return false;
-  }
-  function findSimilarPath(ref, knownPaths) {
-    let best;
-    let bestScore = Infinity;
-    for (const path of knownPaths) {
-      const score = levenshtein(ref, path);
-      if (score < bestScore && score < ref.length / 2) {
-        bestScore = score;
-        best = path;
-      }
-    }
-    return best;
-  }
-  function findSimilar(name, known) {
-    for (const k of known) {
-      if (levenshtein(name, k) <= 2) return k;
-    }
-    return void 0;
-  }
-  function levenshtein(a, b) {
-    const matrix = [];
-    for (let i = 0; i <= b.length; i++) {
-      matrix[i] = [i];
-    }
-    for (let j = 0; j <= a.length; j++) {
-      matrix[0][j] = j;
-    }
-    for (let i = 1; i <= b.length; i++) {
-      for (let j = 1; j <= a.length; j++) {
-        if (b.charAt(i - 1) === a.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            // substitution
-            matrix[i][j - 1] + 1,
-            // insertion
-            matrix[i - 1][j] + 1
-            // deletion
-          );
-        }
-      }
-    }
-    return matrix[b.length][a.length];
-  }
-  function getKnownHelpers() {
-    if (typeof window === "undefined") return [];
-    const boredom = window.boreDOM;
-    if (!boredom?.helpers) return [];
-    return Array.from(boredom.helpers.keys());
-  }
-  function validateTypes(code) {
-    const issues = [];
-    const arrayMethodPatterns = [
-      { pattern: /\.map\s*\(/, method: "map" },
-      { pattern: /\.filter\s*\(/, method: "filter" },
-      { pattern: /\.forEach\s*\(/, method: "forEach" },
-      { pattern: /\.reduce\s*\(/, method: "reduce" },
-      { pattern: /\.find\s*\(/, method: "find" },
-      { pattern: /\.some\s*\(/, method: "some" },
-      { pattern: /\.every\s*\(/, method: "every" }
-    ];
-    for (const { pattern, method } of arrayMethodPatterns) {
-      if (pattern.test(code)) {
-        const regex = new RegExp(`(state\\.[\\w.]+)\\.${method}\\s*\\(`);
-        const match2 = code.match(regex);
-        if (match2) {
-          const path = match2[1];
-          const value = getStateValue(path);
-          if (value === null || value === void 0) {
-            issues.push({
-              type: "type",
-              message: `${path} is ${value}, cannot call .${method}()`,
-              suggestion: `Add null check: ${path}?.${method}(...) or initialize ${path} first`,
-              severity: "error"
-            });
-          } else if (!Array.isArray(value)) {
-            issues.push({
-              type: "type",
-              message: `${path} is not an array, cannot call .${method}()`,
-              suggestion: `Ensure ${path} is an array before calling .${method}()`,
-              severity: "error"
-            });
-          }
-        }
-      }
-    }
-    const propAccessRegex = /state\.([\w.]+)\.([\w]+)/g;
-    let match;
-    while ((match = propAccessRegex.exec(code)) !== null) {
-      const basePath = `state.${match[1]}`;
-      const value = getStateValue(basePath);
-      if (value === null || value === void 0) {
-        issues.push({
-          type: "type",
-          message: `${basePath} is ${value}, cannot read property '${match[2]}'`,
-          suggestion: `Add null check: ${basePath}?.${match[2]} or initialize ${basePath} first`,
-          severity: "warning"
-        });
-      }
-    }
-    if (code.includes("await ") || code.includes("async ")) {
-      issues.push({
-        type: "warning",
-        message: "Async code detected - apply() executes synchronously",
-        suggestion: "Use regular synchronous code or handle async separately",
-        severity: "warning"
-      });
-    }
-    return issues;
-  }
-  function getStateValue(path) {
-    if (!currentAppState2) return void 0;
-    const parts = path.replace("state.", "").split(".");
-    let current = currentAppState2.app;
-    for (const part of parts) {
-      if (current === null || current === void 0) return current;
-      const arrayMatch = part.match(/^(\w+)\[(\d+)\]$/);
-      if (arrayMatch) {
-        current = current[arrayMatch[1]];
-        if (Array.isArray(current)) {
-          current = current[parseInt(arrayMatch[2], 10)];
-        } else {
-          return void 0;
-        }
-      } else {
-        current = current[part];
-      }
-    }
-    return current;
-  }
-  function calculateStateChanges(before, after, path = "state") {
-    const changes = [];
-    if (before === after) return changes;
-    if (typeof before !== typeof after) {
-      changes.push({ path, before, after });
-      return changes;
-    }
-    if (Array.isArray(before) && Array.isArray(after)) {
-      if (JSON.stringify(before) !== JSON.stringify(after)) {
-        changes.push({ path, before, after });
-      }
-      return changes;
-    }
-    if (typeof before === "object" && before !== null && after !== null) {
-      const allKeys = /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)]);
-      for (const key of allKeys) {
-        changes.push(...calculateStateChanges(before[key], after[key], `${path}.${key}`));
-      }
-      return changes;
-    }
-    if (before !== after) {
-      changes.push({ path, before, after });
-    }
-    return changes;
-  }
-  function getAffectedComponents(_changes) {
-    return [];
-  }
-  function validate(code) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      return { valid: true, issues: [] };
-    }
-    if (!isDebugEnabled("llm")) {
-      return { valid: true, issues: [] };
-    }
-    const issues = [
-      ...validateSyntax(code),
-      ...validateReferences(code),
-      ...validateTypes(code)
-    ];
-    const errors2 = issues.filter((i) => i.severity === "error");
-    return {
-      valid: errors2.length === 0,
-      issues
-    };
-  }
-  function apply2(code) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      return {
-        success: false,
-        error: "apply() not available in production",
-        rollback: () => {
-        },
-        componentsAffected: [],
-        stateChanges: []
-      };
-    }
-    if (!isDebugEnabled("llm")) {
-      return {
-        success: false,
-        error: "LLM API is disabled",
-        rollback: () => {
-        },
-        componentsAffected: [],
-        stateChanges: []
-      };
-    }
-    const snapshot = createStateSnapshot();
-    const stateBefore = deepClone(snapshot);
-    const validation = validate(code);
-    if (!validation.valid) {
-      const errorMsg = validation.issues.filter((i) => i.severity === "error").map((i) => i.message).join("; ");
-      recordAttempt(code, "error", errorMsg);
-      return {
-        success: false,
-        error: `Validation failed: ${errorMsg}`,
-        rollback: () => {
-        },
-        componentsAffected: [],
-        stateChanges: []
-      };
-    }
-    try {
-      const execFn = new Function("state", "boreDOM", code);
-      execFn(currentAppState2?.app, typeof window !== "undefined" ? window.boreDOM : void 0);
-      const stateAfter = createStateSnapshot();
-      const stateChanges = calculateStateChanges(stateBefore, stateAfter);
-      recordAttempt(code, "success");
-      return {
-        success: true,
-        rollback: () => restoreStateSnapshot(snapshot),
-        componentsAffected: getAffectedComponents(stateChanges),
-        stateChanges
-      };
-    } catch (e) {
-      restoreStateSnapshot(snapshot);
-      const error = e;
-      recordAttempt(code, "error", error.message);
-      return {
-        success: false,
-        error: error.message,
-        rollback: () => {
-        },
-        // Already rolled back
-        componentsAffected: [],
-        stateChanges: []
-      };
-    }
-  }
-  function applyBatch(codeBlocks) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      return {
-        success: false,
-        results: [],
-        rollbackAll: () => {
-        },
-        error: "applyBatch() not available in production"
-      };
-    }
-    if (!isDebugEnabled("llm")) {
-      return {
-        success: false,
-        results: [],
-        rollbackAll: () => {
-        },
-        error: "LLM API is disabled"
-      };
-    }
-    const initialSnapshot = createStateSnapshot();
-    const results2 = [];
-    for (let i = 0; i < codeBlocks.length; i++) {
-      const result = apply2(codeBlocks[i]);
-      results2.push(result);
-      if (!result.success) {
-        restoreStateSnapshot(initialSnapshot);
-        return {
-          success: false,
-          results: results2,
-          rollbackAll: () => {
-          },
-          // Already rolled back
-          error: result.error,
-          failedIndex: i
-        };
-      }
-    }
-    return {
-      success: true,
-      results: results2,
-      rollbackAll: () => restoreStateSnapshot(initialSnapshot)
-    };
-  }
-  var currentAppState2;
-  var init_validation = __esm({
-    "src/validation.ts"() {
-      "use strict";
-      init_debug();
-      init_llm();
-      currentAppState2 = null;
-    }
-  });
-
   // src/llm.ts
   var llm_exports = {};
   __export(llm_exports, {
-    clearAttempts: () => clearAttempts,
-    context: () => context,
-    copy: () => copy,
-    focus: () => focus,
-    formatErrorForLLM: () => formatErrorForLLM,
-    getAttempts: () => getAttempts,
-    isLLMOutputFormat: () => isLLMOutputFormat,
-    llmAPI: () => llmAPI,
-    llmLog: () => llmLog,
-    recordAttempt: () => recordAttempt,
-    setValidationAppState: () => setValidationAppState
+    llmAPI: () => llmAPI
   });
-  function isSameObject(a, b) {
-    if (a === b) return true;
-    if (!a || !b) return false;
-    if (typeof a !== "object" || typeof b !== "object") return false;
-    try {
-      const marker = Date.now() + Math.random();
-      a[CIRCULAR_CHECK] = marker;
-      const same = b[CIRCULAR_CHECK] === marker;
-      delete a[CIRCULAR_CHECK];
-      return same;
-    } catch {
-      return false;
-    }
-  }
-  function getStatePaths(obj, prefix = "", seen = /* @__PURE__ */ new WeakSet()) {
-    const paths = [];
-    if (obj === null || obj === void 0) return paths;
-    if (typeof obj !== "object") return paths;
-    if (seen.has(obj)) return paths;
-    seen.add(obj);
-    for (const key of Object.keys(obj)) {
-      const path = prefix ? `${prefix}.${key}` : key;
-      paths.push(path);
-      const value = obj[key];
-      if (Array.isArray(value)) {
-        paths.push(`${path}[]`);
-        if (value.length > 0 && typeof value[0] === "object" && value[0] !== null) {
-          paths.push(...getStatePaths(value[0], `${path}[0]`, seen));
-        }
-      } else if (value && typeof value === "object") {
-        paths.push(...getStatePaths(value, path, seen));
-      }
-    }
-    return paths;
-  }
-  function inferTypeShape(obj, seen = /* @__PURE__ */ new WeakSet()) {
-    if (obj === null) return "null";
-    if (obj === void 0) return "undefined";
-    if (Array.isArray(obj)) {
-      if (obj.length === 0) return "any[]";
-      const elemType = inferTypeShape(obj[0], seen);
-      return `${elemType}[]`;
-    }
-    if (typeof obj === "object") {
-      if (seen.has(obj)) return "/* circular */";
-      seen.add(obj);
-      const props = Object.entries(obj).map(([k, v]) => `  ${k}: ${inferTypeShape(v, seen)}`).join("\n");
-      return `{
-${props}
-}`;
-    }
-    return typeof obj;
-  }
-  function sanitizeState(state, seen = /* @__PURE__ */ new WeakSet(), root) {
-    if (state === null || state === void 0) return state;
-    if (typeof state !== "object") return state;
-    if (typeof state === "function") return "[Function]";
-    if (typeof state === "symbol") return "[Symbol]";
-    if (state instanceof Date) return state.toISOString();
-    if (state instanceof RegExp) return state.toString();
-    if (state instanceof Map) return "[Map]";
-    if (state instanceof Set) return "[Set]";
-    if (root === void 0) root = state;
-    if (seen.has(state)) return "[Circular]";
-    seen.add(state);
-    const sanitized = Array.isArray(state) ? [] : {};
-    for (const [key, value] of Object.entries(state)) {
-      const isSensitive = SENSITIVE_KEYS.some(
-        (s) => key.toLowerCase().includes(s.toLowerCase())
-      );
-      if (isSensitive) {
-        sanitized[key] = "[REDACTED]";
-      } else if (value && typeof value === "object") {
-        if (isSameObject(value, root)) {
-          sanitized[key] = "[Circular]";
-        } else if (seen.has(value)) {
-          sanitized[key] = "[Circular]";
-        } else {
-          sanitized[key] = sanitizeState(value, seen, root);
-        }
-      } else if (typeof value === "function") {
-        sanitized[key] = "[Function]";
-      } else if (typeof value === "symbol") {
-        sanitized[key] = "[Symbol]";
-      } else {
-        sanitized[key] = value;
-      }
-    }
-    return sanitized;
-  }
-  function generateSuggestion(ctx) {
-    const msg = ctx.error.message.toLowerCase();
-    if (msg.includes("undefined") && msg.includes("reading")) {
-      const match = msg.match(/reading '(\w+)'/);
-      if (match) {
-        return `Property access on null/undefined. Add null check before accessing '${match[1]}' or initialize the value.`;
-      }
-    }
-    if (msg.includes("is not a function")) {
-      const match = msg.match(/(\w+) is not a function/);
-      if (match) {
-        return `'${match[1]}' is not a function. Check if it's defined, imported, or if the object exists.`;
-      }
-    }
-    if (msg.includes("map") || msg.includes("filter") || msg.includes("foreach")) {
-      return "Array method called on non-array. Initialize as empty array or add type check.";
-    }
-    if (msg.includes("null") || msg.includes("undefined")) {
-      return "Null/undefined value encountered. Add defensive checks or initialize data.";
-    }
-    return "Check the error message and component state for the root cause.";
-  }
-  function getErrorMap() {
-    return debugAPI.errors;
-  }
-  function getMissingFunctionsMap() {
-    return insideOutAPI.missingFunctions;
-  }
-  function getDefinedHelpersMap() {
-    return insideOutAPI.helpers;
-  }
-  function getMissingComponents() {
-    if (typeof document === "undefined") return [];
-    const missing = [];
-    const all = document.querySelectorAll("*");
-    for (const el of Array.from(all)) {
-      const tag = el.tagName.toLowerCase();
-      if (tag.includes("-") && !customElements.get(tag)) {
-        if (!missing.includes(tag)) {
-          missing.push(tag);
-        }
-      }
-    }
-    return missing;
-  }
-  function getRegisteredComponents() {
-    const appState = getCurrentAppState();
-    if (!appState) return [];
-    return appState.internal.customTags || [];
-  }
-  function getComponentTemplate(tagName) {
-    if (typeof document === "undefined") return null;
-    const template = document.querySelector(`template[data-component="${tagName}"]`);
-    return template?.innerHTML ?? null;
-  }
-  function countComponentInstances(tagName) {
-    if (typeof document === "undefined") return 0;
-    return document.querySelectorAll(tagName).length;
-  }
-  function buildComponentInfo(tagName) {
-    const appState = getCurrentAppState();
-    const hasLogic = appState?.internal.components.has(tagName) ?? false;
-    const template = getComponentTemplate(tagName);
-    const instanceCount = countComponentInstances(tagName);
-    const errors2 = getErrorMap();
-    const hasError = errors2.has(tagName);
-    const refs = [];
-    const slots = [];
-    if (template) {
-      const tempDiv = document.createElement("div");
-      tempDiv.innerHTML = template;
-      tempDiv.querySelectorAll("[data-ref]").forEach((el) => {
-        const refName = el.getAttribute("data-ref");
-        if (refName) refs.push(refName);
-      });
-      tempDiv.querySelectorAll("[data-slot], slot[name]").forEach((el) => {
-        const slotName = el.getAttribute("data-slot") || el.getAttribute("name");
-        if (slotName) slots.push(slotName);
-      });
-    }
-    return {
-      tagName,
-      template,
-      hasLogic,
-      refs,
-      slots,
-      events: [],
-      // Would need to track from on() calls
-      stateAccess: [],
-      // Would need to track from state access
-      hasError,
-      instanceCount
-    };
-  }
-  function buildComponentMap() {
-    const tags = getRegisteredComponents();
-    const map = {};
-    for (const tag of tags) {
-      map[tag] = buildComponentInfo(tag);
-    }
-    return map;
-  }
-  function getCapabilities() {
-    const capabilities = ["reactive-state", "web-components", "event-handling"];
-    const config3 = getDebugConfig();
-    if (config3.errorBoundary) capabilities.push("error-boundary");
-    if (config3.globals) capabilities.push("debug-globals");
-    if (config3.api) capabilities.push("runtime-define");
-    if (config3.methodMissing) capabilities.push("method-missing");
-    if (config3.templateInference) capabilities.push("template-inference");
-    return capabilities;
-  }
-  function detectPatterns() {
-    const tags = getRegisteredComponents();
-    const componentNaming = tags.length > 0 ? tags.every((t) => t.match(/^[a-z]+-[a-z]+(-[a-z]+)*$/)) ? "kebab-case (e.g., user-profile, todo-list)" : "mixed" : "unknown";
-    return {
-      eventNaming: "unknown",
-      // Would need to track events
-      stateStructure: "unknown",
-      // Would need to analyze state shape
-      componentNaming
-    };
-  }
-  function inferSignature(name, args) {
-    if (args.length === 0) return `${name}(): any`;
-    const argTypes = args.map((arg, i) => {
-      if (arg === null) return `arg${i}: null`;
-      if (arg === void 0) return `arg${i}: undefined`;
-      if (Array.isArray(arg)) return `items: any[]`;
-      if (typeof arg === "object") return `data: object`;
-      return `arg${i}: ${typeof arg}`;
-    });
-    return `${name}(${argTypes.join(", ")}): any`;
-  }
-  function getEmptyContext() {
-    return {
-      framework: {
-        name: "boreDOM",
-        version: VERSION,
-        capabilities: []
-      },
-      state: {
-        shape: "{}",
-        paths: [],
-        sample: {}
-      },
-      components: {},
-      issues: {
-        errors: [],
-        missingFunctions: [],
-        missingComponents: []
-      },
-      helpers: {
-        defined: {},
-        missing: {}
-      },
-      patterns: {
-        eventNaming: "unknown",
-        stateStructure: "unknown",
-        componentNaming: "unknown"
-      }
-    };
-  }
-  function getEmptyFocusedContext() {
-    return {
-      issue: {
-        type: "none",
-        description: "LLM features disabled or unavailable"
-      },
-      relevantState: {}
-    };
-  }
-  function context() {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      return getEmptyContext();
-    }
-    if (!isDebugEnabled("llm")) {
-      return getEmptyContext();
-    }
-    const appState = getCurrentAppState();
-    const state = appState?.app ?? {};
-    const errors2 = getErrorMap();
-    const missingFns = getMissingFunctionsMap();
-    const definedHelpers = getDefinedHelpersMap();
-    const errorInfos = Array.from(errors2.values()).map((ctx) => ({
-      component: ctx.component,
-      error: ctx.error.message,
-      stack: ctx.stack,
-      state: sanitizeState(ctx.state),
-      timestamp: ctx.timestamp
-    }));
-    const missingFnInfos = [];
-    const missingCallInfos = {};
-    for (const [name, calls] of missingFns.entries()) {
-      const allArgs = calls.map((c) => c.args);
-      const components = [...new Set(calls.map((c) => c.component))];
-      const lastCall = Math.max(...calls.map((c) => c.timestamp));
-      missingFnInfos.push({
-        name,
-        args: calls[0]?.args ?? [],
-        component: calls[0]?.component ?? "unknown",
-        inferredSignature: inferSignature(name, calls[0]?.args ?? []),
-        callCount: calls.length
-      });
-      missingCallInfos[name] = {
-        args: allArgs,
-        components,
-        lastCall
-      };
-    }
-    const definedHelperSignatures = {};
-    for (const [name, fn] of definedHelpers.entries()) {
-      definedHelperSignatures[name] = `${name}(${fn.length > 0 ? "..." : ""}): any`;
-    }
-    return {
-      framework: {
-        name: "boreDOM",
-        version: VERSION,
-        capabilities: getCapabilities()
-      },
-      state: {
-        shape: inferTypeShape(state),
-        paths: getStatePaths(state),
-        sample: sanitizeState(state)
-      },
-      components: buildComponentMap(),
-      issues: {
-        errors: errorInfos,
-        missingFunctions: missingFnInfos,
-        missingComponents: getMissingComponents()
-      },
-      helpers: {
-        defined: definedHelperSignatures,
-        missing: missingCallInfos
-      },
-      patterns: detectPatterns()
-    };
-  }
-  function focus() {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      return getEmptyFocusedContext();
-    }
-    if (!isDebugEnabled("llm")) {
-      return getEmptyFocusedContext();
-    }
-    const errors2 = getErrorMap();
-    if (errors2.size > 0) {
-      const errorList = Array.from(errors2.values());
-      const latest = errorList[errorList.length - 1];
-      return {
-        issue: {
-          type: "error",
-          description: latest.error.message,
-          component: latest.component,
-          suggestion: generateSuggestion(latest)
-        },
-        component: {
-          ...buildComponentInfo(latest.component),
-          currentState: sanitizeState(latest.state)
-        },
-        relevantState: sanitizeState(latest.state),
-        previousAttempts: getRecentAttempts()
-      };
-    }
-    const missingFns = getMissingFunctionsMap();
-    if (missingFns.size > 0) {
-      const entries = Array.from(missingFns.entries());
-      const [name, calls] = entries[entries.length - 1];
-      const lastCall = calls[calls.length - 1];
-      return {
-        issue: {
-          type: "missing_function",
-          description: `Undefined function '${name}' called`,
-          component: lastCall?.component,
-          suggestion: `Define helper: boreDOM.defineHelper("${name}", (${inferSignature(name, lastCall?.args ?? []).split("(")[1]?.split(")")[0] || ""}) => { /* implementation */ })`
-        },
-        component: lastCall?.component ? {
-          ...buildComponentInfo(lastCall.component),
-          currentState: sanitizeState(getCurrentAppState()?.app)
-        } : void 0,
-        relevantState: sanitizeState(getCurrentAppState()?.app),
-        previousAttempts: getRecentAttempts()
-      };
-    }
-    const missingComponents = getMissingComponents();
-    if (missingComponents.length > 0) {
-      const tagName = missingComponents[0];
-      return {
-        issue: {
-          type: "missing_component",
-          description: `Custom element <${tagName}> used but not defined`,
-          suggestion: `Define component: boreDOM.define("${tagName}", "<template-html>", ({ state }) => ({ slots }) => { /* render */ })`
-        },
-        relevantState: sanitizeState(getCurrentAppState()?.app),
-        previousAttempts: getRecentAttempts()
-      };
-    }
-    return {
-      issue: {
-        type: "none",
-        description: "No current issues detected"
-      },
-      relevantState: sanitizeState(getCurrentAppState()?.app)
-    };
-  }
-  function copy() {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      return "{}";
-    }
-    if (!isDebugEnabled("llm")) {
-      return "{}";
-    }
-    const ctx = focus();
-    const json = JSON.stringify(ctx, null, 2);
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(json).then(() => {
-        if (isDebugEnabled("console")) {
-          console.log(
-            "%c\u{1F4CB} boreDOM: LLM context copied to clipboard",
-            "color: #27ae60; font-weight: bold"
-          );
-        }
-      }).catch(() => {
-        if (isDebugEnabled("console")) {
-          console.log(
-            "%c\u{1F4CB} boreDOM: Clipboard access failed, context logged below:",
-            "color: #f39c12; font-weight: bold"
-          );
-          console.log(json);
-        }
-      });
-    } else if (isDebugEnabled("console")) {
-      console.log(
-        "%c\u{1F4CB} boreDOM: Clipboard unavailable, context logged below:",
-        "color: #f39c12; font-weight: bold"
-      );
-      console.log(json);
-    }
-    return json;
-  }
-  function recordAttempt(code, result, error) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("llm")) return;
-    attempts.push({
-      code,
-      result,
-      error,
-      timestamp: Date.now()
-    });
-    if (attempts.length > 10) {
-      attempts = attempts.slice(-10);
-    }
-  }
-  function getRecentAttempts() {
-    return [...attempts];
-  }
-  function getAttempts() {
-    return [...attempts];
-  }
-  function clearAttempts() {
-    attempts = [];
-  }
-  function formatErrorForLLM(ctx) {
-    return JSON.stringify({
-      type: "error",
-      component: ctx.component,
-      error: ctx.error.message,
-      stack: ctx.stack,
-      state: sanitizeState(ctx.state),
-      refs: Object.keys(ctx.refs),
-      slots: Object.keys(ctx.slots),
-      suggestion: generateSuggestion(ctx),
-      timestamp: ctx.timestamp
-    });
-  }
-  function llmLog(type3, data) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    const config3 = getDebugConfig();
-    if (config3.outputFormat === "llm") {
-      console.log(JSON.stringify({ type: type3, ...data }));
-    }
-  }
-  function isLLMOutputFormat() {
-    const config3 = getDebugConfig();
-    return config3.outputFormat === "llm";
-  }
-  var attempts, SENSITIVE_KEYS, CIRCULAR_CHECK, llmAPI;
+  var isLLMEnabled, _vision, _transact, llmAPI;
   var init_llm = __esm({
     "src/llm.ts"() {
       "use strict";
-      init_debug();
+      init_vision();
+      init_patch();
       init_console_api();
-      init_inside_out();
+      init_flatten();
       init_version();
-      init_type_inference();
-      init_validation();
-      attempts = [];
-      SENSITIVE_KEYS = [
-        "password",
-        "token",
-        "secret",
-        "apiKey",
-        "api_key",
-        "auth",
-        "credential",
-        "private",
-        "key",
-        "pass"
-      ];
-      CIRCULAR_CHECK = Symbol("__llm_circular_check__");
+      isLLMEnabled = typeof __LLM__ !== "undefined" ? __LLM__ : typeof __DEBUG__ === "undefined" || __DEBUG__;
+      _vision = (root) => {
+        return getSemanticDOM(root || document.body);
+      };
+      _transact = (patch) => {
+        const appState = getCurrentAppState();
+        if (!appState || !appState.app) {
+          return { success: false, error: "No app state found" };
+        }
+        return applyPatch(appState.app, patch);
+      };
       llmAPI = {
-        /** Get complete session context */
-        context,
-        /** Get focused context for current issue */
-        focus,
-        /** Copy context to clipboard */
-        copy,
-        /** Get all recorded attempts */
-        get attempts() {
-          return getAttempts();
-        },
-        /** Clear recorded attempts */
-        clearAttempts,
-        /** @internal Record an attempt */
-        _recordAttempt: recordAttempt,
-        // Type inference (Phase 5)
-        /** Infer TypeScript types from runtime usage */
-        inferTypes,
-        /** Get inferred type for a specific path */
-        typeOf,
-        /** Clear type tracking data (for testing) */
-        _clearTypes: clearTypeTracking,
-        // Validation & Apply (Phase 6)
-        /** Validate code without executing */
-        validate,
-        /** Execute code with automatic rollback on error */
-        apply: apply2,
-        /** Apply multiple code blocks atomically */
-        applyBatch,
-        /** @internal Set validation app state (used by inflictBoreDOM) */
-        _setValidationAppState: setValidationAppState
+        /**
+         * Returns a lightweight, semantic JSON tree of the DOM.
+         * Use this to "see" the UI structure, attributes, and text without
+         * the noise of full DOM nodes. Hidden elements and scripts are ignored.
+         * 
+         * @returns {SemanticNode | null} The root node of the semantic tree.
+         */
+        vision: isLLMEnabled ? _vision : () => null,
+        /**
+         * Safely modifies the app state using a JSON Patch transaction.
+         * Supports operations: "add", "remove", "replace", "test".
+         * 
+         * ATOMICITY: If any operation fails (including a "test"), the entire
+         * transaction is rolled back, and the state remains unchanged.
+         * 
+         * REACTIVITY: Successful patches automatically trigger DOM updates.
+         * 
+         * @param {JSONPatchOp[]} patch - Array of patch operations.
+         * @returns {TransactionResult} { success: true } or { success: false, error: string }
+         */
+        transact: isLLMEnabled ? _transact : () => ({ success: false, error: "Production mode" }),
+        /**
+         * Returns a compact, LLM-friendly summary of the app.
+         * Includes framework/version, component list, and state paths.
+         */
+        compact: isLLMEnabled ? () => {
+          const appState = getCurrentAppState();
+          if (!appState || !appState.app) return null;
+          const state = appState.app;
+          const paths = flatten(state).map((entry) => entry.path.join("."));
+          const sample = {};
+          Object.entries(state).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              sample[key] = `[${value.length}]`;
+            } else if (value && typeof value === "object") {
+              sample[key] = "{...}";
+            } else {
+              sample[key] = value;
+            }
+          });
+          const components = Array.from(appState.internal.components.entries()).map(([tag, logic]) => ({ tag, hasLogic: Boolean(logic) }));
+          return {
+            framework: { name: "boreDOM", version: VERSION },
+            state: { paths, sample },
+            components
+          };
+        } : () => null
       };
     }
   });
@@ -23972,8 +22974,8 @@ ${props}
     if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
     if (!isDebugEnabled("console")) return;
     if (debugConfig.outputFormat === "llm") {
-      Promise.resolve().then(() => (init_llm(), llm_exports)).then(({ formatErrorForLLM: formatErrorForLLM2 }) => {
-        console.log(formatErrorForLLM2(ctx));
+      Promise.resolve().then(() => (init_llm(), llm_exports)).then(({ formatErrorForLLM }) => {
+        console.log(formatErrorForLLM(ctx));
       });
       return;
     }
@@ -23998,17 +23000,17 @@ ${props}
       console.log(`   boreDOM.export('${ctx.component}')`);
     }
   }
-  function logErrorMinimal(component2, error) {
-    console.error(`[boreDOM] Render error in <${component2}>: ${error.message}`);
+  function logErrorMinimal(component3, error) {
+    console.error(`[boreDOM] Render error in <${component3}>: ${error.message}`);
   }
-  function logInitError(component2, error) {
+  function logInitError(component3, error) {
     if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
     if (!isDebugEnabled("console")) return;
     console.log(
       "%c\u{1F534} boreDOM: Error in %c<%s>%c init",
       "color: #ff6b6b; font-weight: bold",
       "color: #4ecdc4; font-weight: bold",
-      component2,
+      component3,
       "color: #ff6b6b"
     );
     console.error(error);
@@ -24019,12 +23021,12 @@ ${props}
     errors.set(ctx.component, ctx);
     lastError = ctx;
   }
-  function clearError(component2) {
+  function clearError(component3) {
     if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
     if (!isDebugEnabled("errorHistory")) return;
-    if (component2) {
-      errors.delete(component2);
-      if (lastError?.component === component2) {
+    if (component3) {
+      errors.delete(component3);
+      if (lastError?.component === component3) {
         lastError = null;
       }
     } else if (lastError) {
@@ -24123,459 +23125,6 @@ ${props}
           return getDebugConfig();
         }
       };
-    }
-  });
-
-  // src/type-inference.ts
-  function inferTypeFromValue(value, seen = /* @__PURE__ */ new WeakSet()) {
-    if (value === null) return { kind: "primitive", value: "null" };
-    if (value === void 0) return { kind: "primitive", value: "undefined" };
-    const type3 = typeof value;
-    if (type3 === "string") return { kind: "primitive", value: "string" };
-    if (type3 === "number") return { kind: "primitive", value: "number" };
-    if (type3 === "boolean") return { kind: "primitive", value: "boolean" };
-    if (type3 === "function") {
-      return { kind: "function", params: [], returnType: { kind: "unknown" } };
-    }
-    if (value instanceof Date) return { kind: "date" };
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        return { kind: "array", elementType: { kind: "unknown" } };
-      }
-      const sampleSize = Math.min(5, value.length);
-      const elementTypes = [];
-      for (let i = 0; i < sampleSize; i++) {
-        elementTypes.push(inferTypeFromValue(value[i], seen));
-      }
-      return { kind: "array", elementType: mergeTypes(elementTypes) };
-    }
-    if (type3 === "object") {
-      if (seen.has(value)) {
-        return { kind: "unknown" };
-      }
-      seen.add(value);
-      const properties = {};
-      for (const [key, val] of Object.entries(value)) {
-        if (typeof key === "symbol") continue;
-        properties[key] = inferTypeFromValue(val, seen);
-      }
-      return { kind: "object", properties };
-    }
-    return { kind: "unknown" };
-  }
-  function mergeTypes(types) {
-    const known = types.filter((t) => t.kind !== "unknown");
-    if (known.length === 0) return { kind: "unknown" };
-    if (known.length === 1) return known[0];
-    if (known.every((t) => t.kind === "primitive")) {
-      const primitives = known;
-      const unique = [...new Set(primitives.map((p) => p.value))];
-      if (unique.length === 1) return known[0];
-      return {
-        kind: "union",
-        types: unique.map((v) => ({ kind: "primitive", value: v }))
-      };
-    }
-    if (known.every((t) => t.kind === "object")) {
-      const objects = known;
-      const mergedProps = {};
-      for (const obj of objects) {
-        for (const [key, type3] of Object.entries(obj.properties)) {
-          if (mergedProps[key]) {
-            mergedProps[key] = mergeTypes([mergedProps[key], type3]);
-          } else {
-            mergedProps[key] = type3;
-          }
-        }
-      }
-      return { kind: "object", properties: mergedProps };
-    }
-    if (known.every((t) => t.kind === "array")) {
-      const arrays = known;
-      const elementTypes = arrays.map((a) => a.elementType);
-      return { kind: "array", elementType: mergeTypes(elementTypes) };
-    }
-    const deduped = deduplicateTypes(known);
-    if (deduped.length === 1) return deduped[0];
-    return { kind: "union", types: deduped };
-  }
-  function deduplicateTypes(types) {
-    const seen = /* @__PURE__ */ new Set();
-    const result = [];
-    for (const type3 of types) {
-      const key = typeNodeToKey(type3);
-      if (!seen.has(key)) {
-        seen.add(key);
-        result.push(type3);
-      }
-    }
-    return result;
-  }
-  function typeNodeToKey(node) {
-    switch (node.kind) {
-      case "primitive":
-        return `p:${node.value}`;
-      case "literal":
-        return `l:${typeof node.value}:${node.value}`;
-      case "array":
-        return `a:${typeNodeToKey(node.elementType)}`;
-      case "object":
-        const props = Object.entries(node.properties).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}:${typeNodeToKey(v)}`).join(",");
-        return `o:{${props}}`;
-      case "union":
-        return `u:[${node.types.map(typeNodeToKey).sort().join("|")}]`;
-      case "function":
-        const params = node.params.map((p) => `${p.name}:${typeNodeToKey(p.type)}`).join(",");
-        return `f:(${params})=>${typeNodeToKey(node.returnType)}`;
-      case "date":
-        return "date";
-      case "unknown":
-        return "unknown";
-    }
-  }
-  function mergeParamTypes(a, b) {
-    const maxLen = Math.max(a.length, b.length);
-    const result = [];
-    for (let i = 0; i < maxLen; i++) {
-      const paramA = a[i];
-      const paramB = b[i];
-      if (paramA && paramB) {
-        result.push({
-          name: paramA.name,
-          type: mergeTypes([paramA.type, paramB.type]),
-          optional: paramA.optional || paramB.optional
-        });
-      } else if (paramA) {
-        result.push({ ...paramA, optional: true });
-      } else if (paramB) {
-        result.push({ ...paramB, optional: true });
-      }
-    }
-    return result;
-  }
-  function trackStateAccess(path, value) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("llm")) return;
-    const existing = stateAccesses.get(path);
-    const inferredType = inferTypeFromValue(value);
-    if (existing) {
-      const merged = mergeTypes([existing.type, inferredType]);
-      stateAccesses.set(path, {
-        path,
-        type: merged,
-        accessCount: existing.accessCount + 1
-      });
-    } else {
-      stateAccesses.set(path, {
-        path,
-        type: inferredType,
-        accessCount: 1
-      });
-    }
-  }
-  function trackFunctionCall(name, args, returnValue) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("llm")) return;
-    const existing = functionCalls.get(name);
-    const argTypes = args.map((arg, i) => ({
-      name: inferArgName(arg, i),
-      type: inferTypeFromValue(arg),
-      optional: false
-    }));
-    const returnType = inferTypeFromValue(returnValue);
-    if (existing) {
-      const mergedParams = mergeParamTypes(existing.params, argTypes);
-      const mergedReturn = mergeTypes([existing.returnType, returnType]);
-      functionCalls.set(name, {
-        params: mergedParams,
-        returnType: mergedReturn,
-        callCount: existing.callCount + 1
-      });
-    } else {
-      functionCalls.set(name, {
-        params: argTypes,
-        returnType,
-        callCount: 1
-      });
-    }
-  }
-  function inferArgName(value, index) {
-    if (value === null || value === void 0) return `arg${index}`;
-    const type3 = typeof value;
-    if (type3 === "string") {
-      if (value.includes("@")) return "email";
-      if (value.match(/^\d{4}-\d{2}-\d{2}/)) return "date";
-      if (value.length > 100) return "text";
-      return "str";
-    }
-    if (type3 === "number") {
-      if (Number.isInteger(value)) {
-        if (value > 1e12) return "timestamp";
-        return "count";
-      }
-      return "value";
-    }
-    if (type3 === "boolean") return "flag";
-    if (Array.isArray(value)) return "items";
-    if (type3 === "object") {
-      if (value instanceof Date) return "date";
-      return "data";
-    }
-    return `arg${index}`;
-  }
-  function trackComponentProps(tagName, props) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("llm")) return;
-    const existing = componentProps.get(tagName) ?? {};
-    for (const [key, value] of Object.entries(props)) {
-      const inferredType = inferTypeFromValue(value);
-      if (existing[key]) {
-        existing[key] = mergeTypes([existing[key], inferredType]);
-      } else {
-        existing[key] = inferredType;
-      }
-    }
-    componentProps.set(tagName, existing);
-  }
-  function trackEventPayload(eventName, payload) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("llm")) return;
-    const existing = eventPayloads.get(eventName);
-    const inferredType = inferTypeFromValue(payload);
-    if (existing) {
-      eventPayloads.set(eventName, mergeTypes([existing, inferredType]));
-    } else {
-      eventPayloads.set(eventName, inferredType);
-    }
-  }
-  function typeNodeToString(node, indent = 0) {
-    const pad = "  ".repeat(indent);
-    switch (node.kind) {
-      case "primitive":
-        return node.value;
-      case "literal":
-        return typeof node.value === "string" ? `"${node.value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"` : String(node.value);
-      case "array":
-        const elemStr = typeNodeToString(node.elementType, indent);
-        if (node.elementType.kind === "primitive" || node.elementType.kind === "unknown") {
-          return `${elemStr}[]`;
-        }
-        return `Array<${elemStr}>`;
-      case "object": {
-        const entries = Object.entries(node.properties);
-        if (entries.length === 0) return "{}";
-        const props = entries.map(([k, v]) => `${pad}  ${k}: ${typeNodeToString(v, indent + 1)};`).join("\n");
-        return `{
-${props}
-${pad}}`;
-      }
-      case "union":
-        const types = node.types.map((t) => typeNodeToString(t, indent));
-        return types.join(" | ");
-      case "function": {
-        const params = node.params.map((p) => `${p.name}${p.optional ? "?" : ""}: ${typeNodeToString(p.type)}`).join(", ");
-        return `(${params}) => ${typeNodeToString(node.returnType)}`;
-      }
-      case "date":
-        return "Date";
-      case "unknown":
-        return "unknown";
-    }
-  }
-  function buildStateTypeNode() {
-    const root = {};
-    for (const [path, access2] of stateAccesses) {
-      setNestedType(root, path, access2.type);
-    }
-    return buildTypeFromNested(root);
-  }
-  function setNestedType(obj, path, type3) {
-    const parts = path.split(".");
-    let current = obj;
-    for (let i = 0; i < parts.length - 1; i++) {
-      const part = parts[i];
-      const arrayMatch2 = part.match(/^(.+)\[(\d+)\]$/);
-      if (arrayMatch2) {
-        const [, name] = arrayMatch2;
-        if (!current[name]) current[name] = { __isArray: true, __elementType: {} };
-        current = current[name].__elementType;
-      } else {
-        if (!current[part]) current[part] = {};
-        current = current[part];
-      }
-    }
-    const lastPart = parts[parts.length - 1];
-    const arrayMatch = lastPart.match(/^(.+)\[(\d+)\]$/);
-    if (arrayMatch) {
-      const [, name] = arrayMatch;
-      if (!current[name]) current[name] = { __isArray: true, __elementType: {} };
-      const existing = current[name].__elementType.__type;
-      if (existing) {
-        current[name].__elementType.__type = mergeTypes([existing, type3]);
-      } else {
-        current[name].__elementType.__type = type3;
-      }
-    } else {
-      const existing = current[lastPart]?.__type;
-      if (existing) {
-        current[lastPart] = { __type: mergeTypes([existing, type3]) };
-      } else {
-        current[lastPart] = { __type: type3 };
-      }
-    }
-  }
-  function buildTypeFromNested(obj) {
-    if (obj.__type) return obj.__type;
-    if (obj.__isArray) {
-      return {
-        kind: "array",
-        elementType: buildTypeFromNested(obj.__elementType)
-      };
-    }
-    const properties = {};
-    for (const [key, value] of Object.entries(obj)) {
-      if (key.startsWith("__")) continue;
-      if (value && typeof value === "object") {
-        properties[key] = buildTypeFromNested(value);
-      }
-    }
-    if (Object.keys(properties).length === 0) {
-      return { kind: "unknown" };
-    }
-    return { kind: "object", properties };
-  }
-  function buildStateInterface() {
-    const stateType = buildStateTypeNode();
-    if (stateType.kind === "unknown") {
-      return "interface State {}";
-    }
-    return `interface State ${typeNodeToString(stateType)}`;
-  }
-  function getEmptyTypeDefinitions() {
-    return {
-      state: "interface State {}",
-      helpers: {},
-      components: {},
-      events: {},
-      raw: {
-        state: { kind: "object", properties: {} },
-        helpers: {},
-        components: {},
-        events: {}
-      }
-    };
-  }
-  function inferTypes() {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      return getEmptyTypeDefinitions();
-    }
-    if (!isDebugEnabled("llm")) {
-      return getEmptyTypeDefinitions();
-    }
-    const helpers = {};
-    for (const [name, fn] of functionCalls) {
-      helpers[name] = typeNodeToString({
-        kind: "function",
-        params: fn.params,
-        returnType: fn.returnType
-      });
-    }
-    const components = {};
-    for (const [tag, props] of componentProps) {
-      components[tag] = typeNodeToString({ kind: "object", properties: props });
-    }
-    const events = {};
-    for (const [name, payload] of eventPayloads) {
-      events[name] = typeNodeToString(payload);
-    }
-    const rawHelpers = {};
-    for (const [name, fn] of functionCalls) {
-      rawHelpers[name] = fn;
-    }
-    const rawComponents = {};
-    for (const [tag, props] of componentProps) {
-      rawComponents[tag] = { kind: "object", properties: props };
-    }
-    const rawEvents = {};
-    for (const [name, payload] of eventPayloads) {
-      rawEvents[name] = payload;
-    }
-    return {
-      state: buildStateInterface(),
-      helpers,
-      components,
-      events,
-      raw: {
-        state: buildStateTypeNode(),
-        helpers: rawHelpers,
-        components: rawComponents,
-        events: rawEvents
-      }
-    };
-  }
-  function typeOf(path) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return "unknown";
-    if (!isDebugEnabled("llm")) return "unknown";
-    const access2 = stateAccesses.get(path);
-    if (access2) {
-      return typeNodeToString(access2.type);
-    }
-    const stateType = buildStateTypeNode();
-    const result = navigateToPath(stateType, path);
-    if (result) {
-      return typeNodeToString(result);
-    }
-    return "unknown";
-  }
-  function navigateToPath(node, path) {
-    const parts = path.split(".");
-    let current = node;
-    for (const part of parts) {
-      const arrayMatch = part.match(/^(.+)\[(\d+)\]$/);
-      if (arrayMatch) {
-        const [, name] = arrayMatch;
-        if (current.kind === "object" && current.properties[name]) {
-          current = current.properties[name];
-        } else {
-          return null;
-        }
-        if (current.kind === "array") {
-          current = current.elementType;
-        } else {
-          return null;
-        }
-      } else if (part.endsWith("[]")) {
-        const name = part.slice(0, -2);
-        if (current.kind === "object" && current.properties[name]) {
-          current = current.properties[name];
-        } else {
-          return null;
-        }
-      } else {
-        if (current.kind === "object" && current.properties[part]) {
-          current = current.properties[part];
-        } else {
-          return null;
-        }
-      }
-    }
-    return current;
-  }
-  function clearTypeTracking() {
-    stateAccesses.clear();
-    functionCalls.clear();
-    componentProps.clear();
-    eventPayloads.clear();
-  }
-  var stateAccesses, functionCalls, componentProps, eventPayloads;
-  var init_type_inference = __esm({
-    "src/type-inference.ts"() {
-      "use strict";
-      init_debug();
-      stateAccesses = /* @__PURE__ */ new Map();
-      functionCalls = /* @__PURE__ */ new Map();
-      componentProps = /* @__PURE__ */ new Map();
-      eventPayloads = /* @__PURE__ */ new Map();
     }
   });
 
@@ -27355,9 +25904,9 @@ ${pad}}`;
   Assertion.addMethod("Throw", assertThrows);
   function respondTo(method, msg) {
     if (msg) flag2(this, "message", msg);
-    let obj = flag2(this, "object"), itself = flag2(this, "itself"), context2 = "function" === typeof obj && !itself ? obj.prototype[method] : obj[method];
+    let obj = flag2(this, "object"), itself = flag2(this, "itself"), context = "function" === typeof obj && !itself ? obj.prototype[method] : obj[method];
     this.assert(
-      "function" === typeof context2,
+      "function" === typeof context,
       "expected #{this} to respond to " + inspect2(method),
       "expected #{this} to not respond to " + inspect2(method)
     );
@@ -29132,7 +27681,7 @@ ${pad}}`;
     var consultedNodes = new SetLike_default();
     var window2 = safeWindow(root);
     var _options$compute = options.compute, compute = _options$compute === void 0 ? "name" : _options$compute, _options$computedStyl = options.computedStyleSupportsPseudoElements, computedStyleSupportsPseudoElements = _options$computedStyl === void 0 ? options.getComputedStyle !== void 0 : _options$computedStyl, _options$getComputedS = options.getComputedStyle, getComputedStyle2 = _options$getComputedS === void 0 ? window2.getComputedStyle.bind(window2) : _options$getComputedS, _options$hidden = options.hidden, hidden = _options$hidden === void 0 ? false : _options$hidden;
-    function computeMiscTextAlternative(node, context2) {
+    function computeMiscTextAlternative(node, context) {
       var accumulatedText = "";
       if (isElement(node) && computedStyleSupportsPseudoElements) {
         var pseudoBefore = getComputedStyle2(node, "::before");
@@ -29142,7 +27691,7 @@ ${pad}}`;
       var childNodes = isHTMLSlotElement(node) ? getSlotContents(node) : arrayFrom(node.childNodes).concat(queryIdRefs(node, "aria-owns"));
       childNodes.forEach(function(child) {
         var result = computeTextAlternative2(child, {
-          isEmbeddedInLabel: context2.isEmbeddedInLabel,
+          isEmbeddedInLabel: context.isEmbeddedInLabel,
           isReferenced: false,
           recursion: true
         });
@@ -29269,21 +27818,21 @@ ${pad}}`;
       }
       return null;
     }
-    function computeTextAlternative2(current, context2) {
+    function computeTextAlternative2(current, context) {
       if (consultedNodes.has(current)) {
         return "";
       }
-      if (!hidden && isHidden(current, getComputedStyle2) && !context2.isReferenced) {
+      if (!hidden && isHidden(current, getComputedStyle2) && !context.isReferenced) {
         consultedNodes.add(current);
         return "";
       }
       var labelAttributeNode = isElement(current) ? current.getAttributeNode("aria-labelledby") : null;
       var labelElements = labelAttributeNode !== null && !consultedNodes.has(labelAttributeNode) ? queryIdRefs(current, "aria-labelledby") : [];
-      if (compute === "name" && !context2.isReferenced && labelElements.length > 0) {
+      if (compute === "name" && !context.isReferenced && labelElements.length > 0) {
         consultedNodes.add(labelAttributeNode);
         return labelElements.map(function(element) {
           return computeTextAlternative2(element, {
-            isEmbeddedInLabel: context2.isEmbeddedInLabel,
+            isEmbeddedInLabel: context.isEmbeddedInLabel,
             isReferenced: true,
             // this isn't recursion as specified, otherwise we would skip
             // `aria-label` in
@@ -29292,7 +27841,7 @@ ${pad}}`;
           });
         }).join(" ");
       }
-      var skipToStep2E = context2.recursion && isControl(current) && compute === "name";
+      var skipToStep2E = context.recursion && isControl(current) && compute === "name";
       if (!skipToStep2E) {
         var ariaLabel = (isElement(current) && current.getAttribute("aria-label") || "").trim();
         if (ariaLabel !== "" && compute === "name") {
@@ -29311,7 +27860,7 @@ ${pad}}`;
         consultedNodes.add(current);
         return "";
       }
-      if (skipToStep2E || context2.isEmbeddedInLabel || context2.isReferenced) {
+      if (skipToStep2E || context.isEmbeddedInLabel || context.isReferenced) {
         if (hasAnyConcreteRoles(current, ["combobox", "listbox"])) {
           consultedNodes.add(current);
           var selectedOptions = querySelectedOptions(current);
@@ -29320,7 +27869,7 @@ ${pad}}`;
           }
           return arrayFrom(selectedOptions).map(function(selectedOption) {
             return computeTextAlternative2(selectedOption, {
-              isEmbeddedInLabel: context2.isEmbeddedInLabel,
+              isEmbeddedInLabel: context.isEmbeddedInLabel,
               isReferenced: false,
               recursion: true
             });
@@ -29341,9 +27890,9 @@ ${pad}}`;
           return getValueOfTextbox(current);
         }
       }
-      if (allowsNameFromContent(current) || isElement(current) && context2.isReferenced || isNativeHostLanguageTextAlternativeElement(current) || isDescendantOfNativeHostLanguageTextAlternativeElement(current)) {
+      if (allowsNameFromContent(current) || isElement(current) && context.isReferenced || isNativeHostLanguageTextAlternativeElement(current) || isDescendantOfNativeHostLanguageTextAlternativeElement(current)) {
         var accumulatedText2F = computeMiscTextAlternative(current, {
-          isEmbeddedInLabel: context2.isEmbeddedInLabel,
+          isEmbeddedInLabel: context.isEmbeddedInLabel,
           isReferenced: false
         });
         if (accumulatedText2F !== "") {
@@ -29355,10 +27904,10 @@ ${pad}}`;
         consultedNodes.add(current);
         return current.textContent || "";
       }
-      if (context2.recursion) {
+      if (context.recursion) {
         consultedNodes.add(current);
         return computeMiscTextAlternative(current, {
-          isEmbeddedInLabel: context2.isEmbeddedInLabel,
+          isEmbeddedInLabel: context.isEmbeddedInLabel,
           isReferenced: false
         });
       }
@@ -29563,10 +28112,10 @@ ${pad}}`;
     picocolors = nodeRequire.call(module, "picocolors");
   } catch {
   }
-  function getCodeFrame(frame5) {
-    const locationStart = frame5.indexOf("(") + 1;
-    const locationEnd = frame5.indexOf(")");
-    const frameLocation = frame5.slice(locationStart, locationEnd);
+  function getCodeFrame(frame7) {
+    const locationStart = frame7.indexOf("(") + 1;
+    const locationEnd = frame7.indexOf(")");
+    const frameLocation = frame7.slice(locationStart, locationEnd);
     const frameLocationElements = frameLocation.split(":");
     const [filename, line, column] = [frameLocationElements[0], parseInt(frameLocationElements[1], 10), parseInt(frameLocationElements[2], 10)];
     let rawFileContents = "";
@@ -29591,7 +28140,7 @@ ${pad}}`;
       return "";
     }
     const err = new Error();
-    const firstClientCodeFrame = err.stack.split("\n").slice(1).find((frame5) => !frame5.includes("node_modules/"));
+    const firstClientCodeFrame = err.stack.split("\n").slice(1).find((frame7) => !frame7.includes("node_modules/"));
     return getCodeFrame(firstClientCodeFrame);
   }
   var TEXT_NODE = 3;
@@ -31934,32 +30483,62 @@ ${pad}}`;
     }
     return result;
   };
-  var searchForComponents = () => {
-    return Array.from(queryAll("template[data-component]")).filter((elem) => elem instanceof HTMLElement).map((t) => {
-      const result = {
-        name: "",
-        attributes: []
-      };
+  var registerTemplates = async (webComponentFactory, options) => {
+    const isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
+    const shouldMirrorAttributes = options?.mirrorAttributes ?? !isLLMBuild;
+    const names = [];
+    const inlineLogic = /* @__PURE__ */ new Map();
+    const templates = Array.from(queryAll("template[data-component]")).filter((elem) => elem instanceof HTMLElement);
+    for (const t of templates) {
+      let name = "";
+      const attributes = [];
       for (const attribute in t.dataset) {
         if (attribute === "component") {
-          result.name = t.dataset[attribute] ?? "";
-        } else {
-          result.attributes.push([
+          name = t.dataset[attribute] ?? "";
+        } else if (shouldMirrorAttributes) {
+          attributes.push([
             decamelize(attribute),
             t.dataset[attribute] ?? ""
           ]);
         }
       }
-      if (result.name === "") {
-        throw new Error(
-          `A <template> was found with an invalid data-component: "${t.dataset.component}"`
-        );
+      if (!name) {
+        console.error(`Invalid <template> found: missing data-component`, t);
+        continue;
       }
-      return result;
-    }).map(({ name, attributes }) => {
+      if (isTemplate(t)) {
+        const script = t.content.querySelector("script");
+        if (script) {
+          const code = script.textContent;
+          if (code && code.trim().length > 0) {
+            try {
+              const blob = new Blob([code], { type: "text/javascript" });
+              const url = URL.createObjectURL(blob);
+              const module2 = await import(url);
+              URL.revokeObjectURL(url);
+              script.remove();
+              let rawLogic = null;
+              if (module2.default) {
+                rawLogic = module2.default;
+              } else {
+                const keys = Object.keys(module2);
+                if (keys.length > 0) {
+                  rawLogic = module2[keys[0]];
+                }
+              }
+              if (rawLogic) {
+                const logic = webComponentFactory ? webComponentFactory(rawLogic) : rawLogic;
+                inlineLogic.set(name, logic);
+              }
+            } catch (e) {
+            }
+          }
+        }
+      }
       component(name, { attributes });
-      return name;
-    });
+      names.push(name);
+    }
+    return { names, inlineLogic };
   };
   var createComponent = (name, update) => {
     const element = create(name);
@@ -31994,6 +30573,7 @@ ${pad}}`;
       dispatchEvent(new CustomEvent(name, { detail }));
     }
   };
+  var isTemplate = (e) => e instanceof HTMLTemplateElement;
   var isObject = (t) => typeof t === "object";
   var isFunction = (t) => typeof t === "function";
   var isBored = (t) => isObject(t) && "isBored" in t && Boolean(t.isBored);
@@ -32022,12 +30602,11 @@ ${pad}}`;
   var Bored = class extends HTMLElement {
   };
   var component = (tag, props = {}) => {
+    const isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
     if (customElements.get(tag)) return;
     customElements.define(
       tag,
       class extends Bored {
-        // Specify observed attributes so that
-        // attributeChangedCallback will work
         static get observedAttributes() {
           if (typeof props.attributeChangedCallback === "object") {
             return Object.keys(props.attributeChangedCallback);
@@ -32037,34 +30616,28 @@ ${pad}}`;
         constructor() {
           super();
         }
-        /**
-         * Useful to know if a given HTMLElement is a Bored component.
-         * @see `isBored()` typeguard
-         */
         isBored = true;
         traverse(f, { traverseShadowRoot, query: query2 } = {}) {
           Array.from(
             traverseShadowRoot ? this.shadowRoot?.querySelectorAll(query2 ?? "*") ?? [] : []
           ).concat(Array.from(this.querySelectorAll(query2 ?? "*"))).filter((n) => n instanceof HTMLElement).forEach(f);
         }
-        /**
-         * Returns the list of custom event names from a string that is shaped like:
-         * `"dispatch('event1', 'event2', ...)"`
-         *
-         * This is useful when traversing for event handlers to be replaced
-         * with custom dispatchers.
-         * @returns an array of strings
-         */
-        /** Extracts event names from strings like "dispatch('a','b')" */
         #parseCustomEventNames(str) {
           return str.split("'").filter(
             (s) => s.length > 2 && !(s.includes("(") || s.includes(",") || s.includes(")"))
           );
         }
-        /**
-         * Replaces inline on* attributes within the component DOM with real
-         * listeners that dispatch custom events using dispatch().
-         */
+        #parseDirectEventNames(str) {
+          return str.split(/[\s,]+/g).map((s) => s.trim()).filter(Boolean);
+        }
+        #parseEventNames(str) {
+          const trimmed = str.trim();
+          if (trimmed.length === 0) return [];
+          if (trimmed.includes("dispatch(") || trimmed.includes("'")) {
+            return this.#parseCustomEventNames(str);
+          }
+          return this.#parseDirectEventNames(str);
+        }
         #createDispatchers() {
           let host;
           this.traverse((node) => {
@@ -32075,28 +30648,47 @@ ${pad}}`;
               if (isWebComponent) host = node;
               for (let i = 0; i < node.attributes.length; i++) {
                 const attribute = node.attributes[i];
-                if (isStartsWithOn(attribute.name)) {
+                const attributeName = attribute.name;
+                const addDispatchers = (eventName, customEventNames) => {
+                  if (customEventNames.length === 0) return;
+                  customEventNames.forEach((customEventName) => {
+                    node.addEventListener(
+                      eventName,
+                      (e) => dispatch(customEventName, {
+                        event: e,
+                        dispatcher: node,
+                        component: this,
+                        index: this.parentElement ? Array.from(this.parentElement.children).indexOf(
+                          this
+                        ) : -1
+                      })
+                    );
+                  });
+                };
+                if (attributeName.startsWith("on-")) {
+                  const eventName = attributeName.slice(3);
+                  const eventNames = this.#parseEventNames(attribute.value);
+                  addDispatchers(eventName, eventNames);
+                  node.removeAttribute(attributeName);
+                  continue;
+                }
+                if (attributeName === "data-dispatch" || attributeName.startsWith("data-dispatch-")) {
+                  const eventName = attributeName === "data-dispatch" ? "click" : attributeName.slice("data-dispatch-".length);
+                  const eventNames = this.#parseEventNames(attribute.value);
+                  addDispatchers(eventName, eventNames);
+                  node.removeAttribute(attributeName);
+                  continue;
+                }
+                if (!isLLMBuild && isStartsWithOn(attribute.name)) {
                   const eventNames = this.#parseCustomEventNames(attribute.value);
                   if (eventNames.length > 0) {
-                    eventNames.forEach((customEventName) => {
-                      node.addEventListener(
-                        getEventName(attribute.name),
-                        (e) => dispatch(customEventName, {
-                          event: e,
-                          dispatcher: node,
-                          component: this,
-                          index: this.parentElement ? Array.from(this.parentElement.children).indexOf(
-                            this
-                          ) : -1
-                        })
-                      );
-                    });
+                    addDispatchers(getEventName(attribute.name), eventNames);
                   }
                   node.setAttribute(
-                    `data-${attribute.name}-dispatches`,
+                    `data-${attributeName}-dispatches`,
                     eventNames.join()
                   );
-                  node.removeAttribute(attribute.name);
+                  node.removeAttribute(attributeName);
                 }
               }
             }
@@ -32105,8 +30697,8 @@ ${pad}}`;
         isInitialized = false;
         #init() {
           let template = query(`[data-component="${tag}"]`) ?? create("template");
-          const isTemplateShadowRoot = template.getAttribute("shadowrootmode");
-          const isShadowRootNeeded = props.style || props.shadow || isTemplateShadowRoot;
+          const isTemplateShadowRoot = isLLMBuild ? null : template.getAttribute("shadowrootmode");
+          const isShadowRootNeeded = !isLLMBuild && (props.style || props.shadow || isTemplateShadowRoot);
           if (isShadowRootNeeded) {
             const shadowRootMode = props.shadowrootmode ?? isTemplateShadowRoot ?? "open";
             const shadowRoot = this.attachShadow({ mode: shadowRootMode });
@@ -32140,6 +30732,7 @@ ${pad}}`;
               if (!isFunction(value)) continue;
               this.addEventListener(getEventName(key), value);
             } else if (isStartsWithQueriedOn(key)) {
+              if (isLLMBuild) continue;
               const queries2 = value;
               if (!isObject(queries2)) continue;
               const eventName = getEventName(key);
@@ -32158,10 +30751,6 @@ ${pad}}`;
           this.#createDispatchers();
           this.isInitialized = true;
         }
-        /**
-         * User-provided renderer is assigned here by createComponent.
-         * Called on connect and whenever state triggers subscriptions.
-         */
         renderCallback = (_) => {
         };
         connectedCallback() {
@@ -32169,62 +30758,6 @@ ${pad}}`;
           this.renderCallback(this);
           props.connectedCallback?.(this);
         }
-        slots = createSlotsAccessor(this);
-        /*
-              #createSlots() {
-                const slots = Array.from(this.querySelectorAll("slot"));
-                const webComponent = this;
-        
-                slots.forEach((slot) => {
-                  const slotName = slot.getAttribute("name");
-                  if (!slotName) return;
-        
-                  const camelizedSlotName = camelize(slotName);
-                  Object.defineProperty(webComponent.slots, camelizedSlotName, {
-                    get() {
-                      return webComponent.querySelector(`[data-slot="${slotName}"]`);
-                    },
-                    set(value) {
-                      let elem = value;
-                      if (value instanceof HTMLElement) {
-                        value.setAttribute("data-slot", slotName);
-                      } else if (typeof value === "string") {
-                        elem = create("span");
-                        elem.setAttribute("data-slot", slotName);
-                        elem.innerText = value;
-                      }
-        
-                      const existingSlot = this[camelizedSlotName];
-                      if (existingSlot) {
-                        existingSlot.parentElement.replaceChild(elem, existingSlot);
-                      } else {
-                        slot.parentElement?.replaceChild(elem, slot);
-                      }
-                    },
-                  });
-                });
-              }
-              */
-        updateSlot(slotName, content, withinTag) {
-          const container = document.createElement(withinTag);
-          container.setAttribute("slot", slotName);
-        }
-        /*
-              #createProperties() {
-                const elementsFound = document.evaluate(
-                  "//*[contains(text(),'this.')]",
-                  document,
-                  null,
-                  XPathResult.ORDERED_NODE_ITERATOR_TYPE,
-                  null,
-                );
-        
-                let element = null;
-                while (element = elementsFound.iterateNext()) {
-                  console.log("Found ", element);
-                }
-              }
-              */
         disconnectedCallback() {
           props.disconnectedCallback?.(this);
         }
@@ -32257,33 +30790,8 @@ ${pad}}`;
     return result;
   }
 
-  // src/utils/flatten.ts
-  function flatten(obj, ignore = []) {
-    const stack = [{
-      path: [],
-      obj
-    }];
-    const result = [];
-    const visited = /* @__PURE__ */ new WeakSet();
-    while (stack.length > 0) {
-      const { path, obj: obj2 } = stack.pop();
-      if (visited.has(obj2)) continue;
-      visited.add(obj2);
-      for (const key in obj2) {
-        if (ignore.includes(key)) continue;
-        const value = obj2[key];
-        const newPath = path.concat(key);
-        if (typeof value === "object" && value !== null && !visited.has(value)) {
-          stack.push({
-            path: newPath,
-            obj: value
-          });
-        }
-        result.push({ path: newPath, value });
-      }
-    }
-    return result;
-  }
+  // src/bore.ts
+  init_flatten();
 
   // src/utils/isPojo.ts
   function isPOJO(arg) {
@@ -32298,7 +30806,14 @@ ${pad}}`;
   }
 
   // src/bore.ts
-  init_type_inference();
+  var extractDetailData = (element) => {
+    const data = {};
+    for (const [key, value] of Object.entries(element.dataset)) {
+      if (key.startsWith("prop")) continue;
+      data[key] = value;
+    }
+    return data;
+  };
   function createEventsHandler(c, app, detail) {
     return (eventName, handler) => {
       addEventListener(eventName, (event) => {
@@ -32373,10 +30888,10 @@ ${pad}}`;
         let elem = value;
         if (value instanceof HTMLElement) {
           value.setAttribute("data-slot", prop);
-        } else if (typeof value === "string") {
+        } else if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
           elem = create("span");
           elem.setAttribute("data-slot", prop);
-          elem.innerText = value;
+          elem.innerText = String(value);
         } else {
           throw new Error(`Invalid value for slot ${prop} in <${c.tagName}>`);
         }
@@ -32393,12 +30908,15 @@ ${pad}}`;
       }
     });
   }
-  function createStateAccessor(state, log, accum) {
+  function createStateAccessor(state, log, allowWrites = false, accum) {
     const current = accum || { targets: /* @__PURE__ */ new WeakMap(), path: [] };
     if (state === void 0) return void 0;
     return new Proxy(state, {
-      // State accessors are read-only:
+      // State accessors are read-only by default:
       set(target, prop, newValue) {
+        if (allowWrites) {
+          return Reflect.set(target, prop, newValue);
+        }
         if (typeof prop === "string") {
           console.error(
             `State is read-only for web components. Unable to set '${prop}'.`
@@ -32425,7 +30943,7 @@ ${pad}}`;
           if (!current.targets.has(value) && typeof prop === "string") {
             current.targets.set(value, current.path.join("."));
           }
-          return createStateAccessor(value, log, current);
+          return createStateAccessor(value, log, allowWrites, current);
         }
         let path = current.targets.get(target) ?? "";
         if (typeof path === "string" && typeof prop === "string") {
@@ -32440,11 +30958,6 @@ ${pad}}`;
         }
         current.path.length = 0;
         current.path.push(path);
-        if (typeof __DEBUG__ === "undefined" || __DEBUG__) {
-          if (typeof path === "string" && path !== "") {
-            trackStateAccess(path, value);
-          }
-        }
         return value;
       }
     });
@@ -32576,9 +31089,15 @@ ${pad}}`;
         continue;
       }
       elements.forEach((componentClass, index) => {
-        code(state, { index, name: tagName, data: void 0 })(
-          componentClass
-        );
+        if (componentClass.isBoredInitialized) return;
+        const detail = {
+          index,
+          name: tagName,
+          data: extractDetailData(componentClass)
+        };
+        code(state, detail)(componentClass);
+        componentClass.__boreDOMDetail = detail;
+        componentClass.isBoredInitialized = true;
       });
     }
     return;
@@ -32587,7 +31106,10 @@ ${pad}}`;
     const code = state.internal.components.get(name);
     if (code) {
       const info = { ...detail, tagName: name };
-      return createComponent(name, code(state, info));
+      if (!info.data) info.data = {};
+      const element = createComponent(name, code(state, info));
+      element.__boreDOMDetail = info;
+      return element;
     }
     return createComponent(name);
   }
@@ -32595,12 +31117,531 @@ ${pad}}`;
   // src/index.ts
   init_debug();
   init_console_api();
-  init_inside_out();
+
+  // src/inside-out.ts
+  init_debug();
+  init_console_api();
+  var userDefinedHelpers = /* @__PURE__ */ new Map();
+  var missingFunctions = /* @__PURE__ */ new Map();
+  var lastMissing = null;
+  var inferredTemplates = /* @__PURE__ */ new Map();
+  var templateObserver = null;
+  function createRenderHelpers(componentName, element, rerender) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
+      return {};
+    }
+    if (!isDebugEnabled("methodMissing")) {
+      return {};
+    }
+    return new Proxy({}, {
+      get(_target, prop) {
+        if (typeof prop === "symbol" || prop === "then" || prop === "toJSON") {
+          return void 0;
+        }
+        if (userDefinedHelpers.has(prop)) {
+          const helper = userDefinedHelpers.get(prop);
+          return (...args) => {
+            const result = helper(...args);
+            return result;
+          };
+        }
+        return (...args) => {
+          const ctx = {
+            name: prop,
+            args,
+            component: componentName,
+            element,
+            timestamp: Date.now(),
+            define: (impl) => {
+              defineHelper(prop, impl);
+              rerender();
+            }
+          };
+          logMissingFunction(ctx);
+          storeMissingFunction(ctx);
+          exposeMissingGlobals(ctx);
+          return void 0;
+        };
+      },
+      has(_target, prop) {
+        return typeof prop === "string" && userDefinedHelpers.has(prop);
+      }
+    });
+  }
+  function defineHelper(name, implementation) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+    if (!isDebugEnabled("methodMissing")) return;
+    userDefinedHelpers.set(name, implementation);
+    if (isDebugEnabled("console")) {
+      console.log(
+        "%c\u2705 boreDOM: Defined helper %c%s",
+        "color: #27ae60; font-weight: bold",
+        "color: #9b59b6; font-weight: bold",
+        name
+      );
+    }
+  }
+  function clearHelper(name) {
+    userDefinedHelpers.delete(name);
+  }
+  function clearMissingFunctions() {
+    missingFunctions.clear();
+    lastMissing = null;
+  }
+  function logMissingFunction(ctx) {
+    if (!isDebugEnabled("console")) return;
+    console.log(
+      "%c\u26A0\uFE0F boreDOM: Missing function %c%s%c in <%s>",
+      "color: #f39c12; font-weight: bold",
+      "color: #9b59b6; font-weight: bold",
+      ctx.name,
+      "color: #f39c12",
+      ctx.component
+    );
+    if (ctx.args.length > 0) {
+      console.log("   Arguments:", ctx.args);
+    }
+    console.log("%c\u{1F4A1} Define it:", "color: #3498db; font-weight: bold");
+    console.log(`   $defineMissing((${generateArgNames(ctx.args)}) => { ... })`);
+    console.log(
+      `   boreDOM.defineHelper('${ctx.name}', (${generateArgNames(ctx.args)}) => { ... })`
+    );
+  }
+  function generateArgNames(args) {
+    if (args.length === 0) return "";
+    return args.map((arg, i) => {
+      if (arg === null || arg === void 0) return `arg${i}`;
+      if (Array.isArray(arg)) return "items";
+      if (typeof arg === "object") {
+        if ("name" in arg && "email" in arg) return "user";
+        if ("id" in arg && "title" in arg) return "item";
+        if ("id" in arg) return "record";
+        return "data";
+      }
+      if (typeof arg === "string") return "text";
+      if (typeof arg === "number") return "count";
+      if (typeof arg === "boolean") return "flag";
+      return `arg${i}`;
+    }).join(", ");
+  }
+  function storeMissingFunction(ctx) {
+    if (!isDebugEnabled("errorHistory")) return;
+    const existing = missingFunctions.get(ctx.name) || [];
+    if (existing.length >= 10) {
+      existing.shift();
+    }
+    existing.push(ctx);
+    missingFunctions.set(ctx.name, existing);
+    lastMissing = ctx;
+  }
+  function exposeMissingGlobals(ctx) {
+    if (!isDebugEnabled("globals")) return;
+    if (typeof window === "undefined") return;
+    const w = window;
+    w.$missingName = ctx.name;
+    w.$missingArgs = ctx.args;
+    w.$missingComponent = ctx.component;
+    w.$defineMissing = ctx.define;
+  }
+  function clearMissingGlobals() {
+    if (typeof window === "undefined") return;
+    const w = window;
+    delete w.$missingName;
+    delete w.$missingArgs;
+    delete w.$missingComponent;
+    delete w.$defineMissing;
+  }
+  function inferTemplate(tagName, element) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return null;
+    if (!isDebugEnabled("templateInference")) return null;
+    if (isDebugEnabled("strict")) return null;
+    const props = {};
+    const slots = [];
+    if (element) {
+      for (const attr of Array.from(element.attributes)) {
+        if (attr.name.startsWith("data-")) continue;
+        if (["class", "id", "style"].includes(attr.name)) continue;
+        const camelName = kebabToCamel(attr.name);
+        props[camelName] = parseAttributeValue(attr.value);
+      }
+      for (const child of Array.from(element.children)) {
+        const slotName = child.getAttribute("slot");
+        if (slotName && !slots.includes(slotName)) {
+          slots.push(slotName);
+        }
+      }
+    }
+    const propsSlots = Object.keys(props).map((p) => `    <slot name="${camelToKebab(p)}">${formatValue(props[p])}</slot>`).join("\n");
+    const defaultSlot = slots.length === 0 && Object.keys(props).length === 0 ? '    <slot name="content">Loading...</slot>' : "";
+    const template = `<div class="${tagName}-skeleton" data-inferred>
+${propsSlots || defaultSlot}
+  </div>`;
+    return { tagName, template, props, slots };
+  }
+  function registerInferredComponent(tagName, element) {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return false;
+    if (!isDebugEnabled("templateInference")) return false;
+    if (customElements.get(tagName)) return false;
+    if (!getCurrentAppState()) return false;
+    const inference = inferTemplate(tagName, element);
+    if (!inference) return false;
+    const { template, props } = inference;
+    inferredTemplates.set(tagName, inference);
+    logInferredComponent(tagName, props);
+    try {
+      define2(
+        tagName,
+        template,
+        // Stub render that logs what it receives
+        ({ state }) => ({ slots }) => {
+          if (isDebugEnabled("console")) {
+            console.log(
+              "%c\u{1F52E} boreDOM: Inferred <%s> rendering",
+              "color: #9b59b6; font-weight: bold",
+              tagName
+            );
+            console.log("   Inferred props:", props);
+            console.log("   App state:", state);
+          }
+          for (const [key, value] of Object.entries(props)) {
+            const slotKey = camelToKebab(key);
+            if (slots[slotKey]) {
+              slots[slotKey] = String(value);
+            }
+          }
+        }
+      );
+      return true;
+    } catch (e) {
+      if (isDebugEnabled("console")) {
+        console.warn(`[boreDOM] Failed to register inferred <${tagName}>:`, e);
+      }
+      return false;
+    }
+  }
+  function logInferredComponent(tagName, props) {
+    if (!isDebugEnabled("console")) return;
+    console.log(
+      "%c\u{1F52E} boreDOM: Inferring template for %c<%s>",
+      "color: #9b59b6; font-weight: bold",
+      "color: #4ecdc4; font-weight: bold",
+      tagName
+    );
+    if (Object.keys(props).length > 0) {
+      console.log("%c\u{1F4CB} Inferred props from attributes:", "color: #95a5a6");
+      for (const [key, value] of Object.entries(props)) {
+        console.log(`   ${key}: ${JSON.stringify(value)}`);
+      }
+    }
+    console.log("%c\u{1F4A1} Define properly with:", "color: #3498db; font-weight: bold");
+    console.log(
+      `   boreDOM.define('${tagName}', '<your template>', ({ state }) => ({ slots }) => { ... })`
+    );
+  }
+  function observeUndefinedElements() {
+    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
+    if (!isDebugEnabled("templateInference")) return;
+    if (typeof window === "undefined") return;
+    if (templateObserver) return;
+    templateObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of Array.from(mutation.addedNodes)) {
+          if (node instanceof HTMLElement && node.tagName.includes("-")) {
+            const tagName = node.tagName.toLowerCase();
+            if (!customElements.get(tagName)) {
+              const template = document.querySelector(
+                `template[data-component="${tagName}"]`
+              );
+              if (!template) {
+                queueMicrotask(() => {
+                  if (!customElements.get(tagName)) {
+                    registerInferredComponent(tagName, node);
+                  }
+                });
+              }
+            }
+          }
+        }
+      }
+    });
+    templateObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+  function stopObservingUndefinedElements() {
+    if (templateObserver) {
+      templateObserver.disconnect();
+      templateObserver = null;
+    }
+  }
+  function kebabToCamel(str) {
+    return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+  }
+  function camelToKebab(str) {
+    return str.replace(/([A-Z])/g, "-$1").toLowerCase();
+  }
+  function parseAttributeValue(value) {
+    if (value === "true") return true;
+    if (value === "false") return false;
+    const num = Number(value);
+    if (!isNaN(num) && value !== "") return num;
+    if (value.startsWith("{") || value.startsWith("[")) {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  }
+  function formatValue(value) {
+    if (value === null || value === void 0) return "";
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  }
+  var insideOutAPI = {
+    /** Map of missing function calls by function name */
+    get missingFunctions() {
+      return missingFunctions;
+    },
+    /** Most recent missing function context */
+    get lastMissing() {
+      return lastMissing;
+    },
+    /** Define a helper function available to all render functions */
+    defineHelper,
+    /** Get all defined helpers */
+    get helpers() {
+      return new Map(userDefinedHelpers);
+    },
+    /** Clear a helper definition */
+    clearHelper,
+    /** Clear all missing function records */
+    clearMissingFunctions,
+    /** Map of inferred templates by tag name */
+    get inferredTemplates() {
+      return inferredTemplates;
+    },
+    /** Manually infer template for a tag (useful for testing) */
+    inferTemplate
+  };
+
+  // src/index.ts
   init_llm();
+
+  // src/bindings.ts
+  var toCamelCase = (value) => value.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+  var parsePath3 = (raw) => {
+    const normalized = raw.replace(/\[(\d+)\]/g, ".$1").replace(/^\./, "");
+    return normalized.split(".").filter(Boolean);
+  };
+  var resolvePath = (target, raw) => {
+    if (target === void 0 || target === null) return void 0;
+    const path = parsePath3(raw);
+    if (path.length === 0) return target;
+    return access(path, target);
+  };
+  var resolveValue = (expr, scope) => {
+    const raw = expr.trim();
+    if (!raw) return void 0;
+    if (raw === "index" || raw === "i") return scope.index;
+    if (raw === "item") return scope.item;
+    if (raw === "detail") return scope.detail;
+    if (raw === "self") return scope.self;
+    if (raw.startsWith("state.")) return resolvePath(scope.state, raw.slice(6));
+    if (raw.startsWith("item.")) return resolvePath(scope.item, raw.slice(5));
+    if (raw.startsWith("detail.")) return resolvePath(scope.detail, raw.slice(7));
+    if (raw.startsWith("self.")) return resolvePath(scope.self, raw.slice(5));
+    return resolvePath(scope.state, raw);
+  };
+  var collectElements = (root) => {
+    const elements = [];
+    if (root instanceof DocumentFragment) {
+      const walker = document.createTreeWalker(
+        root,
+        NodeFilter.SHOW_ELEMENT
+      );
+      while (walker.nextNode()) {
+        elements.push(walker.currentNode);
+      }
+      return elements;
+    }
+    elements.push(root);
+    root.traverse((elem) => {
+      elements.push(elem);
+    }, { traverseShadowRoot: true });
+    return elements;
+  };
+  var getClassBase = (element) => {
+    const stored = element.getAttribute("data-class-base");
+    if (stored !== null) return stored;
+    const base = element.className;
+    element.setAttribute("data-class-base", base);
+    return base;
+  };
+  var applyClassBinding = (element, expr, scope) => {
+    const base = getClassBase(element);
+    if (expr.includes(":")) {
+      const toggled = [];
+      expr.split(",").forEach((part) => {
+        const [name, valueExpr] = part.split(":").map((s) => s.trim());
+        if (!name || !valueExpr) return;
+        if (resolveValue(valueExpr, scope)) {
+          toggled.push(name);
+        }
+      });
+      const combined = [base, ...toggled].filter(Boolean).join(" ").trim();
+      element.className = combined;
+      return;
+    }
+    const resolved = resolveValue(expr, scope);
+    if (typeof resolved === "string") {
+      element.className = [base, resolved].filter(Boolean).join(" ").trim();
+    } else if (Array.isArray(resolved)) {
+      element.className = [base, resolved.join(" ")].filter(Boolean).join(" ").trim();
+    } else if (resolved && typeof resolved === "object") {
+      const toggled = Object.entries(resolved).filter(([, value]) => Boolean(value)).map(([name]) => name);
+      element.className = [base, ...toggled].filter(Boolean).join(" ").trim();
+    } else {
+      element.className = base.trim();
+    }
+  };
+  var applyAttributeBindings = (elements, scope) => {
+    const skipListItems = scope.item === void 0;
+    elements.forEach((element) => {
+      if (element instanceof HTMLTemplateElement) return;
+      if (skipListItems && element.closest("[data-list-item]")) return;
+      const textBinding = element.getAttribute("data-text");
+      if (textBinding) {
+        const value = resolveValue(textBinding, scope);
+        element.textContent = value === void 0 || value === null ? "" : String(value);
+      }
+      const showBinding = element.getAttribute("data-show");
+      if (showBinding) {
+        element.hidden = !Boolean(resolveValue(showBinding, scope));
+      }
+      const classBinding = element.getAttribute("data-class");
+      if (classBinding) {
+        applyClassBinding(element, classBinding, scope);
+      }
+      const valueBinding = element.getAttribute("data-value");
+      if (valueBinding && "value" in element) {
+        const value = resolveValue(valueBinding, scope);
+        element.value = value === void 0 || value === null ? "" : String(value);
+      }
+      const checkedBinding = element.getAttribute("data-checked");
+      if (checkedBinding && "checked" in element) {
+        const value = resolveValue(checkedBinding, scope);
+        element.checked = Boolean(value);
+      }
+      const propAttributes = Array.from(element.attributes).filter((attr) => attr.name.startsWith("data-prop-"));
+      if (propAttributes.length > 0) {
+        let detailChanged = false;
+        propAttributes.forEach((attr) => {
+          const propName = attr.name.slice("data-prop-".length);
+          if (!propName) return;
+          const resolved = resolveValue(attr.value, scope);
+          const dataAttribute = `data-${propName}`;
+          const current = element.getAttribute(dataAttribute);
+          const isAttributeValue = resolved === void 0 || resolved === null || typeof resolved === "string" || typeof resolved === "number" || typeof resolved === "boolean";
+          const next = isAttributeValue && resolved !== void 0 && resolved !== null ? String(resolved) : null;
+          if (next === null) {
+            if (current !== null) {
+              element.removeAttribute(dataAttribute);
+              detailChanged = true;
+            }
+          } else if (current !== next) {
+            element.setAttribute(dataAttribute, next);
+            detailChanged = true;
+          }
+          const detailKey = toCamelCase(propName);
+          const detail = element.__boreDOMDetail;
+          if (detail) {
+            if (!detail.data) detail.data = {};
+            if (detail.data[detailKey] !== resolved) {
+              detail.data[detailKey] = resolved;
+              detailChanged = true;
+            }
+          }
+        });
+        if (detailChanged) {
+          const rerender = element.__boreDOMRerender;
+          if (typeof rerender === "function") {
+            rerender();
+          }
+        }
+      }
+    });
+  };
+  var applyListBinding = (element, scope) => {
+    const listExpr = element.getAttribute("data-list");
+    if (!listExpr) return;
+    const template = element.querySelector("template[data-item]");
+    if (!(template instanceof HTMLTemplateElement)) return;
+    const resolved = resolveValue(listExpr, scope);
+    const items = Array.isArray(resolved) ? resolved : [];
+    Array.from(element.children).forEach((child) => {
+      if (child.hasAttribute("data-list-item")) {
+        child.remove();
+      }
+    });
+    const fragment = document.createDocumentFragment();
+    items.forEach((item, index) => {
+      const clone = template.content.cloneNode(true);
+      Array.from(clone.childNodes).forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          node.setAttribute("data-list-item", "");
+        }
+      });
+      applyBindingsToFragment(clone, { ...scope, item, index });
+      fragment.appendChild(clone);
+    });
+    element.appendChild(fragment);
+  };
+  var applyBindingsToFragment = (fragment, scope) => {
+    let elements = collectElements(fragment);
+    elements.forEach((element) => applyListBinding(element, scope));
+    elements = collectElements(fragment);
+    applyAttributeBindings(elements, scope);
+  };
+  var applyBindings = (root, scope) => {
+    let elements = collectElements(root);
+    elements.forEach((element) => applyListBinding(element, scope));
+    elements = collectElements(root);
+    applyAttributeBindings(elements, scope);
+  };
+
+  // src/index.ts
   init_debug();
   init_version();
   init_version();
   var hasLoggedVersion = false;
+  var debugApiEnabled = typeof __DEBUG__ === "undefined" || __DEBUG__;
+  var html = (strings, ...values) => {
+    let result = "";
+    for (let i = 0; i < strings.length; i++) {
+      result += strings[i];
+      if (i < values.length) result += String(values[i]);
+    }
+    return result;
+  };
+  function component2(tagName, template, initFunction) {
+    if (typeof document !== "undefined") {
+      const existing = document.querySelector(
+        `template[data-component="${tagName}"]`
+      );
+      if (existing) {
+        existing.innerHTML = template;
+      } else {
+        const templateEl = document.createElement("template");
+        templateEl.setAttribute("data-component", tagName);
+        templateEl.innerHTML = template;
+        document.body.appendChild(templateEl);
+      }
+    }
+    return webComponent(initFunction);
+  }
   var boreDOM = {
     /** Map of all current errors by component name */
     get errors() {
@@ -32624,44 +31665,53 @@ ${pad}}`;
     _setDebugConfig: setDebugConfig,
     /** Framework version */
     version: VERSION,
-    // Console API (Phase 2)
-    /** Define a new component at runtime */
-    define: consoleAPI.define,
-    /** Get live access to a component's internals */
-    operate: consoleAPI.operate,
-    /** Export component state and template */
-    exportComponent: consoleAPI.exportComponent,
-    // Inside-Out API (Phase 3)
-    /** Map of missing function calls by function name */
-    get missingFunctions() {
-      return insideOutAPI.missingFunctions;
-    },
-    /** Most recent missing function context */
-    get lastMissing() {
-      return insideOutAPI.lastMissing;
-    },
-    /** Define a helper function available to all render functions */
-    defineHelper: insideOutAPI.defineHelper,
-    /** Get all defined helpers */
-    get helpers() {
-      return insideOutAPI.helpers;
-    },
-    /** Clear a helper definition */
-    clearHelper: insideOutAPI.clearHelper,
-    /** Clear all missing function records */
-    clearMissingFunctions: insideOutAPI.clearMissingFunctions,
-    /** Map of inferred templates by tag name */
-    get inferredTemplates() {
-      return insideOutAPI.inferredTemplates;
-    },
-    /** Manually infer template for a tag */
-    inferTemplate: insideOutAPI.inferTemplate,
     // LLM Integration API (Phase 4)
     /** LLM context and output utilities */
-    llm: llmAPI
+    llm: llmAPI,
+    /** Create a template-backed component in single-file mode */
+    component: component2,
+    /** Template literal helper for HTML strings */
+    html
   };
+  if (debugApiEnabled) {
+    Object.assign(boreDOM, {
+      /** Define a new component at runtime */
+      define: consoleAPI.define,
+      /** Get live access to a component's internals */
+      operate: consoleAPI.operate,
+      /** Export component state and template */
+      exportComponent: consoleAPI.exportComponent,
+      /** Define a helper function available to all render functions */
+      defineHelper: insideOutAPI.defineHelper,
+      /** Clear a helper definition */
+      clearHelper: insideOutAPI.clearHelper,
+      /** Clear all missing function records */
+      clearMissingFunctions: insideOutAPI.clearMissingFunctions,
+      /** Manually infer template for a tag */
+      inferTemplate: insideOutAPI.inferTemplate
+    });
+    Object.defineProperties(boreDOM, {
+      /** Map of missing function calls by function name */
+      missingFunctions: {
+        get: () => insideOutAPI.missingFunctions
+      },
+      /** Most recent missing function context */
+      lastMissing: {
+        get: () => insideOutAPI.lastMissing
+      },
+      /** Get all defined helpers */
+      helpers: {
+        get: () => insideOutAPI.helpers
+      },
+      /** Map of inferred templates by tag name */
+      inferredTemplates: {
+        get: () => insideOutAPI.inferredTemplates
+      }
+    });
+  }
   if (typeof window !== "undefined") {
     window.boreDOM = boreDOM;
+    window.dispatch = dispatch;
   }
   async function inflictBoreDOM(state, componentsLogic, config3) {
     if (config3?.debug !== void 0) {
@@ -32670,14 +31720,42 @@ ${pad}}`;
     if (!hasLoggedVersion && isDebugEnabled("versionLog")) {
       hasLoggedVersion = true;
       if (typeof console !== "undefined" && typeof console.info === "function") {
-        console.info(`[boreDOM] v${VERSION}`);
       }
     }
-    const registeredNames = searchForComponents();
-    const componentsCode = await dynamicImportScripts(registeredNames);
+    const wrapper = (fn) => {
+      if (fn && fn[WEB_COMPONENT_MARKER]) {
+        return fn;
+      }
+      if (typeof fn === "function") {
+        return webComponent(fn);
+      }
+      return fn;
+    };
+    const isSingleFileBuild = typeof __SINGLE_FILE__ !== "undefined" && __SINGLE_FILE__;
+    const singleFile = config3?.singleFile ?? isSingleFileBuild;
+    const { names: registeredNames, inlineLogic } = await registerTemplates(
+      wrapper,
+      {
+        mirrorAttributes: config3?.mirrorAttributes
+      }
+    );
+    const componentsCode = singleFile ? /* @__PURE__ */ new Map() : await dynamicImportScripts(registeredNames);
+    if (inlineLogic) {
+      for (const [tagName, logic] of inlineLogic) {
+        if (!componentsCode.has(tagName) || componentsCode.get(tagName) === null) {
+          componentsCode.set(tagName, logic);
+        }
+      }
+    }
     if (componentsLogic) {
       for (const tagName of Object.keys(componentsLogic)) {
         componentsCode.set(tagName, componentsLogic[tagName]);
+      }
+    }
+    for (const name of registeredNames) {
+      if (!componentsCode.has(name) || componentsCode.get(name) === null) {
+        componentsCode.set(name, webComponent(() => () => {
+        }));
       }
     }
     const initialState = {
@@ -32701,104 +31779,67 @@ ${pad}}`;
       proxifiedState.internal.updates.raf = void 0;
     }
     setCurrentAppState(proxifiedState, webComponent, registerComponent);
-    setValidationAppState(proxifiedState);
-    if (typeof window !== "undefined" && window.boreDOM?.llm?._setValidationAppState) {
-      window.boreDOM.llm._setValidationAppState(proxifiedState);
-    }
     runComponentsInitializer(proxifiedState);
     observeUndefinedElements();
     return proxifiedState.app;
   }
   function webComponent(initFunction) {
-    let isInitialized = null;
-    let renderFunction;
     const result = (appState, detail) => (c) => {
       const { internal, app } = appState;
       let log = [];
-      const state = createStateAccessor(app, log);
+      const state = createStateAccessor(app, log, true);
       const refs = createRefsAccessor(c);
       const slots = createSlotsAccessor(c);
       const on = createEventsHandler(c, app, detail);
-      if (isInitialized !== c) {
-        const updateSubscribers = async () => {
-          const subscribers = internal.updates.subscribers;
-          for (let path of log) {
-            const functions = subscribers.get(path);
-            if (functions) {
-              if (!functions.includes(renderFunction)) {
-                functions.push(renderFunction);
-              }
-            } else {
-              subscribers.set(path, [renderFunction]);
-            }
-          }
-        };
-        let userDefinedRenderer;
-        try {
-          userDefinedRenderer = initFunction({
-            detail,
-            state,
-            refs,
-            on,
-            self: c
-          });
-        } catch (error) {
-          const err = error;
-          if (isDebugEnabled("console")) {
-            logInitError(detail?.name ?? c.tagName.toLowerCase(), err);
-          }
-          userDefinedRenderer = () => {
-          };
-        }
-        renderFunction = (renderState) => {
-          const componentName = detail?.name ?? c.tagName.toLowerCase();
-          const helpers = createRenderHelpers(
-            componentName,
-            c,
-            () => renderFunction(renderState)
-          );
-          if (isDebugEnabled("errorBoundary")) {
-            try {
-              userDefinedRenderer({
-                state: renderState,
-                refs,
-                slots,
-                self: c,
-                detail,
-                makeComponent: (tag, opts) => {
-                  return createAndRunCode(tag, appState, opts?.detail);
-                },
-                helpers
-              });
-              updateSubscribers();
-              clearComponentErrorMark(c);
-              clearError(componentName);
-            } catch (error) {
-              const err = error;
-              const ctx = {
-                component: componentName,
-                element: c,
-                error: err,
-                state: app,
-                // Write proxy - MUTABLE
-                refs,
-                slots,
-                timestamp: Date.now(),
-                rerender: () => renderFunction(renderState),
-                stack: err.stack ?? ""
-              };
-              if (isDebugEnabled("console")) {
-                logError(ctx);
-              } else {
-                logErrorMinimal(componentName, err);
-              }
-              exposeGlobals(ctx);
-              storeError(ctx);
-              markComponentError(c);
+      let renderFunction;
+      c.state = state;
+      c.refs = refs;
+      c.slots = slots;
+      const updateSubscribers = async () => {
+        const subscribers = internal.updates.subscribers;
+        for (let path of log) {
+          const functions = subscribers.get(path);
+          if (functions) {
+            if (!functions.includes(renderFunction)) {
+              functions.push(renderFunction);
             }
           } else {
+            subscribers.set(path, [renderFunction]);
+          }
+        }
+      };
+      let userDefinedRenderer;
+      try {
+        userDefinedRenderer = initFunction({
+          detail,
+          state,
+          refs,
+          on,
+          self: c,
+          makeComponent: (tag, opts) => {
+            return createAndRunCode(tag, appState, opts?.detail);
+          }
+        });
+      } catch (error) {
+        const err = error;
+        if (isDebugEnabled("console")) {
+          logInitError(detail?.name ?? c.tagName.toLowerCase(), err);
+        }
+        userDefinedRenderer = () => {
+        };
+      }
+      renderFunction = (renderState) => {
+        const componentName = detail?.name ?? c.tagName.toLowerCase();
+        const helpers = createRenderHelpers(
+          componentName,
+          c,
+          () => renderFunction(renderState)
+        );
+        const renderAccessor = createStateAccessor(renderState, log, false);
+        if (isDebugEnabled("errorBoundary")) {
+          try {
             userDefinedRenderer({
-              state: renderState,
+              state: renderAccessor,
               refs,
               slots,
               self: c,
@@ -32808,30 +31849,71 @@ ${pad}}`;
               },
               helpers
             });
+            applyBindings(c, { state: renderAccessor, detail, self: c });
             updateSubscribers();
+            clearComponentErrorMark(c);
+            clearError(componentName);
+          } catch (error) {
+            const err = error;
+            const ctx = {
+              component: componentName,
+              element: c,
+              error: err,
+              state: app,
+              // Write proxy - MUTABLE
+              refs,
+              slots,
+              timestamp: Date.now(),
+              rerender: () => renderFunction(renderState),
+              stack: err.stack ?? ""
+            };
+            if (isDebugEnabled("console")) {
+              logError(ctx);
+            } else {
+              logErrorMinimal(componentName, err);
+            }
+            exposeGlobals(ctx);
+            storeError(ctx);
+            markComponentError(c);
           }
-        };
-        storeComponentContext(c, {
-          state: app,
-          refs,
-          slots,
-          self: c,
-          detail,
-          rerender: () => renderFunction(app)
-        });
-      }
+        } else {
+          userDefinedRenderer({
+            state: renderAccessor,
+            refs,
+            slots,
+            self: c,
+            detail,
+            makeComponent: (tag, opts) => {
+              return createAndRunCode(tag, appState, opts?.detail);
+            },
+            helpers
+          });
+          applyBindings(c, { state: renderAccessor, detail, self: c });
+          updateSubscribers();
+        }
+      };
+      storeComponentContext(c, {
+        state: app,
+        refs,
+        slots,
+        self: c,
+        detail,
+        rerender: () => renderFunction(app)
+      });
+      c.__boreDOMDetail = detail;
+      c.__boreDOMRerender = () => renderFunction(app);
       renderFunction(state);
-      isInitialized = c;
     };
     result[WEB_COMPONENT_MARKER] = true;
     return result;
   }
 
   // tests/dom.test.ts
-  function renderHTML(html) {
+  init_flatten();
+  function renderHTML(html2) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html;
+    main.innerHTML = html2;
     return main;
   }
   async function frame() {
@@ -32839,10 +31921,10 @@ ${pad}}`;
       requestAnimationFrame((t) => resolve(t));
     });
   }
-  async function renderHTMLFrame(html) {
+  async function renderHTMLFrame(html2) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html;
+    main.innerHTML = html2;
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
         resolve(main);
@@ -34456,10 +33538,10 @@ ${pad}}`;
       requestAnimationFrame((t) => resolve(t));
     });
   }
-  async function renderHTMLFrame2(html) {
+  async function renderHTMLFrame2(html2) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html;
+    main.innerHTML = html2;
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
         resolve(main);
@@ -35296,10 +34378,10 @@ ${pad}}`;
       requestAnimationFrame((t) => resolve(t));
     });
   }
-  async function renderHTMLFrame3(html) {
+  async function renderHTMLFrame3(html2) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html;
+    main.innerHTML = html2;
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
         resolve(main);
@@ -35867,11 +34949,10 @@ ${pad}}`;
 
   // tests/inside-out.test.ts
   var import_mocha4 = __toESM(require_mocha());
-  init_inside_out();
-  async function renderHTMLFrame4(html) {
+  async function renderHTMLFrame4(html2) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html;
+    main.innerHTML = html2;
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
         resolve(main);
@@ -36307,2951 +35388,578 @@ ${pad}}`;
       requestAnimationFrame((t) => resolve(t));
     });
   }
-  async function renderHTMLFrame5(html) {
+  async function renderHTMLFrame5(html2) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html;
+    main.innerHTML = html2;
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
         resolve(main);
       });
     });
   }
-  function captureConsole4() {
-    const logs = [];
-    const errors2 = [];
-    const infos = [];
-    const warns = [];
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalInfo = console.info;
-    const originalWarn = console.warn;
-    console.log = (...args) => {
-      logs.push(args);
-    };
-    console.error = (...args) => {
-      errors2.push(args);
-    };
-    console.info = (...args) => {
-      infos.push(args);
-    };
-    console.warn = (...args) => {
-      warns.push(args);
-    };
-    return {
-      logs,
-      errors: errors2,
-      infos,
-      warns,
-      restore: () => {
-        console.log = originalLog;
-        console.error = originalError;
-        console.info = originalInfo;
-        console.warn = originalWarn;
-      }
-    };
-  }
-  function clearWindowGlobals4() {
-    const w = window;
-    delete w.$state;
-    delete w.$refs;
-    delete w.$slots;
-    delete w.$self;
-    delete w.$error;
-    delete w.$component;
-    delete w.$rerender;
-    delete w.$missingName;
-    delete w.$missingArgs;
-    delete w.$missingComponent;
-    delete w.$defineMissing;
-  }
   function llm_test_default() {
-    describe("LLM Integration API (Phase 4)", () => {
+    describe("LLM Integration API (Micro-Symbiotic)", () => {
       beforeEach(function() {
         const main = document.querySelector("main");
         if (!main) return;
         main.innerHTML = "";
         setDebugConfig(true);
-        clearWindowGlobals4();
         clearGlobals();
-        const errorKeys2 = [...boreDOM.errors.keys()];
-        for (const tagName of errorKeys2) {
-          boreDOM.clearError(tagName);
-        }
-        boreDOM.clearError();
-        if (boreDOM.llm?.clearAttempts) {
-          boreDOM.llm.clearAttempts();
-        }
-        if (boreDOM.clearMissingFunctions) {
-          boreDOM.clearMissingFunctions();
-        }
       });
-      afterEach(function() {
-        clearWindowGlobals4();
-        setDebugConfig({ outputFormat: "human" });
-      });
-      describe("boreDOM.llm API existence", () => {
-        it("should have llm property on boreDOM", () => {
-          expect(boreDOM.llm).to.not.be.undefined;
-        });
-        it("should have context() function", () => {
-          expect(boreDOM.llm.context).to.be.a("function");
-        });
-        it("should have focus() function", () => {
-          expect(boreDOM.llm.focus).to.be.a("function");
-        });
-        it("should have copy() function", () => {
-          expect(boreDOM.llm.copy).to.be.a("function");
-        });
-        it("should have attempts property", () => {
-          expect(boreDOM.llm.attempts).to.be.an("array");
-        });
-        it("should have clearAttempts() function", () => {
-          expect(boreDOM.llm.clearAttempts).to.be.a("function");
-        });
-      });
-      describe("boreDOM.llm.context()", () => {
-        it("should return complete context structure", async () => {
+      describe("boreDOM.llm.vision()", () => {
+        it("should capture semantic structure", async () => {
           await renderHTMLFrame5(`
-          <llm-context-test></llm-context-test>
-
-          <template data-component="llm-context-test">
-            <p data-ref="output">Output</p>
+          <div id="test-root">
+            <h1 class="title">Hello</h1>
+            <input type="text" value="World" id="inp">
+            <div hidden>Secret</div>
+            <span style="display: none">Hidden</span>
+            <button data-action="submit">Send</button>
+          </div>
+        `);
+          const root = document.getElementById("test-root");
+          expect(root).to.not.be.null;
+          const semantic = boreDOM.llm.vision(root);
+          expect(semantic).to.not.be.null;
+          expect(semantic?.tagName).to.equal("div");
+          expect(semantic?.attributes?.id).to.equal("test-root");
+          const children = semantic?.children || [];
+          expect(children).to.have.length(3);
+          const h1 = children[0];
+          expect(h1.tagName).to.equal("h1");
+          expect(h1.attributes?.class).to.equal("title");
+          expect(h1.text).to.equal("Hello");
+          const inp = children[1];
+          expect(inp.tagName).to.equal("input");
+          expect(inp.attributes?.value).to.equal("World");
+          const btn = children[2];
+          expect(btn.tagName).to.equal("button");
+          expect(btn.attributes["data-action"]).to.equal("submit");
+          expect(btn.text).to.equal("Send");
+        });
+      });
+      describe("boreDOM.llm.transact()", () => {
+        it("should replace state values and trigger reactivity", async () => {
+          await renderHTMLFrame5(`
+          <transact-test></transact-test>
+          <template data-component="transact-test">
+            <p data-ref="out"></p>
           </template>
         `);
-          await inflictBoreDOM({ count: 42, name: "test" }, {
-            "llm-context-test": webComponent(() => {
-              return ({ state, refs }) => {
-                if (refs.output instanceof HTMLElement && state) {
-                  refs.output.textContent = String(state.count);
-                }
-              };
+          const appState = await inflictBoreDOM({ count: 10 }, {
+            "transact-test": webComponent(() => ({ state, refs }) => {
+              if (refs.out) refs.out.textContent = String(state?.count);
             })
           });
-          const ctx = boreDOM.llm.context();
-          expect(ctx.framework).to.not.be.undefined;
-          expect(ctx.framework.name).to.equal("boreDOM");
-          expect(ctx.framework.version).to.be.a("string");
-          expect(ctx.framework.capabilities).to.be.an("array");
-          expect(ctx.state).to.not.be.undefined;
-          expect(ctx.state.shape).to.be.a("string");
-          expect(ctx.state.paths).to.be.an("array");
-          expect(ctx.state.sample).to.not.be.undefined;
-          expect(ctx.components).to.not.be.undefined;
-          expect(ctx.components["llm-context-test"]).to.not.be.undefined;
-          expect(ctx.issues).to.not.be.undefined;
-          expect(ctx.issues.errors).to.be.an("array");
-          expect(ctx.issues.missingFunctions).to.be.an("array");
-          expect(ctx.issues.missingComponents).to.be.an("array");
-          expect(ctx.helpers).to.not.be.undefined;
-          expect(ctx.helpers.defined).to.be.an("object");
-          expect(ctx.helpers.missing).to.be.an("object");
-          expect(ctx.patterns).to.not.be.undefined;
+          const el = document.querySelector("transact-test p");
+          expect(el?.textContent).to.equal("10");
+          const result = boreDOM.llm.transact([
+            { op: "replace", path: "/count", value: 42 }
+          ]);
+          expect(result.success).to.be.true;
+          expect(appState?.count).to.equal(42);
+          await frame4();
+          await frame4();
+          expect(el?.textContent).to.equal("42");
         });
-        it("should include state paths", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({
-            user: {
-              name: "John",
-              profile: {
-                email: "john@example.com"
-              }
-            },
-            items: [1, 2, 3]
-          });
-          const ctx = boreDOM.llm.context();
-          expect(ctx.state.paths).to.include("user");
-          expect(ctx.state.paths).to.include("user.name");
-          expect(ctx.state.paths).to.include("user.profile");
-          expect(ctx.state.paths).to.include("user.profile.email");
-          expect(ctx.state.paths).to.include("items");
-          expect(ctx.state.paths).to.include("items[]");
+        it("should handle array operations", async () => {
+          await inflictBoreDOM({ items: ["a", "b"] });
+          boreDOM.llm.transact([
+            { op: "add", path: "/items/-", value: "c" }
+          ]);
+          const state = boreDOM.exportComponent("transact-test")?.state || window.boreDOM.lastError?.state || boreDOM._setDebugConfig ? boreDOM._testState : null;
         });
-        it("should sanitize sensitive data", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({
-            username: "john",
-            password: "secret123",
-            apiKey: "abc-xyz-123",
-            token: "jwt-token-here"
-          });
-          const ctx = boreDOM.llm.context();
-          expect(ctx.state.sample.username).to.equal("john");
-          expect(ctx.state.sample.password).to.equal("[REDACTED]");
-          expect(ctx.state.sample.apiKey).to.equal("[REDACTED]");
-          expect(ctx.state.sample.token).to.equal("[REDACTED]");
+        it("should return error on invalid path", async () => {
+          await inflictBoreDOM({ foo: 1 });
+          const result = boreDOM.llm.transact([
+            { op: "replace", path: "/invalid/path", value: 2 }
+          ]);
+          expect(result.success).to.be.false;
+          expect(result.error).to.include("not found");
         });
-        it("should include component template", async () => {
-          const container = await renderHTMLFrame5(`
-          <llm-template-test></llm-template-test>
-
-          <template data-component="llm-template-test">
-            <div class="custom-class">
-              <p data-ref="text">Text</p>
-              <slot name="content">Default</slot>
-            </div>
+      });
+      describe("boreDOM.llm.compact()", () => {
+        it("should return a compact summary of state and components", async () => {
+          await renderHTMLFrame5(`
+          <compact-test></compact-test>
+          <template data-component="compact-test">
+            <p data-ref="out"></p>
           </template>
         `);
-          await inflictBoreDOM({ value: "test" }, {
-            "llm-template-test": webComponent(() => {
+          await inflictBoreDOM(
+            { count: 1, items: ["a", "b"] },
+            {
+              "compact-test": webComponent(() => () => {
+              })
+            }
+          );
+          const compact = boreDOM.llm.compact();
+          expect(compact).to.not.be.null;
+          expect(compact?.framework?.name).to.equal("boreDOM");
+          expect(compact?.state?.paths).to.include("count");
+          expect(compact?.components?.some((c) => c.tag === "compact-test")).to.equal(true);
+        });
+      });
+    });
+  }
+
+  // tests/patch-concurrency.test.ts
+  init_patch();
+  function patch_concurrency_test_default() {
+    describe("Patch Concurrency & Atomicity", () => {
+      it("should pass 'test' operation when values match", () => {
+        const state = { count: 1, ver: 10 };
+        const patch = [
+          { op: "test", path: "/ver", value: 10 },
+          { op: "replace", path: "/count", value: 2 }
+        ];
+        const result = applyPatch(state, patch);
+        expect(result.success).to.be.true;
+        expect(state.count).to.equal(2);
+      });
+      it("should fail transaction when 'test' fails", () => {
+        const state = { count: 1, ver: 10 };
+        const patch = [
+          { op: "test", path: "/ver", value: 99 },
+          // Mismatch
+          { op: "replace", path: "/count", value: 2 }
+        ];
+        const result = applyPatch(state, patch);
+        expect(result.success).to.be.false;
+        expect(result.error).to.include("Test failed");
+        expect(state.count).to.equal(1);
+      });
+      it("should rollback previous changes if a later 'test' fails (Atomicity)", () => {
+        const state = { count: 1, ver: 10, list: [1, 2] };
+        const patch = [
+          { op: "replace", path: "/count", value: 50 },
+          // Applied first
+          { op: "add", path: "/list/-", value: 3 },
+          // Applied second
+          { op: "test", path: "/ver", value: 999 }
+          // Fails
+        ];
+        const result = applyPatch(state, patch);
+        expect(result.success).to.be.false;
+        expect(state.count).to.equal(1);
+        expect(state.list).to.deep.equal([1, 2]);
+      });
+      it("should handle nested object equality in test", () => {
+        const state = { config: { theme: "dark", admin: true } };
+        const patch = [
+          { op: "test", path: "/config", value: { theme: "dark", admin: true } },
+          { op: "replace", path: "/config/theme", value: "light" }
+        ];
+        const result = applyPatch(state, patch);
+        expect(result.success).to.be.true;
+        expect(state.config.theme).to.equal("light");
+      });
+      it("should fail test on deep object mismatch", () => {
+        const state = { config: { theme: "dark", admin: true } };
+        const patch = [
+          { op: "test", path: "/config", value: { theme: "dark", admin: false } },
+          { op: "replace", path: "/config/theme", value: "light" }
+        ];
+        const result = applyPatch(state, patch);
+        expect(result.success).to.be.false;
+        expect(state.config.theme).to.equal("dark");
+      });
+      it("should rollback array splice operations correctly", () => {
+        const state = { items: ["a", "b", "c"] };
+        const patch = [
+          { op: "remove", path: "/items/1" },
+          { op: "test", path: "/items/0", value: "z" }
+          // Fail
+        ];
+        const result = applyPatch(state, patch);
+        expect(result.success).to.be.false;
+        expect(state.items).to.deep.equal(["a", "b", "c"]);
+      });
+      it("should rollback array insert operations correctly", () => {
+        const state = { items: ["a", "c"] };
+        const patch = [
+          { op: "add", path: "/items/1", value: "b" },
+          { op: "test", path: "/items/0", value: "z" }
+          // Fail
+        ];
+        const result = applyPatch(state, patch);
+        expect(result.success).to.be.false;
+        expect(state.items).to.deep.equal(["a", "c"]);
+      });
+      it("should rollback object property addition", () => {
+        const state = { a: 1 };
+        const patch = [
+          { op: "add", path: "/b", value: 2 },
+          { op: "test", path: "/a", value: 99 }
+        ];
+        const result = applyPatch(state, patch);
+        expect(result.success).to.be.false;
+        expect(state.b).to.be.undefined;
+        expect("b" in state).to.be.false;
+      });
+    });
+  }
+
+  // tests/inline-logic.test.ts
+  function inlineLogicTests() {
+    describe("Inline Logic Components", () => {
+      let container;
+      beforeEach(() => {
+        container = document.createElement("div");
+        document.body.appendChild(container);
+      });
+      afterEach(() => {
+        document.body.removeChild(container);
+      });
+      it("should load component logic from <script> inside <template>", async () => {
+        const tagName = "inline-counter";
+        const template = document.createElement("template");
+        template.setAttribute("data-component", tagName);
+        template.innerHTML = `
+        <div class="count">Count: <slot name="value">0</slot></div>
+        <button onclick="dispatch('inc')">+</button>
+        
+        <script type="module">
+          // Standard boreDOM component definition
+          export default ({ on }) => {
+            on("inc", ({ state }) => {
+              state.count++;
+            });
+            
+            return ({ state, slots }) => {
+              slots.value = String(state.count);
+            };
+          };
+        <\/script>
+      `;
+        document.body.appendChild(template);
+        const instance = document.createElement(tagName);
+        container.appendChild(instance);
+        const state = await inflictBoreDOM(
+          { count: 10 },
+          // No explicit componentsLogic passed - it should find it in the template!
+          void 0,
+          { debug: false }
+        );
+        await new Promise((r) => setTimeout(r, 50));
+        const countDisplay = instance.querySelector(".count");
+        expect(countDisplay).to.not.be.null;
+        expect(countDisplay?.textContent).to.contain("Count: 10");
+        const btn = instance.querySelector("button");
+        btn?.click();
+        await new Promise((r) => setTimeout(r, 50));
+        expect(countDisplay?.textContent).to.contain("Count: 11");
+        expect(state?.count).to.equal(11);
+      });
+      it("should handle multiple inline components", async () => {
+        const tag1 = "inline-one";
+        const tag2 = "inline-two";
+        const t1 = document.createElement("template");
+        t1.setAttribute("data-component", tag1);
+        t1.innerHTML = `
+        <span>One</span>
+        <script type="module">
+          export default () => ({ slots }) => { slots.default = "One rendered"; };
+        <\/script>
+      `;
+        document.body.appendChild(t1);
+        const t2 = document.createElement("template");
+        t2.setAttribute("data-component", tag2);
+        t2.innerHTML = `
+        <span>Two</span>
+        <script type="module">
+          export default () => ({ slots }) => { slots.default = "Two rendered"; };
+        <\/script>
+      `;
+        document.body.appendChild(t2);
+        const el1 = document.createElement(tag1);
+        const el2 = document.createElement(tag2);
+        container.appendChild(el1);
+        container.appendChild(el2);
+        await inflictBoreDOM({}, void 0, { debug: false });
+        await new Promise((r) => setTimeout(r, 50));
+        expect(el1.textContent).to.contain("One");
+        expect(el2.textContent).to.contain("Two");
+      });
+      it("should auto-wrap raw init functions", async () => {
+        const tagName = "auto-wrap-test";
+        const template = document.createElement("template");
+        template.setAttribute("data-component", tagName);
+        template.innerHTML = `
+         <span>Result: <slot name="val"></slot></span>
+         <script type="module">
+           // This is NOT wrapped in webComponent(), but just the init function
+           export default ({ state }) => {
+              return ({ slots }) => {
+                slots.val = state.val;
+              }
+           }
+         <\/script>
+       `;
+        document.body.appendChild(template);
+        const el = document.createElement(tagName);
+        container.appendChild(el);
+        await inflictBoreDOM({ val: "worked" });
+        await new Promise((r) => setTimeout(r, 50));
+        expect(el.textContent).to.contain("Result: worked");
+      });
+    });
+  }
+
+  // tests/dispatch-index.test.ts
+  async function frame5() {
+    return new Promise((resolve) => {
+      requestAnimationFrame((t) => resolve(t));
+    });
+  }
+  function renderHTML2(html2) {
+    const main = document.querySelector("main");
+    if (!main) throw new Error("No <main> found!");
+    main.innerHTML = html2;
+    return main;
+  }
+  function dispatchIndexTests() {
+    describe("Dispatch & Indexing", () => {
+      beforeEach(() => {
+        const main = document.querySelector("main");
+        if (main) main.innerHTML = "";
+      });
+      it("should update state via direct ref onclick (Singular Approach)", async () => {
+        renderHTML2(`
+        <ref-comp></ref-comp>
+        <template data-component="ref-comp">
+          <button data-ref="btn">Click</button>
+          <span data-ref="out"></span>
+          <script type="module">
+            export default ({ refs, state }) => {
+              refs.btn.onclick = () => state.val = 'ok';
+              return ({ state, refs }) => {
+                refs.out.textContent = state.val;
+              };
+            }
+          <\/script>
+        </template>
+      `);
+        const state = await inflictBoreDOM({ val: "init" });
+        const btn = document.querySelector("button");
+        if (!btn) throw new Error("Button not found");
+        fireEvent.click(btn);
+        await frame5();
+        const out = document.querySelector('[data-ref="out"]');
+        expect(out?.textContent).to.equal("ok");
+      });
+      it("should provide the correct index in dispatch handlers (List Approach)", async () => {
+        renderHTML2(`
+        <list-comp></list-comp>
+        <template data-component="list-comp">
+          <div data-ref="container"></div>
+          <script type="module">
+            export default ({ on, state, makeComponent, refs }) => {
+              on('hit', ({ e }) => {
+                state.lastIndex = e.index;
+              });
+              return ({ state, refs }) => {
+                refs.container.innerHTML = '';
+                [0, 1, 2].forEach(() => {
+                  refs.container.appendChild(makeComponent('item-btn'));
+                });
+              };
+            }
+          <\/script>
+        </template>
+        <template data-component="item-btn">
+          <button onclick="dispatch('hit')">Hit</button>
+        </template>
+      `);
+        const state = await inflictBoreDOM({ lastIndex: -1 });
+        await frame5();
+        const buttons = document.querySelectorAll("button");
+        expect(buttons.length).to.equal(3);
+        fireEvent.click(buttons[1]);
+        await frame5();
+        expect(state.lastIndex).to.equal(1);
+      });
+    });
+  }
+
+  // tests/bindings.test.ts
+  var import_mocha6 = __toESM(require_mocha());
+  async function frame6() {
+    return new Promise((resolve) => {
+      requestAnimationFrame((t) => resolve(t));
+    });
+  }
+  async function renderHTMLFrame6(html2) {
+    const main = document.querySelector("main");
+    if (!main) throw new Error("No <main> found!");
+    main.innerHTML = html2;
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => resolve(main));
+    });
+  }
+  function bindings_test_default() {
+    describe("Bindings", () => {
+      beforeEach(() => {
+        const main = document.querySelector("main");
+        if (main) main.innerHTML = "";
+        setDebugConfig(true);
+      });
+      it("applies data-text, data-show, data-class, data-value, data-checked", async () => {
+        await renderHTMLFrame6(`
+        <binding-test></binding-test>
+        <template data-component="binding-test">
+          <p data-ref="text" data-text="state.message"></p>
+          <div data-ref="visible" data-show="state.visible"></div>
+          <span class="base" data-ref="toggle" data-class="active:state.active"></span>
+          <input data-ref="input" data-value="state.input">
+          <input type="checkbox" data-ref="check" data-checked="state.checked">
+        </template>
+      `);
+        const state = await inflictBoreDOM(
+          {
+            message: "Hello",
+            visible: true,
+            active: true,
+            input: "test",
+            checked: true
+          },
+          {
+            "binding-test": webComponent(() => () => {
+            })
+          }
+        );
+        const text = document.querySelector("[data-ref='text']");
+        const visible = document.querySelector("[data-ref='visible']");
+        const toggle = document.querySelector("[data-ref='toggle']");
+        const input = document.querySelector("[data-ref='input']");
+        const check = document.querySelector("[data-ref='check']");
+        expect(text.textContent).to.equal("Hello");
+        expect(visible.hidden).to.equal(false);
+        expect(toggle.classList.contains("active")).to.equal(true);
+        expect(input.value).to.equal("test");
+        expect(check.checked).to.equal(true);
+        state.message = "World";
+        state.visible = false;
+        state.active = false;
+        state.input = "next";
+        state.checked = false;
+        await frame6();
+        await frame6();
+        expect(text.textContent).to.equal("World");
+        expect(visible.hidden).to.equal(true);
+        expect(toggle.classList.contains("active")).to.equal(false);
+        expect(input.value).to.equal("next");
+        expect(check.checked).to.equal(false);
+      });
+      it("renders lists with data-list and data-item templates", async () => {
+        await renderHTMLFrame6(`
+        <list-test></list-test>
+        <template data-component="list-test">
+          <ul data-list="state.items">
+            <template data-item>
+              <li>
+                <span data-text="item.label"></span>
+                <span data-text="index"></span>
+              </li>
+            </template>
+          </ul>
+        </template>
+      `);
+        const state = await inflictBoreDOM(
+          { items: [{ label: "A" }, { label: "B" }] },
+          { "list-test": webComponent(() => () => {
+          }) }
+        );
+        await frame6();
+        await frame6();
+        const items = document.querySelectorAll("list-test li");
+        expect(items.length).to.equal(2);
+        expect(items[0].textContent).to.include("A");
+        expect(items[1].textContent).to.include("B");
+        state.items.push({ label: "C" });
+        await frame6();
+        await frame6();
+        const updated = document.querySelectorAll("list-test li");
+        expect(updated.length).to.equal(3);
+        expect(updated[2].textContent).to.include("C");
+      });
+      it("updates data-prop bindings and rerenders child components", async () => {
+        await renderHTMLFrame6(`
+        <parent-comp></parent-comp>
+        <template data-component="parent-comp">
+          <child-comp data-prop-user-id="state.selectedId"></child-comp>
+        </template>
+        <template data-component="child-comp">
+          <span data-ref="out"></span>
+        </template>
+      `);
+        const state = await inflictBoreDOM(
+          { selectedId: 1 },
+          {
+            "parent-comp": webComponent(() => () => {
+            }),
+            "child-comp": webComponent(() => ({ refs, detail }) => {
+              refs.out.textContent = String(detail?.data?.userId ?? "");
+            })
+          }
+        );
+        const output = document.querySelector("child-comp span");
+        expect(output.textContent).to.equal("1");
+        state.selectedId = 2;
+        await frame6();
+        await frame6();
+        expect(output.textContent).to.equal("2");
+      });
+      it("supports data-dispatch and on- attributes for events", async () => {
+        await renderHTMLFrame6(`
+        <event-test></event-test>
+        <template data-component="event-test">
+          <button data-dispatch="hit" data-ref="hit"></button>
+          <button on-click="tap" data-ref="tap"></button>
+        </template>
+      `);
+        const state = await inflictBoreDOM(
+          { hits: 0, taps: 0 },
+          {
+            "event-test": webComponent(({ on }) => {
+              on("hit", ({ state: state2 }) => {
+                state2.hits += 1;
+              });
+              on("tap", ({ state: state2 }) => {
+                state2.taps += 1;
+              });
               return () => {
               };
             })
-          });
-          const ctx = boreDOM.llm.context();
-          const compInfo = ctx.components["llm-template-test"];
-          expect(compInfo).to.not.be.undefined;
-          expect(compInfo.template).to.include("custom-class");
-          expect(compInfo.refs).to.include("text");
-          expect(compInfo.slots).to.include("content");
-        });
-        it("should include errors when component fails", async () => {
-          const container = await renderHTMLFrame5(`
-          <llm-error-context-test></llm-error-context-test>
-
-          <template data-component="llm-error-context-test">
-            <p>Error test</p>
-          </template>
-        `);
-          const capture = captureConsole4();
-          await inflictBoreDOM({ user: null }, {
-            "llm-error-context-test": webComponent(() => {
-              return ({ state }) => {
-                const name = state.user.name;
-              };
-            })
-          });
-          capture.restore();
-          const ctx = boreDOM.llm.context();
-          expect(ctx.issues.errors.length).to.be.greaterThan(0);
-          expect(ctx.issues.errors[0].component).to.equal("llm-error-context-test");
-          expect(ctx.issues.errors[0].error).to.be.a("string");
-          clearWindowGlobals4();
-        });
-        it("should return empty context when llm disabled", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({ value: "test" });
-          setDebugConfig({ llm: false });
-          const ctx = boreDOM.llm.context();
-          expect(ctx.framework.capabilities).to.deep.equal([]);
-          expect(ctx.state.paths).to.deep.equal([]);
-          expect(Object.keys(ctx.components)).to.have.length(0);
-        });
-      });
-      describe("boreDOM.llm.focus()", () => {
-        it("should return error context when error exists", async () => {
-          const container = await renderHTMLFrame5(`
-          <llm-focus-error-test></llm-focus-error-test>
-
-          <template data-component="llm-focus-error-test">
-            <p>Focus error test</p>
-          </template>
-        `);
-          const capture = captureConsole4();
-          await inflictBoreDOM({ items: null }, {
-            "llm-focus-error-test": webComponent(() => {
-              return ({ state }) => {
-                state.items.map((x) => x);
-              };
-            })
-          });
-          capture.restore();
-          const focused = boreDOM.llm.focus();
-          expect(focused.issue.type).to.equal("error");
-          expect(focused.issue.component).to.equal("llm-focus-error-test");
-          expect(focused.issue.description).to.be.a("string");
-          expect(focused.issue.suggestion).to.be.a("string");
-          expect(focused.component).to.not.be.undefined;
-          expect(focused.relevantState).to.not.be.undefined;
-          clearWindowGlobals4();
-        });
-        it("should return missing_function context when helper missing", async () => {
-          const container = await renderHTMLFrame5(`
-          <llm-focus-missing-test></llm-focus-missing-test>
-
-          <template data-component="llm-focus-missing-test">
-            <p>Missing function test</p>
-          </template>
-        `);
-          const capture = captureConsole4();
-          await inflictBoreDOM({ user: { name: "John" } }, {
-            "llm-focus-missing-test": webComponent(() => {
-              return ({ helpers }) => {
-                helpers.formatUser({ name: "John" });
-              };
-            })
-          });
-          capture.restore();
-          const focused = boreDOM.llm.focus();
-          expect(["error", "missing_function", "none"]).to.include(focused.issue.type);
-        });
-        it("should return none when no issues exist", async () => {
-          const container = await renderHTMLFrame5(`
-          <llm-focus-clean-test></llm-focus-clean-test>
-
-          <template data-component="llm-focus-clean-test">
-            <p data-ref="out">Clean</p>
-          </template>
-        `);
-          await inflictBoreDOM({ value: "clean" }, {
-            "llm-focus-clean-test": webComponent(() => {
-              return ({ state, refs }) => {
-                if (refs.out instanceof HTMLElement && state) {
-                  refs.out.textContent = state.value;
-                }
-              };
-            })
-          });
-          const focused = boreDOM.llm.focus();
-          expect(focused.issue.type).to.equal("none");
-          expect(focused.issue.description).to.include("No current issues");
-        });
-        it("should include suggestion for errors", async () => {
-          const container = await renderHTMLFrame5(`
-          <llm-suggestion-test></llm-suggestion-test>
-
-          <template data-component="llm-suggestion-test">
-            <p>Suggestion test</p>
-          </template>
-        `);
-          const capture = captureConsole4();
-          await inflictBoreDOM({ data: void 0 }, {
-            "llm-suggestion-test": webComponent(() => {
-              return ({ state }) => {
-                const val = state.data.value;
-              };
-            })
-          });
-          capture.restore();
-          const focused = boreDOM.llm.focus();
-          expect(focused.issue.type).to.equal("error");
-          expect(focused.issue.suggestion).to.be.a("string");
-          expect(focused.issue.suggestion?.length).to.be.greaterThan(0);
-          clearWindowGlobals4();
-        });
-        it("should return empty context when llm disabled", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({ value: "test" });
-          setDebugConfig({ llm: false });
-          const focused = boreDOM.llm.focus();
-          expect(focused.issue.description).to.include("disabled");
-        });
-      });
-      describe("boreDOM.llm.copy()", () => {
-        it("should return JSON string", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({ value: "copy-test" });
-          const result = boreDOM.llm.copy();
-          expect(result).to.be.a("string");
-          expect(() => JSON.parse(result)).to.not.throw();
-        });
-        it("should return focused context as JSON", async () => {
-          const container = await renderHTMLFrame5(`
-          <llm-copy-test></llm-copy-test>
-
-          <template data-component="llm-copy-test">
-            <p>Copy test</p>
-          </template>
-        `);
-          const capture = captureConsole4();
-          await inflictBoreDOM({ value: "error" }, {
-            "llm-copy-test": webComponent(() => {
-              return ({ state }) => {
-                throw new Error("Test error for copy");
-              };
-            })
-          });
-          capture.restore();
-          const result = boreDOM.llm.copy();
-          const parsed = JSON.parse(result);
-          expect(parsed.issue).to.not.be.undefined;
-          expect(parsed.issue.type).to.equal("error");
-          clearWindowGlobals4();
-        });
-        it("should return empty JSON when llm disabled", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({ value: "test" });
-          setDebugConfig({ llm: false });
-          const result = boreDOM.llm.copy();
-          expect(result).to.equal("{}");
-        });
-      });
-      describe("Attempt tracking", () => {
-        it("should start with empty attempts array", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({ value: "test" });
-          boreDOM.llm.clearAttempts();
-          expect(boreDOM.llm.attempts).to.deep.equal([]);
-        });
-        it("clearAttempts() should clear all attempts", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({ value: "test" });
-          if (boreDOM.llm._recordAttempt) {
-            boreDOM.llm._recordAttempt("test code 1", "success");
-            boreDOM.llm._recordAttempt("test code 2", "error", "Some error");
           }
-          expect(boreDOM.llm.attempts.length).to.be.greaterThan(0);
-          boreDOM.llm.clearAttempts();
-          expect(boreDOM.llm.attempts).to.deep.equal([]);
-        });
-        it("should limit attempts to 10", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({ value: "test" });
-          boreDOM.llm.clearAttempts();
-          if (boreDOM.llm._recordAttempt) {
-            for (let i = 0; i < 15; i++) {
-              boreDOM.llm._recordAttempt(`code ${i}`, "success");
-            }
+        );
+        const hit = document.querySelector("[data-ref='hit']");
+        const tap = document.querySelector("[data-ref='tap']");
+        fireEvent.click(hit);
+        fireEvent.click(tap);
+        await frame6();
+        await frame6();
+        expect(state.hits).to.equal(1);
+        expect(state.taps).to.equal(1);
+      });
+      it("creates templates via component() helper", async () => {
+        const Helper = component2(
+          "component-helper",
+          `<p data-text="state.message"></p>`,
+          () => () => {
           }
-          expect(boreDOM.llm.attempts.length).to.be.at.most(10);
-        });
-      });
-      describe("outputFormat: 'llm' configuration", () => {
-        it("should be 'human' by default", () => {
-          setDebugConfig(true);
-          const config3 = boreDOM.config;
-          expect(config3.outputFormat).to.equal("human");
-        });
-        it("should be settable to 'llm'", () => {
-          setDebugConfig({ outputFormat: "llm" });
-          const config3 = boreDOM.config;
-          expect(config3.outputFormat).to.equal("llm");
-        });
-        it("should output JSON for errors in llm mode", async () => {
-          const container = await renderHTMLFrame5(`
-          <llm-output-format-test></llm-output-format-test>
-
-          <template data-component="llm-output-format-test">
-            <p>Output format test</p>
-          </template>
-        `);
-          setDebugConfig({ outputFormat: "llm" });
-          const capture = captureConsole4();
-          await inflictBoreDOM({ data: null }, {
-            "llm-output-format-test": webComponent(() => {
-              return ({ state }) => {
-                const x = state.data.value;
-              };
-            })
-          });
-          await frame4();
-          await frame4();
-          capture.restore();
-          const jsonLogs = capture.logs.filter((args) => {
-            try {
-              const parsed = JSON.parse(args[0]);
-              return parsed.type === "error";
-            } catch {
-              return false;
-            }
-          });
-          expect(jsonLogs.length).to.be.at.least(0);
-          clearWindowGlobals4();
-        });
-      });
-      describe("Debug configuration for llm", () => {
-        it("setDebugConfig(true) should enable llm", () => {
-          setDebugConfig(true);
-          expect(isDebugEnabled("llm")).to.be.true;
-        });
-        it("setDebugConfig(false) should disable llm", () => {
-          setDebugConfig(false);
-          expect(isDebugEnabled("llm")).to.be.false;
-        });
-        it("setDebugConfig({ llm: true }) should enable llm specifically", () => {
-          setDebugConfig({ llm: true, console: false });
-          expect(isDebugEnabled("llm")).to.be.true;
-          expect(isDebugEnabled("console")).to.be.false;
-        });
-        it("setDebugConfig({ llm: false }) should disable llm specifically", () => {
-          setDebugConfig({ llm: false, console: true });
-          expect(isDebugEnabled("llm")).to.be.false;
-          expect(isDebugEnabled("console")).to.be.true;
-        });
-      });
-      describe("Context state handling", () => {
-        it("should handle circular references in state", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          const circularState = { name: "circular" };
-          circularState.self = circularState;
-          await inflictBoreDOM(circularState);
-          const ctx = boreDOM.llm.context();
-          expect(ctx.state.sample.name).to.equal("circular");
-          expect(ctx.state.sample.self).to.equal("[Circular]");
-        });
-        it("should handle functions in state", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({
-            value: "test",
-            handler: () => console.log("test")
-          });
-          const ctx = boreDOM.llm.context();
-          expect(ctx.state.sample.value).to.equal("test");
-          expect(ctx.state.sample.handler).to.equal("[Function]");
-        });
-        it("should handle empty state", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM();
-          const ctx = boreDOM.llm.context();
-          expect(ctx.state.paths).to.deep.equal([]);
-        });
-        it("should handle deeply nested state", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({
-            level1: {
-              level2: {
-                level3: {
-                  level4: {
-                    value: "deep"
-                  }
-                }
-              }
-            }
-          });
-          const ctx = boreDOM.llm.context();
-          expect(ctx.state.paths).to.include("level1");
-          expect(ctx.state.paths).to.include("level1.level2");
-          expect(ctx.state.paths).to.include("level1.level2.level3");
-          expect(ctx.state.paths).to.include("level1.level2.level3.level4");
-          expect(ctx.state.paths).to.include("level1.level2.level3.level4.value");
-        });
-        it("should handle arrays with objects", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({
-            users: [
-              { id: 1, name: "Alice" },
-              { id: 2, name: "Bob" }
-            ]
-          });
-          const ctx = boreDOM.llm.context();
-          expect(ctx.state.paths).to.include("users");
-          expect(ctx.state.paths).to.include("users[]");
-          expect(ctx.state.paths).to.include("users[0].id");
-          expect(ctx.state.paths).to.include("users[0].name");
-        });
-      });
-      describe("Integration with other phases", () => {
-        it("should include Phase 1 errors in context", async () => {
-          const container = await renderHTMLFrame5(`
-          <llm-phase1-test></llm-phase1-test>
-
-          <template data-component="llm-phase1-test">
-            <p>Phase 1 test</p>
-          </template>
-        `);
-          const capture = captureConsole4();
-          await inflictBoreDOM({ value: null }, {
-            "llm-phase1-test": webComponent(() => {
-              return ({ state }) => {
-                throw new Error("Phase 1 error test");
-              };
-            })
-          });
-          capture.restore();
-          const ctx = boreDOM.llm.context();
-          expect(ctx.issues.errors.length).to.be.greaterThan(0);
-          clearWindowGlobals4();
-        });
-        it("should include Phase 3 helpers in context", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({ value: "test" });
-          boreDOM.defineHelper("testHelper", (x) => x * 2);
-          const ctx = boreDOM.llm.context();
-          expect(ctx.helpers.defined).to.have.property("testHelper");
-        });
-        it("should work with Phase 2 define()", async () => {
-          await renderHTMLFrame5(`<p>Test</p>`);
-          await inflictBoreDOM({ greeting: "Hello!" });
-          boreDOM.define(
-            "llm-phase2-test",
-            "<p data-ref='msg'>Loading</p>",
-            ({ state }) => {
-              return ({ refs }) => {
-                if (refs.msg instanceof HTMLElement && state) {
-                  refs.msg.textContent = state.greeting;
-                }
-              };
-            }
-          );
-          const ctx = boreDOM.llm.context();
-          expect(ctx.components["llm-phase2-test"]).to.not.be.undefined;
-          expect(ctx.components["llm-phase2-test"].hasLogic).to.be.true;
-        });
-      });
-    });
-  }
-
-  // tests/type-inference.test.ts
-  var import_mocha6 = __toESM(require_mocha());
-  init_type_inference();
-  function type_inference_test_default() {
-    describe("Type Inference (Phase 5)", () => {
-      beforeEach(function() {
-        const main = document.querySelector("main");
-        if (!main) return;
-        main.innerHTML = "";
-        setDebugConfig(true);
-        clearTypeTracking();
-      });
-      afterEach(function() {
-        clearTypeTracking();
-      });
-      describe("inferTypeFromValue() - Basic Types", () => {
-        it("should infer string type", () => {
-          expect(inferTypeFromValue("hello")).to.deep.equal({ kind: "primitive", value: "string" });
-        });
-        it("should infer number type", () => {
-          expect(inferTypeFromValue(42)).to.deep.equal({ kind: "primitive", value: "number" });
-        });
-        it("should infer boolean type", () => {
-          expect(inferTypeFromValue(true)).to.deep.equal({ kind: "primitive", value: "boolean" });
-          expect(inferTypeFromValue(false)).to.deep.equal({ kind: "primitive", value: "boolean" });
-        });
-        it("should infer null type", () => {
-          expect(inferTypeFromValue(null)).to.deep.equal({ kind: "primitive", value: "null" });
-        });
-        it("should infer undefined type", () => {
-          expect(inferTypeFromValue(void 0)).to.deep.equal({ kind: "primitive", value: "undefined" });
-        });
-        it("should infer Date type", () => {
-          expect(inferTypeFromValue(/* @__PURE__ */ new Date())).to.deep.equal({ kind: "date" });
-          expect(inferTypeFromValue(/* @__PURE__ */ new Date("2024-01-01"))).to.deep.equal({ kind: "date" });
-          expect(inferTypeFromValue(/* @__PURE__ */ new Date(0))).to.deep.equal({ kind: "date" });
-        });
-        it("should infer function type for functions", () => {
-          expect(inferTypeFromValue(() => {
-          })).to.deep.equal({ kind: "function", params: [], returnType: { kind: "unknown" } });
-          expect(inferTypeFromValue(function named() {
-          })).to.deep.equal({ kind: "function", params: [], returnType: { kind: "unknown" } });
-          expect(inferTypeFromValue(async () => {
-          })).to.deep.equal({ kind: "function", params: [], returnType: { kind: "unknown" } });
-        });
-        it("should infer unknown for Symbol", () => {
-          expect(inferTypeFromValue(Symbol("test"))).to.deep.equal({ kind: "unknown" });
-          expect(inferTypeFromValue(Symbol.for("global"))).to.deep.equal({ kind: "unknown" });
-        });
-      });
-      describe("inferTypeFromValue() - Number Edge Cases", () => {
-        it("should handle zero", () => {
-          expect(inferTypeFromValue(0)).to.deep.equal({ kind: "primitive", value: "number" });
-        });
-        it("should handle negative numbers", () => {
-          expect(inferTypeFromValue(-42)).to.deep.equal({ kind: "primitive", value: "number" });
-          expect(inferTypeFromValue(-0)).to.deep.equal({ kind: "primitive", value: "number" });
-        });
-        it("should handle floats", () => {
-          expect(inferTypeFromValue(3.14159)).to.deep.equal({ kind: "primitive", value: "number" });
-          expect(inferTypeFromValue(0.1 + 0.2)).to.deep.equal({ kind: "primitive", value: "number" });
-        });
-        it("should handle Infinity", () => {
-          expect(inferTypeFromValue(Infinity)).to.deep.equal({ kind: "primitive", value: "number" });
-          expect(inferTypeFromValue(-Infinity)).to.deep.equal({ kind: "primitive", value: "number" });
-        });
-        it("should handle NaN", () => {
-          expect(inferTypeFromValue(NaN)).to.deep.equal({ kind: "primitive", value: "number" });
-        });
-        it("should handle Number.MAX_VALUE and MIN_VALUE", () => {
-          expect(inferTypeFromValue(Number.MAX_VALUE)).to.deep.equal({ kind: "primitive", value: "number" });
-          expect(inferTypeFromValue(Number.MIN_VALUE)).to.deep.equal({ kind: "primitive", value: "number" });
-        });
-        it("should handle BigInt", () => {
-          const result = inferTypeFromValue(BigInt(9007199254740991));
-          expect(result.kind).to.equal("unknown");
-        });
-      });
-      describe("inferTypeFromValue() - String Edge Cases", () => {
-        it("should handle empty string", () => {
-          expect(inferTypeFromValue("")).to.deep.equal({ kind: "primitive", value: "string" });
-        });
-        it("should handle whitespace-only strings", () => {
-          expect(inferTypeFromValue("   ")).to.deep.equal({ kind: "primitive", value: "string" });
-          expect(inferTypeFromValue("	\n")).to.deep.equal({ kind: "primitive", value: "string" });
-        });
-        it("should handle unicode strings", () => {
-          expect(inferTypeFromValue("\u65E5\u672C\u8A9E")).to.deep.equal({ kind: "primitive", value: "string" });
-          expect(inferTypeFromValue("emoji \u{1F389}\u{1F680}")).to.deep.equal({ kind: "primitive", value: "string" });
-          expect(inferTypeFromValue("\u0645\u0631\u062D\u0628\u0627")).to.deep.equal({ kind: "primitive", value: "string" });
-        });
-        it("should handle very long strings", () => {
-          const longString = "a".repeat(1e4);
-          expect(inferTypeFromValue(longString)).to.deep.equal({ kind: "primitive", value: "string" });
-        });
-        it("should handle strings with special characters", () => {
-          expect(inferTypeFromValue("line1\nline2")).to.deep.equal({ kind: "primitive", value: "string" });
-          expect(inferTypeFromValue("tab	here")).to.deep.equal({ kind: "primitive", value: "string" });
-          expect(inferTypeFromValue("null\0char")).to.deep.equal({ kind: "primitive", value: "string" });
-        });
-        it("should handle template literal results", () => {
-          const name = "World";
-          expect(inferTypeFromValue(`Hello ${name}`)).to.deep.equal({ kind: "primitive", value: "string" });
-        });
-      });
-      describe("inferTypeFromValue() - Array Types", () => {
-        it("should infer empty array type", () => {
-          expect(inferTypeFromValue([])).to.deep.equal({
-            kind: "array",
-            elementType: { kind: "unknown" }
-          });
-        });
-        it("should infer homogeneous number array", () => {
-          expect(inferTypeFromValue([1, 2, 3])).to.deep.equal({
-            kind: "array",
-            elementType: { kind: "primitive", value: "number" }
-          });
-        });
-        it("should infer homogeneous string array", () => {
-          expect(inferTypeFromValue(["a", "b", "c"])).to.deep.equal({
-            kind: "array",
-            elementType: { kind: "primitive", value: "string" }
-          });
-        });
-        it("should infer homogeneous boolean array", () => {
-          expect(inferTypeFromValue([true, false, true])).to.deep.equal({
-            kind: "array",
-            elementType: { kind: "primitive", value: "boolean" }
-          });
-        });
-        it("should infer union type for mixed primitive arrays", () => {
-          const result = inferTypeFromValue([1, "hello", true]);
-          expect(result.kind).to.equal("array");
-          if (result.kind === "array") {
-            expect(result.elementType.kind).to.equal("union");
-            if (result.elementType.kind === "union") {
-              expect(result.elementType.types.length).to.be.greaterThanOrEqual(3);
-            }
-          }
-        });
-        it("should infer array of objects with same shape", () => {
-          const result = inferTypeFromValue([
-            { id: 1, name: "Alice" },
-            { id: 2, name: "Bob" }
-          ]);
-          expect(result.kind).to.equal("array");
-          if (result.kind === "array") {
-            expect(result.elementType.kind).to.equal("object");
-          }
-        });
-        it("should handle nested arrays", () => {
-          const result = inferTypeFromValue([[1, 2], [3, 4]]);
-          expect(result.kind).to.equal("array");
-          if (result.kind === "array") {
-            expect(result.elementType.kind).to.equal("array");
-          }
-        });
-        it("should handle deeply nested arrays", () => {
-          const result = inferTypeFromValue([[[1]], [[2]], [[3]]]);
-          expect(result.kind).to.equal("array");
-        });
-        it("should handle sparse arrays", () => {
-          const sparse = [1, , 3];
-          const result = inferTypeFromValue(sparse);
-          expect(result.kind).to.equal("array");
-        });
-        it("should handle array with null elements", () => {
-          const result = inferTypeFromValue([1, null, 3]);
-          expect(result.kind).to.equal("array");
-          if (result.kind === "array") {
-            expect(result.elementType.kind).to.equal("union");
-          }
-        });
-        it("should handle array with undefined elements", () => {
-          const result = inferTypeFromValue([1, void 0, 3]);
-          expect(result.kind).to.equal("array");
-          if (result.kind === "array") {
-            expect(result.elementType.kind).to.equal("union");
-          }
-        });
-        it("should sample only first elements for large arrays", () => {
-          const largeArray = Array.from({ length: 1e3 }, (_, i) => i);
-          const result = inferTypeFromValue(largeArray);
-          expect(result.kind).to.equal("array");
-        });
-        it("should handle array-like objects (not as arrays)", () => {
-          const arrayLike = { 0: "a", 1: "b", length: 2 };
-          const result = inferTypeFromValue(arrayLike);
-          expect(result.kind).to.equal("object");
-        });
-      });
-      describe("inferTypeFromValue() - Object Types", () => {
-        it("should infer empty object type", () => {
-          const result = inferTypeFromValue({});
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(Object.keys(result.properties)).to.have.length(0);
-          }
-        });
-        it("should infer simple object types", () => {
-          const result = inferTypeFromValue({ name: "John", age: 30 });
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(result.properties.name).to.deep.equal({ kind: "primitive", value: "string" });
-            expect(result.properties.age).to.deep.equal({ kind: "primitive", value: "number" });
-          }
-        });
-        it("should infer nested object types", () => {
-          const result = inferTypeFromValue({
-            user: {
-              name: "John",
-              address: { city: "NYC", zip: 10001 }
-            }
-          });
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(result.properties.user.kind).to.equal("object");
-          }
-        });
-        it("should handle deeply nested objects", () => {
-          const deep = { a: { b: { c: { d: { e: { f: "deep" } } } } } };
-          const result = inferTypeFromValue(deep);
-          expect(result.kind).to.equal("object");
-        });
-        it("should handle objects with array properties", () => {
-          const result = inferTypeFromValue({
-            items: [1, 2, 3],
-            tags: ["a", "b"]
-          });
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(result.properties.items.kind).to.equal("array");
-            expect(result.properties.tags.kind).to.equal("array");
-          }
-        });
-        it("should handle objects with mixed value types", () => {
-          const result = inferTypeFromValue({
-            str: "hello",
-            num: 42,
-            bool: true,
-            arr: [1, 2],
-            obj: { nested: true },
-            nil: null,
-            undef: void 0
-          });
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(Object.keys(result.properties)).to.have.length(7);
-          }
-        });
-        it("should handle objects with special property names", () => {
-          const result = inferTypeFromValue({
-            "kebab-case": 1,
-            "with spaces": 2,
-            "123numeric": 3,
-            "": 4,
-            // empty string key
-            [Symbol.toStringTag]: "test"
-            // Symbol key (should be ignored)
-          });
-          expect(result.kind).to.equal("object");
-        });
-        it("should handle objects with function values", () => {
-          const result = inferTypeFromValue({
-            method: () => {
-            },
-            name: "test"
-          });
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(result.properties.method).to.deep.equal({ kind: "function", params: [], returnType: { kind: "unknown" } });
-            expect(result.properties.name).to.deep.equal({ kind: "primitive", value: "string" });
-          }
-        });
-        it("should handle circular references gracefully", () => {
-          const obj = { name: "test" };
-          obj.self = obj;
-          const result = inferTypeFromValue(obj);
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(result.properties.self).to.deep.equal({ kind: "unknown" });
-          }
-        });
-        it("should handle multiple circular references", () => {
-          const a = { name: "a" };
-          const b = { name: "b" };
-          a.ref = b;
-          b.ref = a;
-          const result = inferTypeFromValue({ a, b });
-          expect(result.kind).to.equal("object");
-        });
-        it("should handle objects with Date properties", () => {
-          const result = inferTypeFromValue({
-            created: /* @__PURE__ */ new Date(),
-            updated: /* @__PURE__ */ new Date()
-          });
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(result.properties.created).to.deep.equal({ kind: "date" });
-          }
-        });
-        it("should handle prototype chain (only own properties)", () => {
-          const proto = { inherited: "value" };
-          const obj = Object.create(proto);
-          obj.own = "property";
-          const result = inferTypeFromValue(obj);
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(result.properties).to.have.property("own");
-            expect(result.properties).to.not.have.property("inherited");
-          }
-        });
-        it("should handle Object.create(null)", () => {
-          const nullProto = /* @__PURE__ */ Object.create(null);
-          nullProto.key = "value";
-          const result = inferTypeFromValue(nullProto);
-          expect(result.kind).to.equal("object");
-        });
-      });
-      describe("inferTypeFromValue() - Special Objects", () => {
-        it("should handle RegExp", () => {
-          const result = inferTypeFromValue(/test/gi);
-          expect(result.kind).to.be.oneOf(["unknown", "object"]);
-        });
-        it("should handle Error objects", () => {
-          const result = inferTypeFromValue(new Error("test"));
-          expect(result.kind).to.be.oneOf(["unknown", "object"]);
-        });
-        it("should handle Map objects", () => {
-          const result = inferTypeFromValue(/* @__PURE__ */ new Map([["key", "value"]]));
-          expect(result.kind).to.be.oneOf(["unknown", "object"]);
-        });
-        it("should handle Set objects", () => {
-          const result = inferTypeFromValue(/* @__PURE__ */ new Set([1, 2, 3]));
-          expect(result.kind).to.be.oneOf(["unknown", "object"]);
-        });
-        it("should handle WeakMap", () => {
-          const result = inferTypeFromValue(/* @__PURE__ */ new WeakMap());
-          expect(result.kind).to.be.oneOf(["unknown", "object"]);
-        });
-        it("should handle WeakSet", () => {
-          const result = inferTypeFromValue(/* @__PURE__ */ new WeakSet());
-          expect(result.kind).to.be.oneOf(["unknown", "object"]);
-        });
-        it("should handle ArrayBuffer", () => {
-          const result = inferTypeFromValue(new ArrayBuffer(8));
-          expect(result.kind).to.be.oneOf(["unknown", "object"]);
-        });
-        it("should handle TypedArrays", () => {
-          const result = inferTypeFromValue(new Uint8Array([1, 2, 3]));
-          expect(result.kind).to.be.oneOf(["unknown", "array", "object"]);
-        });
-        it("should handle Promise (as unknown)", () => {
-          const result = inferTypeFromValue(Promise.resolve(42));
-          expect(result.kind).to.be.oneOf(["unknown", "object"]);
-        });
-        it("should handle Proxy objects", () => {
-          const target = { value: 42 };
-          const proxy = new Proxy(target, {});
-          const result = inferTypeFromValue(proxy);
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(result.properties.value).to.deep.equal({ kind: "primitive", value: "number" });
-          }
-        });
-      });
-      describe("mergeTypes() - Comprehensive", () => {
-        it("should return unknown for empty array", () => {
-          expect(mergeTypes([])).to.deep.equal({ kind: "unknown" });
-        });
-        it("should return single type unchanged", () => {
-          const type3 = { kind: "primitive", value: "string" };
-          expect(mergeTypes([type3])).to.deep.equal(type3);
-        });
-        it("should merge identical primitive types", () => {
-          const type1 = { kind: "primitive", value: "string" };
-          const type22 = { kind: "primitive", value: "string" };
-          expect(mergeTypes([type1, type22])).to.deep.equal(type1);
-        });
-        it("should create union for different primitive types", () => {
-          const type1 = { kind: "primitive", value: "string" };
-          const type22 = { kind: "primitive", value: "number" };
-          const result = mergeTypes([type1, type22]);
-          expect(result.kind).to.equal("union");
-          if (result.kind === "union") {
-            expect(result.types).to.have.length(2);
-          }
-        });
-        it("should create union with nested union (doesn't flatten)", () => {
-          const type1 = { kind: "primitive", value: "string" };
-          const type22 = {
-            kind: "union",
-            types: [
-              { kind: "primitive", value: "number" },
-              { kind: "primitive", value: "boolean" }
-            ]
-          };
-          const result = mergeTypes([type1, type22]);
-          expect(result.kind).to.equal("union");
-          if (result.kind === "union") {
-            expect(result.types).to.have.length(2);
-          }
-        });
-        it("should deduplicate union types", () => {
-          const types = [
-            { kind: "primitive", value: "string" },
-            { kind: "primitive", value: "string" },
-            { kind: "primitive", value: "number" }
-          ];
-          const result = mergeTypes(types);
-          expect(result.kind).to.equal("union");
-          if (result.kind === "union") {
-            expect(result.types).to.have.length(2);
-          }
-        });
-        it("should merge object types with same properties", () => {
-          const type1 = {
-            kind: "object",
-            properties: { name: { kind: "primitive", value: "string" } }
-          };
-          const type22 = {
-            kind: "object",
-            properties: { name: { kind: "primitive", value: "string" } }
-          };
-          const result = mergeTypes([type1, type22]);
-          expect(result.kind).to.equal("object");
-        });
-        it("should merge object types with different properties", () => {
-          const type1 = {
-            kind: "object",
-            properties: { name: { kind: "primitive", value: "string" } }
-          };
-          const type22 = {
-            kind: "object",
-            properties: { age: { kind: "primitive", value: "number" } }
-          };
-          const result = mergeTypes([type1, type22]);
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(result.properties).to.have.property("name");
-            expect(result.properties).to.have.property("age");
-          }
-        });
-        it("should create union for property type conflicts", () => {
-          const type1 = {
-            kind: "object",
-            properties: { value: { kind: "primitive", value: "string" } }
-          };
-          const type22 = {
-            kind: "object",
-            properties: { value: { kind: "primitive", value: "number" } }
-          };
-          const result = mergeTypes([type1, type22]);
-          expect(result.kind).to.equal("object");
-          if (result.kind === "object") {
-            expect(result.properties.value.kind).to.equal("union");
-          }
-        });
-        it("should merge array types with same element type", () => {
-          const type1 = { kind: "array", elementType: { kind: "primitive", value: "string" } };
-          const type22 = { kind: "array", elementType: { kind: "primitive", value: "string" } };
-          const result = mergeTypes([type1, type22]);
-          expect(result.kind).to.equal("array");
-          if (result.kind === "array") {
-            expect(result.elementType).to.deep.equal({ kind: "primitive", value: "string" });
-          }
-        });
-        it("should create union element for arrays with different element types", () => {
-          const type1 = { kind: "array", elementType: { kind: "primitive", value: "string" } };
-          const type22 = { kind: "array", elementType: { kind: "primitive", value: "number" } };
-          const result = mergeTypes([type1, type22]);
-          expect(result.kind).to.equal("array");
-          if (result.kind === "array") {
-            expect(result.elementType.kind).to.equal("union");
-          }
-        });
-        it("should handle merging many types", () => {
-          const types = [
-            { kind: "primitive", value: "string" },
-            { kind: "primitive", value: "number" },
-            { kind: "primitive", value: "boolean" },
-            { kind: "primitive", value: "null" },
-            { kind: "primitive", value: "undefined" }
-          ];
-          const result = mergeTypes(types);
-          expect(result.kind).to.equal("union");
-          if (result.kind === "union") {
-            expect(result.types).to.have.length(5);
-          }
-        });
-        it("should handle merging date with primitives", () => {
-          const types = [
-            { kind: "date" },
-            { kind: "primitive", value: "string" }
-          ];
-          const result = mergeTypes(types);
-          expect(result.kind).to.equal("union");
-        });
-        it("should filter out unknown in unions (returns known type)", () => {
-          const types = [
-            { kind: "unknown" },
-            { kind: "primitive", value: "string" }
-          ];
-          const result = mergeTypes(types);
-          expect(result.kind).to.equal("primitive");
-        });
-      });
-      describe("typeNodeToString() - Comprehensive", () => {
-        it("should serialize all primitive types", () => {
-          expect(typeNodeToString({ kind: "primitive", value: "string" })).to.equal("string");
-          expect(typeNodeToString({ kind: "primitive", value: "number" })).to.equal("number");
-          expect(typeNodeToString({ kind: "primitive", value: "boolean" })).to.equal("boolean");
-          expect(typeNodeToString({ kind: "primitive", value: "null" })).to.equal("null");
-          expect(typeNodeToString({ kind: "primitive", value: "undefined" })).to.equal("undefined");
-        });
-        it("should serialize date type", () => {
-          expect(typeNodeToString({ kind: "date" })).to.equal("Date");
-        });
-        it("should serialize unknown type", () => {
-          expect(typeNodeToString({ kind: "unknown" })).to.equal("unknown");
-        });
-        it("should serialize string literal types", () => {
-          expect(typeNodeToString({ kind: "literal", value: "hello" })).to.equal('"hello"');
-          expect(typeNodeToString({ kind: "literal", value: "" })).to.equal('""');
-          expect(typeNodeToString({ kind: "literal", value: 'with"quote' })).to.include("with");
-        });
-        it("should serialize number literal types", () => {
-          expect(typeNodeToString({ kind: "literal", value: 42 })).to.equal("42");
-          expect(typeNodeToString({ kind: "literal", value: -1 })).to.equal("-1");
-          expect(typeNodeToString({ kind: "literal", value: 3.14 })).to.equal("3.14");
-        });
-        it("should serialize boolean literal types", () => {
-          expect(typeNodeToString({ kind: "literal", value: true })).to.equal("true");
-          expect(typeNodeToString({ kind: "literal", value: false })).to.equal("false");
-        });
-        it("should serialize simple array types", () => {
-          expect(typeNodeToString({
-            kind: "array",
-            elementType: { kind: "primitive", value: "string" }
-          })).to.equal("string[]");
-          expect(typeNodeToString({
-            kind: "array",
-            elementType: { kind: "primitive", value: "number" }
-          })).to.equal("number[]");
-        });
-        it("should serialize array of arrays", () => {
-          const result = typeNodeToString({
-            kind: "array",
-            elementType: {
-              kind: "array",
-              elementType: { kind: "primitive", value: "number" }
-            }
-          });
-          expect(result).to.equal("Array<number[]>");
-        });
-        it("should serialize array with union element type", () => {
-          const result = typeNodeToString({
-            kind: "array",
-            elementType: {
-              kind: "union",
-              types: [
-                { kind: "primitive", value: "string" },
-                { kind: "primitive", value: "number" }
-              ]
-            }
-          });
-          expect(result).to.equal("Array<string | number>");
-        });
-        it("should serialize union types", () => {
-          const result = typeNodeToString({
-            kind: "union",
-            types: [
-              { kind: "primitive", value: "string" },
-              { kind: "primitive", value: "number" }
-            ]
-          });
-          expect(result).to.equal("string | number");
-        });
-        it("should serialize union with null", () => {
-          const result = typeNodeToString({
-            kind: "union",
-            types: [
-              { kind: "primitive", value: "string" },
-              { kind: "primitive", value: "null" }
-            ]
-          });
-          expect(result).to.equal("string | null");
-        });
-        it("should serialize simple object types", () => {
-          const result = typeNodeToString({
-            kind: "object",
-            properties: {
-              name: { kind: "primitive", value: "string" },
-              age: { kind: "primitive", value: "number" }
-            }
-          });
-          expect(result).to.include("name: string");
-          expect(result).to.include("age: number");
-        });
-        it("should serialize nested object types", () => {
-          const result = typeNodeToString({
-            kind: "object",
-            properties: {
-              user: {
-                kind: "object",
-                properties: {
-                  name: { kind: "primitive", value: "string" }
-                }
-              }
-            }
-          });
-          expect(result).to.include("user:");
-          expect(result).to.include("name: string");
-        });
-        it("should serialize object with array property", () => {
-          const result = typeNodeToString({
-            kind: "object",
-            properties: {
-              items: {
-                kind: "array",
-                elementType: { kind: "primitive", value: "number" }
-              }
-            }
-          });
-          expect(result).to.include("items: number[]");
-        });
-        it("should serialize empty object type", () => {
-          const result = typeNodeToString({
-            kind: "object",
-            properties: {}
-          });
-          expect(result).to.include("{");
-          expect(result).to.include("}");
-        });
-        it("should serialize function types with no params", () => {
-          const result = typeNodeToString({
-            kind: "function",
-            params: [],
-            returnType: { kind: "primitive", value: "string" }
-          });
-          expect(result).to.equal("() => string");
-        });
-        it("should serialize function types with params", () => {
-          const result = typeNodeToString({
-            kind: "function",
-            params: [
-              { name: "x", type: { kind: "primitive", value: "number" } },
-              { name: "y", type: { kind: "primitive", value: "number" } }
-            ],
-            returnType: { kind: "primitive", value: "number" }
-          });
-          expect(result).to.equal("(x: number, y: number) => number");
-        });
-        it("should serialize function types with optional params", () => {
-          const result = typeNodeToString({
-            kind: "function",
-            params: [
-              { name: "required", type: { kind: "primitive", value: "string" } },
-              { name: "optional", type: { kind: "primitive", value: "number" }, optional: true }
-            ],
-            returnType: { kind: "primitive", value: "boolean" }
-          });
-          expect(result).to.equal("(required: string, optional?: number) => boolean");
-        });
-        it("should serialize function with object param", () => {
-          const result = typeNodeToString({
-            kind: "function",
-            params: [
-              {
-                name: "opts",
-                type: {
-                  kind: "object",
-                  properties: {
-                    name: { kind: "primitive", value: "string" }
-                  }
-                }
-              }
-            ],
-            returnType: { kind: "primitive", value: "undefined" }
-          });
-          expect(result).to.include("opts:");
-          expect(result).to.include("name: string");
-        });
-        it("should serialize function returning void/undefined", () => {
-          const result = typeNodeToString({
-            kind: "function",
-            params: [],
-            returnType: { kind: "primitive", value: "undefined" }
-          });
-          expect(result).to.equal("() => undefined");
-        });
-      });
-      describe("trackStateAccess() - Comprehensive", () => {
-        it("should track simple string access", () => {
-          trackStateAccess("user.name", "John");
-          expect(typeOf("user.name")).to.equal("string");
-        });
-        it("should track simple number access", () => {
-          trackStateAccess("count", 42);
-          expect(typeOf("count")).to.equal("number");
-        });
-        it("should track boolean access", () => {
-          trackStateAccess("isActive", true);
-          expect(typeOf("isActive")).to.equal("boolean");
-        });
-        it("should track null access", () => {
-          trackStateAccess("selected", null);
-          expect(typeOf("selected")).to.equal("null");
-        });
-        it("should track undefined access", () => {
-          trackStateAccess("missing", void 0);
-          expect(typeOf("missing")).to.equal("undefined");
-        });
-        it("should track array access", () => {
-          trackStateAccess("items", [1, 2, 3]);
-          expect(typeOf("items")).to.include("number[]");
-        });
-        it("should track object access", () => {
-          trackStateAccess("user", { name: "John", age: 30 });
-          const result = typeOf("user");
-          expect(result).to.include("name");
-          expect(result).to.include("age");
-        });
-        it("should merge types from multiple accesses of same path", () => {
-          trackStateAccess("value", "hello");
-          trackStateAccess("value", 42);
-          const result = typeOf("value");
-          expect(result).to.include("|");
-        });
-        it("should handle deep path tracking", () => {
-          trackStateAccess("a.b.c.d.e", "deep");
-          expect(typeOf("a.b.c.d.e")).to.equal("string");
-        });
-        it("should handle many paths", () => {
-          for (let i = 0; i < 100; i++) {
-            trackStateAccess(`path${i}`, i);
-          }
-          expect(typeOf("path50")).to.equal("number");
-        });
-        it("should handle path with numeric indices", () => {
-          trackStateAccess("items.0.name", "first");
-          trackStateAccess("items.1.name", "second");
-          const result = typeOf("items.0.name");
-          expect(result).to.equal("string");
-        });
-        it("should track Date values", () => {
-          trackStateAccess("created", /* @__PURE__ */ new Date());
-          expect(typeOf("created")).to.equal("Date");
-        });
-        it("should handle repeated tracking of same value", () => {
-          for (let i = 0; i < 10; i++) {
-            trackStateAccess("stable", "constant");
-          }
-          expect(typeOf("stable")).to.equal("string");
-        });
-      });
-      describe("trackFunctionCall() - Comprehensive", () => {
-        it("should track function with no args and string return", () => {
-          trackFunctionCall("getName", [], "John");
-          const types = inferTypes();
-          expect(types.helpers.getName).to.include("() =>");
-          expect(types.helpers.getName).to.include("string");
-        });
-        it("should track function with single arg", () => {
-          trackFunctionCall("double", [5], 10);
-          const types = inferTypes();
-          expect(types.helpers.double).to.include("number");
-        });
-        it("should track function with multiple args", () => {
-          trackFunctionCall("add", [1, 2, 3], 6);
-          const types = inferTypes();
-          expect(types.helpers.add).to.include("=>");
-        });
-        it("should track function with object arg", () => {
-          trackFunctionCall("formatUser", [{ name: "John", age: 30 }], "<div>John</div>");
-          const types = inferTypes();
-          expect(types.helpers.formatUser).to.include("=>");
-          expect(types.helpers.formatUser).to.include("string");
-        });
-        it("should track function with array arg", () => {
-          trackFunctionCall("sum", [[1, 2, 3]], 6);
-          const types = inferTypes();
-          expect(types.helpers.sum).to.include("number");
-        });
-        it("should track function returning object", () => {
-          trackFunctionCall("createUser", ["John"], { name: "John", id: 1 });
-          const types = inferTypes();
-          expect(types.helpers.createUser).to.include("name");
-        });
-        it("should track function returning array", () => {
-          trackFunctionCall("getNumbers", [], [1, 2, 3]);
-          const types = inferTypes();
-          expect(types.helpers.getNumbers).to.include("[]");
-        });
-        it("should track function returning null", () => {
-          trackFunctionCall("findUser", [999], null);
-          const types = inferTypes();
-          expect(types.helpers.findUser).to.include("null");
-        });
-        it("should track function returning undefined", () => {
-          trackFunctionCall("doSomething", [], void 0);
-          const types = inferTypes();
-          expect(types.helpers.doSomething).to.include("undefined");
-        });
-        it("should merge signatures from multiple calls", () => {
-          trackFunctionCall("getValue", [], "string");
-          trackFunctionCall("getValue", [], 42);
-          const types = inferTypes();
-          expect(types.helpers.getValue).to.include("|");
-        });
-        it("should handle many function calls", () => {
-          for (let i = 0; i < 50; i++) {
-            trackFunctionCall(`func${i}`, [i], i * 2);
-          }
-          const types = inferTypes();
-          expect(Object.keys(types.helpers)).to.have.length(50);
-        });
-        it("should track function with optional pattern (null arg)", () => {
-          trackFunctionCall("process", ["value", null], "result");
-          const types = inferTypes();
-          expect(types.helpers.process).to.include("=>");
-        });
-        it("should track variadic-like patterns (different arg counts)", () => {
-          trackFunctionCall("log", ["message"], void 0);
-          trackFunctionCall("log", ["message", { level: "info" }], void 0);
-          const types = inferTypes();
-          expect(types.helpers.log).to.exist;
-        });
-      });
-      describe("trackComponentProps() - Comprehensive", () => {
-        it("should track simple string prop", () => {
-          trackComponentProps("my-button", { label: "Click me" });
-          const types = inferTypes();
-          expect(types.components["my-button"]).to.include("label");
-          expect(types.components["my-button"]).to.include("string");
-        });
-        it("should track number prop", () => {
-          trackComponentProps("counter-display", { count: 42 });
-          const types = inferTypes();
-          expect(types.components["counter-display"]).to.include("count");
-          expect(types.components["counter-display"]).to.include("number");
-        });
-        it("should track boolean prop", () => {
-          trackComponentProps("toggle-switch", { enabled: true });
-          const types = inferTypes();
-          expect(types.components["toggle-switch"]).to.include("enabled");
-          expect(types.components["toggle-switch"]).to.include("boolean");
-        });
-        it("should track multiple props", () => {
-          trackComponentProps("user-card", {
-            name: "John",
-            age: 30,
-            isAdmin: false
-          });
-          const types = inferTypes();
-          const props = types.components["user-card"];
-          expect(props).to.include("name");
-          expect(props).to.include("age");
-          expect(props).to.include("isAdmin");
-        });
-        it("should track object prop", () => {
-          trackComponentProps("data-viewer", {
-            data: { items: [1, 2, 3] }
-          });
-          const types = inferTypes();
-          expect(types.components["data-viewer"]).to.include("data");
-        });
-        it("should track array prop", () => {
-          trackComponentProps("list-view", {
-            items: ["a", "b", "c"]
-          });
-          const types = inferTypes();
-          expect(types.components["list-view"]).to.include("items");
-        });
-        it("should merge props from multiple tracking calls", () => {
-          trackComponentProps("flexible-comp", { prop1: "a" });
-          trackComponentProps("flexible-comp", { prop2: 42 });
-          const types = inferTypes();
-          const props = types.components["flexible-comp"];
-          expect(props).to.include("prop1");
-          expect(props).to.include("prop2");
-        });
-        it("should handle many components", () => {
-          for (let i = 0; i < 20; i++) {
-            trackComponentProps(`component-${i}`, { index: i });
-          }
-          const types = inferTypes();
-          expect(Object.keys(types.components)).to.have.length(20);
-        });
-        it("should track Date prop", () => {
-          trackComponentProps("date-picker", { value: /* @__PURE__ */ new Date() });
-          const types = inferTypes();
-          expect(types.components["date-picker"]).to.include("Date");
-        });
-        it("should handle null prop", () => {
-          trackComponentProps("optional-display", { selected: null });
-          const types = inferTypes();
-          expect(types.components["optional-display"]).to.include("null");
-        });
-      });
-      describe("trackEventPayload() - Comprehensive", () => {
-        it("should track simple string payload", () => {
-          trackEventPayload("message-sent", "hello");
-          const types = inferTypes();
-          expect(types.events["message-sent"]).to.include("string");
-        });
-        it("should track number payload", () => {
-          trackEventPayload("counter-changed", 42);
-          const types = inferTypes();
-          expect(types.events["counter-changed"]).to.include("number");
-        });
-        it("should track boolean payload", () => {
-          trackEventPayload("toggle-clicked", true);
-          const types = inferTypes();
-          expect(types.events["toggle-clicked"]).to.include("boolean");
-        });
-        it("should track object payload", () => {
-          trackEventPayload("user-selected", { userId: 123, name: "John" });
-          const types = inferTypes();
-          expect(types.events["user-selected"]).to.include("userId");
-          expect(types.events["user-selected"]).to.include("name");
-        });
-        it("should track array payload", () => {
-          trackEventPayload("items-reordered", [1, 2, 3]);
-          const types = inferTypes();
-          expect(types.events["items-reordered"]).to.include("[]");
-        });
-        it("should track null payload", () => {
-          trackEventPayload("selection-cleared", null);
-          const types = inferTypes();
-          expect(types.events["selection-cleared"]).to.include("null");
-        });
-        it("should merge payload types from multiple events", () => {
-          trackEventPayload("value-changed", "string value");
-          trackEventPayload("value-changed", 42);
-          const types = inferTypes();
-          expect(types.events["value-changed"]).to.include("|");
-        });
-        it("should handle many event types", () => {
-          for (let i = 0; i < 30; i++) {
-            trackEventPayload(`event-${i}`, { index: i });
-          }
-          const types = inferTypes();
-          expect(Object.keys(types.events)).to.have.length(30);
-        });
-        it("should track complex nested payload", () => {
-          trackEventPayload("form-submitted", {
-            user: { name: "John", email: "john@example.com" },
-            items: [{ id: 1, qty: 2 }],
-            timestamp: Date.now()
-          });
-          const types = inferTypes();
-          expect(types.events["form-submitted"]).to.include("user");
-        });
-        it("should track event with Date payload", () => {
-          trackEventPayload("date-selected", /* @__PURE__ */ new Date());
-          const types = inferTypes();
-          expect(types.events["date-selected"]).to.include("Date");
-        });
-      });
-      describe("inferTypes() - Comprehensive", () => {
-        it("should return empty types when nothing tracked", () => {
-          const types = inferTypes();
-          expect(types.state).to.equal("interface State {}");
-          expect(types.helpers).to.deep.equal({});
-          expect(types.components).to.deep.equal({});
-          expect(types.events).to.deep.equal({});
-        });
-        it("should generate state interface from flat properties", () => {
-          trackStateAccess("name", "John");
-          trackStateAccess("age", 30);
-          trackStateAccess("active", true);
-          const types = inferTypes();
-          expect(types.state).to.include("interface State");
-          expect(types.state).to.include("name: string");
-          expect(types.state).to.include("age: number");
-          expect(types.state).to.include("active: boolean");
-        });
-        it("should generate nested state interface", () => {
-          trackStateAccess("user.name", "John");
-          trackStateAccess("user.email", "john@example.com");
-          trackStateAccess("user.profile.bio", "Developer");
-          const types = inferTypes();
-          expect(types.state).to.include("user:");
-        });
-        it("should include all tracked helpers", () => {
-          trackFunctionCall("helper1", [1], 2);
-          trackFunctionCall("helper2", ["a"], "b");
-          trackFunctionCall("helper3", [true], false);
-          const types = inferTypes();
-          expect(types.helpers).to.have.property("helper1");
-          expect(types.helpers).to.have.property("helper2");
-          expect(types.helpers).to.have.property("helper3");
-        });
-        it("should include all tracked components", () => {
-          trackComponentProps("comp-a", { x: 1 });
-          trackComponentProps("comp-b", { y: "2" });
-          const types = inferTypes();
-          expect(types.components).to.have.property("comp-a");
-          expect(types.components).to.have.property("comp-b");
-        });
-        it("should include all tracked events", () => {
-          trackEventPayload("event-a", { id: 1 });
-          trackEventPayload("event-b", "payload");
-          const types = inferTypes();
-          expect(types.events).to.have.property("event-a");
-          expect(types.events).to.have.property("event-b");
-        });
-        it("should include raw type data", () => {
-          trackStateAccess("value", 42);
-          trackFunctionCall("fn", [], "result");
-          const types = inferTypes();
-          expect(types.raw).to.have.property("state");
-          expect(types.raw).to.have.property("helpers");
-          expect(types.raw).to.have.property("components");
-          expect(types.raw).to.have.property("events");
-        });
-        it("should handle combined tracking scenario", () => {
-          trackStateAccess("user.name", "John");
-          trackStateAccess("user.items", [1, 2, 3]);
-          trackFunctionCall("formatName", ["John"], "JOHN");
-          trackComponentProps("user-display", { userId: 123 });
-          trackEventPayload("user-clicked", { userId: 123 });
-          const types = inferTypes();
-          expect(types.state).to.include("user");
-          expect(types.helpers).to.have.property("formatName");
-          expect(types.components).to.have.property("user-display");
-          expect(types.events).to.have.property("user-clicked");
-        });
-      });
-      describe("typeOf() - Comprehensive", () => {
-        it("should return unknown for untracked paths", () => {
-          expect(typeOf("nonexistent")).to.equal("unknown");
-          expect(typeOf("a.b.c")).to.equal("unknown");
-        });
-        it("should return exact primitive type", () => {
-          trackStateAccess("str", "hello");
-          trackStateAccess("num", 42);
-          trackStateAccess("bool", true);
-          expect(typeOf("str")).to.equal("string");
-          expect(typeOf("num")).to.equal("number");
-          expect(typeOf("bool")).to.equal("boolean");
-        });
-        it("should return Date type", () => {
-          trackStateAccess("created", /* @__PURE__ */ new Date());
-          expect(typeOf("created")).to.equal("Date");
-        });
-        it("should return array type", () => {
-          trackStateAccess("numbers", [1, 2, 3]);
-          expect(typeOf("numbers")).to.equal("number[]");
-        });
-        it("should return object type", () => {
-          trackStateAccess("user.name", "John");
-          trackStateAccess("user.age", 30);
-          const result = typeOf("user");
-          expect(result).to.include("{");
-          expect(result).to.include("name: string");
-          expect(result).to.include("age: number");
-        });
-        it("should return union type for mixed values", () => {
-          trackStateAccess("mixed", "string");
-          trackStateAccess("mixed", 42);
-          const result = typeOf("mixed");
-          expect(result).to.include("|");
-          expect(result).to.include("string");
-          expect(result).to.include("number");
-        });
-        it("should handle deep paths", () => {
-          trackStateAccess("a.b.c.d", "deep");
-          expect(typeOf("a.b.c.d")).to.equal("string");
-        });
-        it("should reconstruct parent objects", () => {
-          trackStateAccess("config.api.url", "https://api.example.com");
-          trackStateAccess("config.api.key", "secret");
-          trackStateAccess("config.debug", true);
-          const configType = typeOf("config");
-          expect(configType).to.include("api:");
-          expect(configType).to.include("debug: boolean");
-        });
-      });
-      describe("LLM API Integration", () => {
-        it("should expose inferTypes through boreDOM.llm", () => {
-          expect(boreDOM.llm.inferTypes).to.be.a("function");
-        });
-        it("should expose typeOf through boreDOM.llm", () => {
-          expect(boreDOM.llm.typeOf).to.be.a("function");
-        });
-        it("should expose _clearTypes through boreDOM.llm", () => {
-          expect(boreDOM.llm._clearTypes).to.be.a("function");
-        });
-        it("should work through the llm API - inferTypes", () => {
-          trackStateAccess("test.value", 42);
-          const result = boreDOM.llm.inferTypes();
-          expect(result.state).to.include("test");
-        });
-        it("should work through the llm API - typeOf", () => {
-          trackStateAccess("api.data", { id: 1 });
-          const result = boreDOM.llm.typeOf("api.data");
-          expect(result).to.include("id");
-        });
-        it("should work through the llm API - _clearTypes", () => {
-          trackStateAccess("toBeCleared", "value");
-          boreDOM.llm._clearTypes();
-          expect(typeOf("toBeCleared")).to.equal("unknown");
-        });
-      });
-      describe("Edge Cases & Error Handling", () => {
-        it("should handle empty string path", () => {
-          trackStateAccess("", "value");
-          const result = typeOf("");
-          expect(result).to.exist;
-        });
-        it("should handle path with dots only", () => {
-          trackStateAccess("...", "value");
-        });
-        it("should handle very long paths", () => {
-          const longPath = Array.from({ length: 50 }, (_, i) => `level${i}`).join(".");
-          trackStateAccess(longPath, "deep");
-        });
-        it("should handle special characters in path", () => {
-          trackStateAccess("$special", "value");
-          trackStateAccess("_underscore", "value");
-        });
-        it("should handle rapid successive calls", () => {
-          for (let i = 0; i < 1e3; i++) {
-            trackStateAccess("rapid", i);
-          }
-          const result = typeOf("rapid");
-          expect(result).to.equal("number");
-        });
-        it("should handle clearing while tracking", () => {
-          trackStateAccess("a", 1);
-          clearTypeTracking();
-          trackStateAccess("b", 2);
-          expect(typeOf("a")).to.equal("unknown");
-          expect(typeOf("b")).to.equal("number");
-        });
-        it("should handle undefined function args", () => {
-          trackFunctionCall("withUndefined", [void 0], "result");
-          const types = inferTypes();
-          expect(types.helpers.withUndefined).to.exist;
-        });
-        it("should handle null function args", () => {
-          trackFunctionCall("withNull", [null], "result");
-          const types = inferTypes();
-          expect(types.helpers.withNull).to.exist;
-        });
-        it("should handle empty object props", () => {
-          trackComponentProps("empty-props", {});
-          const types = inferTypes();
-          expect(types.components["empty-props"]).to.exist;
-        });
-        it("should handle undefined event payload", () => {
-          trackEventPayload("undefined-event", void 0);
-          const types = inferTypes();
-          expect(types.events["undefined-event"]).to.include("undefined");
-        });
-      });
-      describe("Production Build", () => {
-        it("should have __DEBUG__ flag respected in dev mode", () => {
-          trackStateAccess("dev.test", "value");
-          const types = inferTypes();
-          expect(types.state).to.include("dev");
-        });
-        it("should work correctly with all debug options enabled", () => {
-          setDebugConfig(true);
-          trackStateAccess("full.debug", 123);
-          expect(typeOf("full.debug")).to.equal("number");
-        });
-      });
-      describe("Real-world Scenarios", () => {
-        it("should handle typical e-commerce state", () => {
-          trackStateAccess("cart.items", [
-            { id: 1, name: "Widget", price: 9.99, quantity: 2 },
-            { id: 2, name: "Gadget", price: 19.99, quantity: 1 }
-          ]);
-          trackStateAccess("cart.total", 39.97);
-          trackStateAccess("user.email", "customer@example.com");
-          trackStateAccess("user.address.street", "123 Main St");
-          trackStateAccess("user.address.city", "Anytown");
-          const types = inferTypes();
-          expect(types.state).to.include("cart");
-          expect(types.state).to.include("user");
-        });
-        it("should handle typical todo app state", () => {
-          trackStateAccess("todos", [
-            { id: 1, text: "Learn TypeScript", completed: true },
-            { id: 2, text: "Build app", completed: false }
-          ]);
-          trackStateAccess("filter", "all");
-          trackStateAccess("editingId", null);
-          trackFunctionCall("toggleTodo", [1], void 0);
-          trackFunctionCall("addTodo", ["New task"], { id: 3, text: "New task", completed: false });
-          trackFunctionCall("filterTodos", [["all"]], []);
-          const types = inferTypes();
-          expect(types.state).to.include("todos");
-          expect(types.helpers).to.have.property("toggleTodo");
-          expect(types.helpers).to.have.property("addTodo");
-        });
-        it("should handle typical dashboard state", () => {
-          trackStateAccess("dashboard.metrics.visitors", 12345);
-          trackStateAccess("dashboard.metrics.revenue", 98765.43);
-          trackStateAccess("dashboard.metrics.conversionRate", 0.032);
-          trackStateAccess("dashboard.charts.salesData", [100, 120, 95, 140, 180]);
-          trackStateAccess("dashboard.filters.dateRange.start", /* @__PURE__ */ new Date("2024-01-01"));
-          trackStateAccess("dashboard.filters.dateRange.end", /* @__PURE__ */ new Date("2024-12-31"));
-          trackStateAccess("dashboard.isLoading", false);
-          trackComponentProps("metric-card", { value: 12345, label: "Visitors", trend: "up" });
-          trackComponentProps("line-chart", { data: [1, 2, 3], title: "Sales" });
-          trackEventPayload("date-range-changed", {
-            start: /* @__PURE__ */ new Date(),
-            end: /* @__PURE__ */ new Date()
-          });
-          const types = inferTypes();
-          expect(types.state).to.include("dashboard");
-          expect(types.components).to.have.property("metric-card");
-          expect(types.events).to.have.property("date-range-changed");
-        });
-        it("should handle form state with validation", () => {
-          trackStateAccess("form.values.email", "user@example.com");
-          trackStateAccess("form.values.password", "secret123");
-          trackStateAccess("form.values.confirmPassword", "secret123");
-          trackStateAccess("form.errors.email", null);
-          trackStateAccess("form.errors.password", "Too short");
-          trackStateAccess("form.touched.email", true);
-          trackStateAccess("form.touched.password", true);
-          trackStateAccess("form.isSubmitting", false);
-          trackStateAccess("form.isValid", false);
-          trackFunctionCall("validateEmail", ["user@example.com"], null);
-          trackFunctionCall("validatePassword", ["short"], "Must be at least 8 characters");
-          const types = inferTypes();
-          expect(types.state).to.include("form");
-          expect(types.helpers).to.have.property("validateEmail");
-        });
-        it("should handle API response patterns", () => {
-          trackStateAccess("api.users.data", [{ id: 1, name: "John" }]);
-          trackStateAccess("api.users.loading", false);
-          trackStateAccess("api.users.error", null);
-          trackStateAccess("api.users.error", { code: 500, message: "Server error" });
-          trackStateAccess("api.posts.loading", true);
-          trackStateAccess("api.posts.data", null);
-          const types = inferTypes();
-          expect(types.state).to.include("api");
-        });
-      });
-      describe("Performance", () => {
-        it("should handle 1000 state accesses efficiently", () => {
-          const start = performance.now();
-          for (let i = 0; i < 1e3; i++) {
-            trackStateAccess(`path.${i}`, i);
-          }
-          const duration = performance.now() - start;
-          expect(duration).to.be.lessThan(1e3);
-        });
-        it("should handle 1000 function calls efficiently", () => {
-          const start = performance.now();
-          for (let i = 0; i < 1e3; i++) {
-            trackFunctionCall(`func${i}`, [i], i * 2);
-          }
-          const duration = performance.now() - start;
-          expect(duration).to.be.lessThan(1e3);
-        });
-        it("should generate types efficiently after heavy tracking", () => {
-          for (let i = 0; i < 100; i++) {
-            trackStateAccess(`state.${i}`, i);
-            trackFunctionCall(`helper${i}`, [i], i);
-            trackComponentProps(`comp-${i}`, { val: i });
-            trackEventPayload(`event-${i}`, { id: i });
-          }
-          const start = performance.now();
-          const types = inferTypes();
-          const duration = performance.now() - start;
-          expect(duration).to.be.lessThan(500);
-          expect(types).to.exist;
-        });
-        it("should handle large objects efficiently", () => {
-          const largeObject = {};
-          for (let i = 0; i < 100; i++) {
-            largeObject[`key${i}`] = i;
-          }
-          const start = performance.now();
-          trackStateAccess("large", largeObject);
-          const duration = performance.now() - start;
-          expect(duration).to.be.lessThan(100);
-        });
-        it("should handle deep nesting efficiently", () => {
-          let nested = { value: "deep" };
-          for (let i = 0; i < 20; i++) {
-            nested = { nested };
-          }
-          const start = performance.now();
-          const result = inferTypeFromValue(nested);
-          const duration = performance.now() - start;
-          expect(duration).to.be.lessThan(100);
-          expect(result.kind).to.equal("object");
-        });
-      });
-    });
-  }
-
-  // tests/validation.test.ts
-  init_validation();
-  init_debug();
-  function getBoreDOM() {
-    return window.boreDOM;
-  }
-  function getState() {
-    return getValidationAppState()?.app;
-  }
-  function validation_test_default() {
-    describe("Phase 6: Validation & Apply", () => {
-      beforeEach(() => {
-        setDebugConfig(true);
-        clearGlobals();
-        const fixture = document.getElementById("fixture");
-        if (fixture) fixture.innerHTML = "";
-      });
-      afterEach(() => {
-        clearGlobals();
-      });
-      describe("deepClone()", () => {
-        it("should clone primitives", () => {
-          expect(deepClone(42)).to.equal(42);
-          expect(deepClone("hello")).to.equal("hello");
-          expect(deepClone(true)).to.equal(true);
-          expect(deepClone(null)).to.equal(null);
-          expect(deepClone(void 0)).to.equal(void 0);
-        });
-        it("should clone arrays", () => {
-          const arr = [1, 2, { a: 3 }];
-          const cloned = deepClone(arr);
-          expect(cloned).to.deep.equal(arr);
-          expect(cloned).to.not.equal(arr);
-          expect(cloned[2]).to.not.equal(arr[2]);
-        });
-        it("should clone nested objects", () => {
-          const obj = { a: { b: { c: 1 } } };
-          const cloned = deepClone(obj);
-          expect(cloned).to.deep.equal(obj);
-          expect(cloned.a).to.not.equal(obj.a);
-          expect(cloned.a.b).to.not.equal(obj.a.b);
-        });
-        it("should handle Date objects", () => {
-          const date = /* @__PURE__ */ new Date("2024-01-01");
-          const cloned = deepClone(date);
-          expect(cloned).to.deep.equal(date);
-          expect(cloned).to.not.equal(date);
-        });
-        it("should handle Map objects", () => {
-          const map = /* @__PURE__ */ new Map([["key", { value: 1 }]]);
-          const cloned = deepClone(map);
-          expect(cloned.get("key")).to.deep.equal({ value: 1 });
-          expect(cloned.get("key")).to.not.equal(map.get("key"));
-        });
-        it("should handle Set objects", () => {
-          const set2 = /* @__PURE__ */ new Set([1, 2, 3]);
-          const cloned = deepClone(set2);
-          expect(cloned.size).to.equal(3);
-          expect(cloned).to.not.equal(set2);
-        });
-        it("should handle circular references", () => {
-          const obj = { a: 1 };
-          obj.self = obj;
-          const cloned = deepClone(obj);
-          expect(cloned.a).to.equal(1);
-          expect(cloned.self).to.equal(cloned);
-        });
-      });
-      describe("levenshtein()", () => {
-        it("should return 0 for identical strings", () => {
-          expect(levenshtein("hello", "hello")).to.equal(0);
-        });
-        it("should return string length for empty comparison", () => {
-          expect(levenshtein("hello", "")).to.equal(5);
-          expect(levenshtein("", "hello")).to.equal(5);
-        });
-        it("should calculate distance for substitutions", () => {
-          expect(levenshtein("cat", "bat")).to.equal(1);
-          expect(levenshtein("users", "usres")).to.equal(2);
-        });
-        it("should calculate distance for insertions", () => {
-          expect(levenshtein("cat", "cats")).to.equal(1);
-        });
-        it("should calculate distance for deletions", () => {
-          expect(levenshtein("cats", "cat")).to.equal(1);
-        });
-      });
-      describe("boreDOM.llm.validate()", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ users: [{ id: 1, name: "Test" }], count: 0 }, {});
-        });
-        describe("Syntax validation", () => {
-          it("should pass valid JavaScript", () => {
-            const result = getBoreDOM().llm.validate(`state.count = 42`);
-            expect(result.valid).to.be.true;
-            expect(result.issues).to.have.length(0);
-          });
-          it("should catch syntax errors", () => {
-            const result = getBoreDOM().llm.validate(`state.count =`);
-            expect(result.valid).to.be.false;
-            expect(result.issues.some((i) => i.type === "syntax")).to.be.true;
-          });
-          it("should catch unbalanced braces", () => {
-            const result = getBoreDOM().llm.validate(`if (true { }`);
-            expect(result.valid).to.be.false;
-            expect(result.issues.some((i) => i.type === "syntax")).to.be.true;
-          });
-          it("should catch invalid tokens", () => {
-            const result = getBoreDOM().llm.validate(`state.count @ 42`);
-            expect(result.valid).to.be.false;
-          });
-        });
-        describe("Reference validation", () => {
-          it("should pass valid state references", () => {
-            const result = getBoreDOM().llm.validate(`state.count = 1`);
-            expect(result.valid).to.be.true;
-          });
-          it("should catch undefined state paths", () => {
-            const result = getBoreDOM().llm.validate(`state.usrs.push({ id: 2 })`);
-            expect(result.valid).to.be.false;
-            expect(result.issues.some((i) => i.type === "reference")).to.be.true;
-            expect(result.issues.some((i) => i.message.includes("usrs"))).to.be.true;
-          });
-          it("should suggest similar paths for typos", () => {
-            const result = getBoreDOM().llm.validate(`state.usrs.push({ id: 2 })`);
-            const refIssue = result.issues.find((i) => i.type === "reference");
-            expect(refIssue?.suggestion).to.include("users");
-          });
-          it("should handle valid array access", () => {
-            const result = getBoreDOM().llm.validate(`state.users[0].name = "New"`);
-            expect(result.valid).to.be.true;
-          });
-          it("should pass valid nested paths", async () => {
-            await inflictBoreDOM({ nested: { deeply: { value: 1 } } }, {});
-            const result = getBoreDOM().llm.validate(`state.nested.deeply.value = 2`);
-            expect(result.valid).to.be.true;
-          });
-        });
-        describe("Type validation", () => {
-          it("should warn when calling .map() on null", async () => {
-            await inflictBoreDOM({ items: null }, {});
-            const result = getBoreDOM().llm.validate(`state.items.map(x => x)`);
-            expect(result.issues.some((i) => i.type === "type")).to.be.true;
-          });
-          it("should warn when calling array methods on non-array", async () => {
-            await inflictBoreDOM({ value: 123 }, {});
-            const result = getBoreDOM().llm.validate(`state.value.map(x => x)`);
-            expect(result.issues.some((i) => i.type === "type")).to.be.true;
-          });
-          it("should warn about async code", () => {
-            const result = getBoreDOM().llm.validate(`await fetch('/api')`);
-            expect(result.issues.some((i) => i.type === "warning")).to.be.true;
-            expect(result.issues.some((i) => i.message.includes("async"))).to.be.true;
-          });
-          it("should pass valid array operations", () => {
-            const result = getBoreDOM().llm.validate(`state.users.push({ id: 2 })`);
-            expect(result.valid).to.be.true;
-          });
-        });
-        describe("Multiple issues", () => {
-          it("should report multiple issues in one validation", () => {
-            const result = getBoreDOM().llm.validate(`
-          state.usrs.push({ id: 2 })
-          state.itms.map(x => x)
-        `);
-            expect(result.valid).to.be.false;
-            expect(result.issues.length).to.be.greaterThan(1);
-          });
-        });
-      });
-      describe("boreDOM.llm.apply()", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ count: 0, users: [] }, {});
-        });
-        it("should execute valid code", () => {
-          const result = getBoreDOM().llm.apply(`state.count = 42`);
-          expect(result.success).to.be.true;
-        });
-        it("should return success true on success", () => {
-          const result = getBoreDOM().llm.apply(`state.count = 42`);
-          expect(result.success).to.be.true;
-          expect(result.error).to.be.undefined;
-        });
-        it("should capture state changes", () => {
-          const result = getBoreDOM().llm.apply(`state.count = 42`);
-          expect(result.stateChanges.length).to.be.greaterThan(0);
-          expect(result.stateChanges.some((c) => c.path === "state.count")).to.be.true;
-        });
-        it("should provide rollback function", () => {
-          const initial = getState().count;
-          const result = getBoreDOM().llm.apply(`state.count = 42`);
-          expect(result.rollback).to.be.a("function");
-          expect(getState().count).to.equal(42);
-          result.rollback();
-          expect(getState().count).to.equal(initial);
-        });
-        it("should automatically rollback on execution error", () => {
-          const initial = getState().count;
-          const result = getBoreDOM().llm.apply(`
-        state.count = 10
-        throw new Error("test error")
-      `);
-          expect(result.success).to.be.false;
-          expect(result.error).to.include("test error");
-          expect(getState().count).to.equal(initial);
-        });
-        it("should validate before executing", () => {
-          const result = getBoreDOM().llm.apply(`state.usrs.push({ id: 1 })`);
-          expect(result.success).to.be.false;
-          expect(result.error).to.include("Validation failed");
-        });
-        it("should record attempt on success", () => {
-          getBoreDOM().llm.clearAttempts();
-          getBoreDOM().llm.apply(`state.count = 42`);
-          const attempts2 = getBoreDOM().llm.attempts;
-          expect(attempts2.length).to.be.greaterThan(0);
-          expect(attempts2.some((a) => a.result === "success")).to.be.true;
-        });
-        it("should record attempt on failure", () => {
-          getBoreDOM().llm.clearAttempts();
-          getBoreDOM().llm.apply(`state.usrs.push({ id: 1 })`);
-          const attempts2 = getBoreDOM().llm.attempts;
-          expect(attempts2.some((a) => a.result === "error")).to.be.true;
-        });
-        it("should handle complex state changes", () => {
-          const result = getBoreDOM().llm.apply(`
-        state.users.push({ id: 1, name: "First" })
-        state.users.push({ id: 2, name: "Second" })
-        state.count = state.users.length
-      `);
-          expect(result.success).to.be.true;
-          expect(getState().users).to.have.length(2);
-          expect(getState().count).to.equal(2);
-        });
-      });
-      describe("boreDOM.llm.applyBatch()", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ users: [], count: 0 }, {});
-        });
-        it("should apply all blocks in order", () => {
-          const result = getBoreDOM().llm.applyBatch([
-            `state.users.push({ id: 1 })`,
-            `state.users.push({ id: 2 })`,
-            `state.count = state.users.length`
-          ]);
-          expect(result.success).to.be.true;
-          expect(getState().users).to.have.length(2);
-          expect(getState().count).to.equal(2);
-        });
-        it("should rollback all on any failure", () => {
-          const result = getBoreDOM().llm.applyBatch([
-            `state.users.push({ id: 1 })`,
-            `state.users.push({ id: 2 })`,
-            `state.usrs.push({ id: 3 })`
-            // Typo - will fail
-          ]);
-          expect(result.success).to.be.false;
-          expect(getState().users).to.have.length(0);
-        });
-        it("should report which block failed", () => {
-          const result = getBoreDOM().llm.applyBatch([
-            `state.count = 1`,
-            `state.count = 2`,
-            `state.usrs.length`
-            // Fails
-          ]);
-          expect(result.failedIndex).to.equal(2);
-        });
-        it("should provide rollbackAll function", () => {
-          const result = getBoreDOM().llm.applyBatch([
-            `state.count = 42`
-          ]);
-          expect(result.success).to.be.true;
-          expect(result.rollbackAll).to.be.a("function");
-          expect(getState().count).to.equal(42);
-          result.rollbackAll();
-          expect(getState().count).to.equal(0);
-        });
-        it("should return individual results for each block", () => {
-          const result = getBoreDOM().llm.applyBatch([
-            `state.count = 1`,
-            `state.count = 2`
-          ]);
-          expect(result.results).to.have.length(2);
-          expect(result.results[0].success).to.be.true;
-          expect(result.results[1].success).to.be.true;
-        });
-      });
-      describe("State snapshots", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ nested: { deep: { value: 1 } }, arr: [1, 2, 3] }, {});
-        });
-        it("should create accurate snapshot", () => {
-          expect(getState().nested.deep.value).to.equal(1);
-          getBoreDOM().llm.apply(`state.nested.deep.value = 999`);
-          expect(getState().nested.deep.value).to.equal(999);
-        });
-        it("should restore snapshot exactly", () => {
-          const result = getBoreDOM().llm.apply(`state.nested.deep.value = 999`);
-          result.rollback();
-          expect(getState().nested.deep.value).to.equal(1);
-        });
-        it("should handle nested objects", () => {
-          const result = getBoreDOM().llm.apply(`
-        state.nested.deep.value = 999
-        state.nested.deep.extra = "new"
-      `);
-          result.rollback();
-          expect(getState().nested.deep.value).to.equal(1);
-          expect(getState().nested.deep.extra).to.be.undefined;
-        });
-        it("should handle arrays", () => {
-          const result = getBoreDOM().llm.apply(`
-        state.arr.push(4)
-        state.arr.push(5)
-      `);
-          expect(getState().arr).to.have.length(5);
-          result.rollback();
-          expect(getState().arr).to.deep.equal([1, 2, 3]);
-        });
-        it("should handle null/undefined", async () => {
-          await inflictBoreDOM({ value: null, other: void 0 }, {});
-          const result = getBoreDOM().llm.apply(`state.value = "set"`);
-          expect(getState().value).to.equal("set");
-          result.rollback();
-          expect(getState().value).to.be.null;
-        });
-      });
-      describe("Attempt tracking", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ count: 0 }, {});
-          getBoreDOM().llm.clearAttempts();
-        });
-        it("should track successful applies", () => {
-          getBoreDOM().llm.apply(`state.count = 1`);
-          const attempts2 = getBoreDOM().llm.attempts;
-          expect(attempts2.some((a) => a.result === "success")).to.be.true;
-        });
-        it("should track failed applies with errors", () => {
-          getBoreDOM().llm.apply(`state.usrs = 1`);
-          const attempts2 = getBoreDOM().llm.attempts;
-          expect(attempts2.some((a) => a.result === "error")).to.be.true;
-          expect(attempts2.some((a) => a.error)).to.be.true;
-        });
-        it("should limit to 10 attempts", () => {
-          for (let i = 0; i < 15; i++) {
-            getBoreDOM().llm.apply(`state.count = ${i}`);
-          }
-          expect(getBoreDOM().llm.attempts.length).to.be.at.most(10);
-        });
-        it("should clear on request", () => {
-          getBoreDOM().llm.apply(`state.count = 1`);
-          getBoreDOM().llm.apply(`state.count = 2`);
-          getBoreDOM().llm.clearAttempts();
-          expect(getBoreDOM().llm.attempts).to.have.length(0);
-        });
-        it("should include code in attempt", () => {
-          getBoreDOM().llm.apply(`state.count = 42`);
-          const attempts2 = getBoreDOM().llm.attempts;
-          expect(attempts2.some((a) => a.code.includes("42"))).to.be.true;
-        });
-        it("should include timestamp in attempt", () => {
-          const before = Date.now();
-          getBoreDOM().llm.apply(`state.count = 1`);
-          const after = Date.now();
-          const attempts2 = getBoreDOM().llm.attempts;
-          expect(attempts2[0].timestamp).to.be.at.least(before);
-          expect(attempts2[0].timestamp).to.be.at.most(after);
-        });
-      });
-      describe("Config options", () => {
-        it("should respect llm: false config", async () => {
-          setDebugConfig({ llm: false });
-          getBoreDOM()._setDebugConfig({ llm: false });
-          await inflictBoreDOM({ count: 0 }, {});
-          const result = getBoreDOM().llm.validate(`state.usrs.push(1)`);
-          expect(result.valid).to.be.true;
-          const applyResult = getBoreDOM().llm.apply(`state.count = 42`);
-          expect(applyResult.success).to.be.false;
-          expect(applyResult.error).to.include("disabled");
-          setDebugConfig(true);
-          getBoreDOM()._setDebugConfig(true);
-        });
-        it("should work with all debug features enabled", async () => {
-          setDebugConfig({
-            console: true,
-            globals: true,
-            errorBoundary: true,
-            llm: true
-          });
-          await inflictBoreDOM({ count: 0 }, {});
-          const result = getBoreDOM().llm.apply(`state.count = 42`);
-          expect(result.success).to.be.true;
-        });
-      });
-      describe("Edge cases", () => {
-        it("should handle code that throws intentionally", async () => {
-          await inflictBoreDOM({ count: 0 }, {});
-          const result = getBoreDOM().llm.apply(`throw new Error("intentional")`);
-          expect(result.success).to.be.false;
-          expect(result.error).to.include("intentional");
-        });
-        it("should handle empty code", async () => {
-          await inflictBoreDOM({ count: 0 }, {});
-          const result = getBoreDOM().llm.apply(``);
-          expect(result.success).to.be.true;
-        });
-        it("should handle comments only", async () => {
-          await inflictBoreDOM({ count: 0 }, {});
-          const result = getBoreDOM().llm.apply(`// just a comment`);
-          expect(result.success).to.be.true;
-        });
-        it("should handle code with boreDOM access", async () => {
-          await inflictBoreDOM({ count: 0 }, {});
-          const result = getBoreDOM().llm.apply(`boreDOM.defineHelper("test", () => 1)`);
-          expect(result.success).to.be.true;
-        });
-        it("should handle special characters in values", async () => {
-          await inflictBoreDOM({ name: "" }, {});
-          const result = getBoreDOM().llm.apply(`state.name = "Hello\\nWorld"`);
-          expect(result.success).to.be.true;
-        });
-      });
-      describe("Integration", () => {
-        it("full workflow: validate -> apply -> rollback", async () => {
-          await inflictBoreDOM({ count: 0 }, {});
-          const validation = getBoreDOM().llm.validate(`state.count = 42`);
-          expect(validation.valid).to.be.true;
-          const result = getBoreDOM().llm.apply(`state.count = 42`);
-          expect(result.success).to.be.true;
-          expect(result.stateChanges.length).to.be.greaterThan(0);
-          expect(getState().count).to.equal(42);
-          result.rollback();
-          expect(getState().count).to.equal(0);
-        });
-        it("batch apply with partial failure and rollback", async () => {
-          await inflictBoreDOM({ users: [], count: 0 }, {});
-          const result = getBoreDOM().llm.applyBatch([
-            `state.users.push({ id: 1, name: "First" })`,
-            `state.users.push({ id: 2, name: "Second" })`,
-            `state.usrs.push({ id: 3 })`
-            // Typo - will fail
-          ]);
-          expect(result.success).to.be.false;
-          expect(result.failedIndex).to.equal(2);
-          expect(getState().users).to.have.length(0);
-        });
-        it("apply with helpers defined", async () => {
-          await inflictBoreDOM({ value: "" }, {});
-          getBoreDOM().llm.apply(`boreDOM.defineHelper("upper", s => s.toUpperCase())`);
-          expect(getBoreDOM().helpers.has("upper")).to.be.true;
-        });
-      });
-    });
-  }
-
-  // tests/validation-edge-cases.test.ts
-  init_validation();
-  init_debug();
-  function getBoreDOM2() {
-    return window.boreDOM;
-  }
-  function getState2() {
-    return getValidationAppState()?.app;
-  }
-  function validation_edge_cases_test_default() {
-    describe("Phase 6: Validation Edge Cases", () => {
-      beforeEach(() => {
-        setDebugConfig(true);
-        clearGlobals();
-        const fixture = document.getElementById("fixture");
-        if (fixture) fixture.innerHTML = "";
-      });
-      afterEach(() => {
-        clearGlobals();
-      });
-      describe("Security concerns", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ safe: "data" }, {});
-        });
-        it("should execute code that accesses window (no sandbox)", () => {
-          const result = getBoreDOM2().llm.apply(`state.safe = typeof window`);
-          expect(result.success).to.be.true;
-          expect(getState2().safe).to.equal("object");
-        });
-        it("should execute code that accesses document (no sandbox)", () => {
-          const result = getBoreDOM2().llm.apply(`state.safe = document.title`);
-          expect(result.success).to.be.true;
-        });
-        it("should handle eval in code", () => {
-          const result = getBoreDOM2().llm.apply(`state.safe = eval("1+1")`);
-          expect(result.success).to.be.true;
-          expect(getState2().safe).to.equal(2);
-        });
-        it("should handle Function constructor", () => {
-          const result = getBoreDOM2().llm.apply(`state.safe = new Function("return 42")()`);
-          expect(result.success).to.be.true;
-          expect(getState2().safe).to.equal(42);
-        });
-        it("should handle prototype modification attempts", () => {
-          const result = getBoreDOM2().llm.apply(`
-        Object.prototype.injected = "bad"
-        state.safe = "modified"
-      `);
-          expect(result.success).to.be.true;
-          delete Object.prototype.injected;
-        });
-        it("should handle code with embedded string that looks like code", () => {
-          const result = getBoreDOM2().llm.apply(`
-        state.safe = "some embedded code-like string: x.users.push({ evil: true })"
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().safe).to.include("x.users.push");
-        });
-        it("should handle template literal injection attempts", () => {
-          const result = getBoreDOM2().llm.apply(`
-        state.safe = \`\${1+1}\`
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().safe).to.equal("2");
-        });
-      });
-      describe("Unusual JavaScript constructs", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ value: 0, arr: [1, 2, 3], obj: { a: 1 } }, {});
-        });
-        it("should handle unicode variable names", () => {
-          const result = getBoreDOM2().llm.apply(`
-        const \u03C0 = 3.14159
-        state.value = \u03C0
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().value).to.be.closeTo(3.14159, 1e-4);
-        });
-        it("should handle emoji in strings", async () => {
-          await inflictBoreDOM({ text: "" }, {});
-          const result = getBoreDOM2().llm.apply(`state.text = "Hello \u{1F44B} World \u{1F30D}"`);
-          expect(result.success).to.be.true;
-          expect(getState2().text).to.equal("Hello \u{1F44B} World \u{1F30D}");
-        });
-        it("should handle destructuring assignment", () => {
-          const result = getBoreDOM2().llm.apply(`
-        const { a } = state.obj
-        state.value = a
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().value).to.equal(1);
-        });
-        it("should handle spread operator", () => {
-          const result = getBoreDOM2().llm.apply(`
-        state.arr = [...state.arr, 4, 5]
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().arr).to.deep.equal([1, 2, 3, 4, 5]);
-        });
-        it("should handle arrow functions with implicit return", () => {
-          const result = getBoreDOM2().llm.apply(`
-        state.arr = state.arr.map(x => x * 2)
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().arr).to.deep.equal([2, 4, 6]);
-        });
-        it("should handle nullish coalescing", async () => {
-          await inflictBoreDOM({ val: null, result: 0 }, {});
-          const result = getBoreDOM2().llm.apply(`state.result = state.val ?? 42`);
-          expect(result.success).to.be.true;
-          expect(getState2().result).to.equal(42);
-        });
-        it("should handle optional chaining", async () => {
-          await inflictBoreDOM({ nested: null, result: "" }, {});
-          const result = getBoreDOM2().llm.apply(`state.result = state.nested?.deep?.value ?? "default"`);
-          expect(result.success).to.be.true;
-          expect(getState2().result).to.equal("default");
-        });
-        it("should handle logical assignment operators", async () => {
-          await inflictBoreDOM({ a: null, b: 0 }, {});
-          const result = getBoreDOM2().llm.apply(`
-        state.a ??= "assigned"
-        state.b ||= 42
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().a).to.equal("assigned");
-          expect(getState2().b).to.equal(42);
-        });
-        it("should handle computed property names", () => {
-          const result = getBoreDOM2().llm.apply(`
-        const key = "value"
-        state.obj = { [key]: 123 }
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().obj).to.deep.equal({ value: 123 });
-        });
-        it("should handle BigInt", async () => {
-          await inflictBoreDOM({ big: 0 }, {});
-          const result = getBoreDOM2().llm.apply(`state.big = 9007199254740991n + 1n`);
-          expect(result.success).to.be.true;
-          expect(getState2().big).to.equal(9007199254740992n);
-        });
-        it("should handle Symbol values", async () => {
-          await inflictBoreDOM({ sym: null }, {});
-          const result = getBoreDOM2().llm.apply(`state.sym = Symbol.for("test")`);
-          expect(result.success).to.be.true;
-          expect(getState2().sym).to.equal(Symbol.for("test"));
-        });
-      });
-      describe("State edge cases", () => {
-        it("should handle deeply nested state (10 levels)", async () => {
-          const deep = { l1: { l2: { l3: { l4: { l5: { l6: { l7: { l8: { l9: { l10: 0 } } } } } } } } } };
-          await inflictBoreDOM(deep, {});
-          const result = getBoreDOM2().llm.apply(`state.l1.l2.l3.l4.l5.l6.l7.l8.l9.l10 = 42`);
-          expect(result.success).to.be.true;
-          expect(getState2().l1.l2.l3.l4.l5.l6.l7.l8.l9.l10).to.equal(42);
-          result.rollback();
-          expect(getState2().l1.l2.l3.l4.l5.l6.l7.l8.l9.l10).to.equal(0);
-        });
-        it("should handle empty state object", async () => {
-          await inflictBoreDOM({ placeholder: null }, {});
-          const result = getBoreDOM2().llm.apply(`state.placeholder = "created"`);
-          expect(result.success).to.be.true;
-          expect(getState2().placeholder).to.equal("created");
-        });
-        it("should handle state with many properties", async () => {
-          const manyProps = {};
-          for (let i = 0; i < 100; i++) {
-            manyProps[`prop${i}`] = i;
-          }
-          await inflictBoreDOM(manyProps, {});
-          const result = getBoreDOM2().llm.apply(`state.prop50 = 999`);
-          expect(result.success).to.be.true;
-          expect(getState2().prop50).to.equal(999);
-          result.rollback();
-          expect(getState2().prop50).to.equal(50);
-        });
-        it("should handle state with array of objects", async () => {
-          await inflictBoreDOM({
-            users: [
-              { id: 1, name: "Alice", tags: ["admin"] },
-              { id: 2, name: "Bob", tags: ["user"] }
-            ]
-          }, {});
-          const result = getBoreDOM2().llm.apply(`
-        state.users[0].tags.push("super")
-        state.users.push({ id: 3, name: "Carol", tags: [] })
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().users).to.have.length(3);
-          expect(getState2().users[0].tags).to.include("super");
-          result.rollback();
-          expect(getState2().users).to.have.length(2);
-          expect(getState2().users[0].tags).to.not.include("super");
-        });
-        it("should handle state with Date objects", async () => {
-          const date = /* @__PURE__ */ new Date("2024-01-15");
-          await inflictBoreDOM({ created: date }, {});
-          const result = getBoreDOM2().llm.apply(`state.created = new Date("2025-06-01")`);
-          expect(result.success).to.be.true;
-          result.rollback();
-          expect(getState2().created.getFullYear()).to.equal(2024);
-        });
-        it("should handle state with Map and Set", async () => {
-          await inflictBoreDOM({
-            map: /* @__PURE__ */ new Map([["key", "value"]]),
-            set: /* @__PURE__ */ new Set([1, 2, 3])
-          }, {});
-          const result = getBoreDOM2().llm.apply(`
-        state.map.set("new", "entry")
-        state.set.add(4)
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().map.get("new")).to.equal("entry");
-          expect(getState2().set.has(4)).to.be.true;
-        });
-        it("should handle state with RegExp", async () => {
-          await inflictBoreDOM({ pattern: /test/gi }, {});
-          const result = getBoreDOM2().llm.apply(`state.pattern = /new-pattern/m`);
-          expect(result.success).to.be.true;
-          expect(getState2().pattern.source).to.equal("new-pattern");
-        });
-        it("should handle state with functions (though unusual)", async () => {
-          await inflictBoreDOM({ fn: () => 1 }, {});
-          const result = getBoreDOM2().llm.apply(`state.fn = () => 42`);
-          expect(result.success).to.be.true;
-          expect(getState2().fn()).to.equal(42);
-        });
-        it.skip("should handle circular references in state", async () => {
-          const circular = { name: "root" };
-          circular.self = circular;
-          await inflictBoreDOM(circular, {});
-          const result = getBoreDOM2().llm.apply(`state.name = "modified"`);
-          expect(result.success).to.be.true;
-          expect(getState2().name).to.equal("modified");
-        });
-      });
-      describe("Validation bypass attempts", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ users: [{ id: 1 }], count: 0 }, {});
-        });
-        it("should catch dynamic path construction with bracket notation", () => {
-          const result = getBoreDOM2().llm.apply(`
-        const prop = "usrs"
-        state[prop] = []
-      `);
-          expect(result.success).to.be.true;
-        });
-        it("should catch indirect state access through variable", () => {
-          const result = getBoreDOM2().llm.apply(`
-        const s = state
-        s.count = 42
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().count).to.equal(42);
-        });
-        it("should validate even with multi-line obfuscated code", () => {
-          const result = getBoreDOM2().llm.validate(`state.usrs.push({ id: 2 })`);
-          expect(result.valid).to.be.false;
-          const resultSplit = getBoreDOM2().llm.validate(`
-        state
-          .usrs
-          .push({ id: 2 })
-      `);
-          expect(resultSplit.valid).to.be.true;
-        });
-        it("should validate state access in string concatenation context", () => {
-          const result = getBoreDOM2().llm.validate(`
-        const x = "" + state.usrs
-      `);
-          expect(result.valid).to.be.false;
-        });
-        it("should handle apply with indirect throw", () => {
-          const result = getBoreDOM2().llm.apply(`
-        const err = () => { throw new Error("indirect") }
-        state.count = 1
-        err()
-      `);
-          expect(result.success).to.be.false;
-          expect(result.error).to.include("indirect");
-          expect(getState2().count).to.equal(0);
-        });
-      });
-      describe("Rollback edge cases", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ value: 0, nested: { a: 1, b: 2 } }, {});
-        });
-        it("should handle multiple successive applies then rollback first", () => {
-          const result1 = getBoreDOM2().llm.apply(`state.value = 10`);
-          getBoreDOM2().llm.apply(`state.value = 20`);
-          getBoreDOM2().llm.apply(`state.value = 30`);
-          expect(getState2().value).to.equal(30);
-          result1.rollback();
-          expect(getState2().value).to.equal(0);
-        });
-        it("should handle rollback then another apply", () => {
-          const result1 = getBoreDOM2().llm.apply(`state.value = 10`);
-          result1.rollback();
-          const result2 = getBoreDOM2().llm.apply(`state.value = 20`);
-          expect(result2.success).to.be.true;
-          expect(getState2().value).to.equal(20);
-        });
-        it("should handle double rollback (idempotent)", () => {
-          const result = getBoreDOM2().llm.apply(`state.value = 10`);
-          result.rollback();
-          expect(getState2().value).to.equal(0);
-          result.rollback();
-          expect(getState2().value).to.equal(0);
-        });
-        it("should rollback complex nested changes", async () => {
-          await inflictBoreDOM({ value: 0, nested: { a: 1, b: 2, c: null } }, {});
-          const result = getBoreDOM2().llm.apply(`
-        state.nested.a = 100
-        state.nested.b = 200
-        state.nested.c = 300
-        delete state.nested.a
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().nested.c).to.equal(300);
-          expect(getState2().nested.a).to.be.undefined;
-          result.rollback();
-          expect(getState2().nested).to.deep.equal({ a: 1, b: 2, c: null });
-        });
-        it("should rollback property deletion", () => {
-          const result = getBoreDOM2().llm.apply(`delete state.nested`);
-          expect(getState2().nested).to.be.undefined;
-          result.rollback();
-          expect(getState2().nested).to.deep.equal({ a: 1, b: 2 });
-        });
-        it("should rollback array mutations", async () => {
-          await inflictBoreDOM({ arr: [1, 2, 3] }, {});
-          const result = getBoreDOM2().llm.apply(`
-        state.arr.push(4)
-        state.arr.shift()
-        state.arr.reverse()
-      `);
-          expect(getState2().arr).to.deep.equal([4, 3, 2]);
-          result.rollback();
-          expect(getState2().arr).to.deep.equal([1, 2, 3]);
-        });
-      });
-      describe("Batch operation edge cases", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ count: 0, items: [] }, {});
-        });
-        it("should handle empty batch", () => {
-          const result = getBoreDOM2().llm.applyBatch([]);
-          expect(result.success).to.be.true;
-          expect(result.results).to.have.length(0);
-        });
-        it("should handle single-item batch", () => {
-          const result = getBoreDOM2().llm.applyBatch([`state.count = 42`]);
-          expect(result.success).to.be.true;
-          expect(result.results).to.have.length(1);
-        });
-        it("should handle batch where each block depends on previous", () => {
-          const result = getBoreDOM2().llm.applyBatch([
-            `state.count = 1`,
-            `state.count = state.count + 1`,
-            `state.count = state.count * 2`
-          ]);
-          expect(result.success).to.be.true;
-          expect(getState2().count).to.equal(4);
-        });
-        it("should handle batch with failure in middle", () => {
-          const result = getBoreDOM2().llm.applyBatch([
-            `state.count = 10`,
-            `state.items.push("a")`,
-            `throw new Error("middle fail")`,
-            `state.count = 20`
-          ]);
-          expect(result.success).to.be.false;
-          expect(result.failedIndex).to.equal(2);
-          expect(getState2().count).to.equal(0);
-          expect(getState2().items).to.have.length(0);
-        });
-        it("should handle batch with validation failure", () => {
-          const result = getBoreDOM2().llm.applyBatch([
-            `state.count = 10`,
-            `state.undefined_prop.something = 1`
-            // validation fail
-          ]);
-          expect(result.success).to.be.false;
-          expect(result.failedIndex).to.equal(1);
-          expect(getState2().count).to.equal(0);
-        });
-        it("should handle rollbackAll after successful batch", () => {
-          const result = getBoreDOM2().llm.applyBatch([
-            `state.count = 10`,
-            `state.items.push("a")`,
-            `state.items.push("b")`
-          ]);
-          expect(result.success).to.be.true;
-          result.rollbackAll();
-          expect(getState2().count).to.equal(0);
-          expect(getState2().items).to.have.length(0);
-        });
-        it("should handle very long batch", () => {
-          const blocks = Array.from({ length: 50 }, (_, i) => `state.count = ${i}`);
-          const result = getBoreDOM2().llm.applyBatch(blocks);
-          expect(result.success).to.be.true;
-          expect(getState2().count).to.equal(49);
-          expect(result.results).to.have.length(50);
-        });
-      });
-      describe("Levenshtein distance edge cases", () => {
-        it("should handle single character strings", () => {
-          expect(levenshtein("a", "b")).to.equal(1);
-          expect(levenshtein("a", "a")).to.equal(0);
-        });
-        it("should handle case sensitivity", () => {
-          expect(levenshtein("Users", "users")).to.equal(1);
-        });
-        it("should handle repeated characters", () => {
-          expect(levenshtein("aaa", "aaaa")).to.equal(1);
-          expect(levenshtein("mississippi", "missisippi")).to.equal(1);
-        });
-        it("should handle completely different strings", () => {
-          expect(levenshtein("abc", "xyz")).to.equal(3);
-        });
-        it("should suggest correct path for common typos", async () => {
-          await inflictBoreDOM({
-            users: [],
-            items: [],
-            products: [],
-            configuration: {}
-          }, {});
-          const typos = [
-            { typo: "usres", correct: "users" },
-            { typo: "itmes", correct: "items" },
-            { typo: "prodcuts", correct: "products" },
-            { typo: "confguration", correct: "configuration" }
-          ];
-          for (const { typo, correct } of typos) {
-            const result = getBoreDOM2().llm.validate(`state.${typo}.push(1)`);
-            expect(result.valid).to.be.false;
-            const issue = result.issues.find((i) => i.suggestion);
-            expect(issue?.suggestion).to.include(correct);
-          }
-        });
-      });
-      describe("deepClone edge cases", () => {
-        it("should handle object with null prototype", () => {
-          const obj = /* @__PURE__ */ Object.create(null);
-          obj.key = "value";
-          const cloned = deepClone(obj);
-          expect(cloned.key).to.equal("value");
-        });
-        it("should handle sparse arrays", () => {
-          const sparse = [1, , , 4];
-          const cloned = deepClone(sparse);
-          expect(cloned.length).to.equal(4);
-          expect(cloned[0]).to.equal(1);
-          expect(cloned[3]).to.equal(4);
-          expect(1 in cloned).to.be.false;
-        });
-        it("should handle array with object properties", () => {
-          const arr = [1, 2, 3];
-          arr.custom = "property";
-          const cloned = deepClone(arr);
-          expect(cloned.custom).to.equal("property");
-        });
-        it("should handle deeply nested Map", () => {
-          const nested = /* @__PURE__ */ new Map([
-            ["outer", /* @__PURE__ */ new Map([["inner", { value: 42 }]])]
-          ]);
-          const cloned = deepClone(nested);
-          expect(cloned.get("outer").get("inner").value).to.equal(42);
-          expect(cloned.get("outer")).to.not.equal(nested.get("outer"));
-        });
-        it("should handle mutual circular references", () => {
-          const a = { name: "a" };
-          const b = { name: "b" };
-          a.ref = b;
-          b.ref = a;
-          const cloned = deepClone(a);
-          expect(cloned.name).to.equal("a");
-          expect(cloned.ref.name).to.equal("b");
-          expect(cloned.ref.ref).to.equal(cloned);
-        });
-        it("should preserve instanceof for Date", () => {
-          const date = /* @__PURE__ */ new Date();
-          const cloned = deepClone(date);
-          expect(cloned).to.be.instanceof(Date);
-        });
-        it("should preserve instanceof for RegExp", () => {
-          const regex = /test/gi;
-          const cloned = deepClone(regex);
-          expect(cloned).to.be.instanceof(RegExp);
-          expect(cloned.flags).to.equal("gi");
-        });
-      });
-      describe("Error message quality", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ users: [], config: { theme: "dark" } }, {});
-        });
-        it("should provide helpful syntax error messages", () => {
-          const result = getBoreDOM2().llm.validate(`state.users.push({)`);
-          expect(result.issues[0].message).to.be.a("string");
-          expect(result.issues[0].message.length).to.be.greaterThan(10);
-        });
-        it("should provide actionable suggestions for undefined paths", () => {
-          const result = getBoreDOM2().llm.validate(`state.user.name = "test"`);
-          const issue = result.issues.find((i) => i.type === "reference");
-          expect(issue?.suggestion).to.include("users");
-        });
-        it("should warn about array methods on null with fix suggestion", () => {
-          getBoreDOM2().llm.apply(`state.config.items = null`);
-          const result = getBoreDOM2().llm.validate(`state.config.items.map(x => x)`);
-          const issue = result.issues.find((i) => i.type === "type");
-          expect(issue?.suggestion).to.include("?.map");
-        });
-      });
-      describe("Rapid successive operations", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ counter: 0 }, {});
-        });
-        it("should handle many rapid applies", () => {
-          for (let i = 0; i < 100; i++) {
-            const result = getBoreDOM2().llm.apply(`state.counter++`);
-            expect(result.success).to.be.true;
-          }
-          expect(getState2().counter).to.equal(100);
-        });
-        it("should handle interleaved applies and rollbacks", () => {
-          const results2 = [];
-          for (let i = 0; i < 10; i++) {
-            results2.push(getBoreDOM2().llm.apply(`state.counter = ${i * 10}`));
-          }
-          for (let i = 9; i >= 0; i -= 2) {
-            results2[i].rollback();
-          }
-          expect(typeof getState2().counter).to.equal("number");
-        });
-        it("should handle many rapid validates", () => {
-          for (let i = 0; i < 100; i++) {
-            const result = getBoreDOM2().llm.validate(`state.counter = ${i}`);
-            expect(result.valid).to.be.true;
-          }
-        });
-      });
-      describe("Special string values", () => {
-        beforeEach(async () => {
-          await inflictBoreDOM({ text: "" }, {});
-        });
-        it("should handle strings with quotes", () => {
-          const result = getBoreDOM2().llm.apply(`state.text = 'He said "Hello"'`);
-          expect(result.success).to.be.true;
-          expect(getState2().text).to.equal('He said "Hello"');
-        });
-        it("should handle strings with backslashes", () => {
-          const result = getBoreDOM2().llm.apply(`state.text = "C:\\\\Users\\\\file.txt"`);
-          expect(result.success).to.be.true;
-          expect(getState2().text).to.equal("C:\\Users\\file.txt");
-        });
-        it("should handle strings with newlines", () => {
-          const result = getBoreDOM2().llm.apply(`state.text = "line1\\nline2\\nline3"`);
-          expect(result.success).to.be.true;
-          expect(getState2().text).to.include("\n");
-        });
-        it("should handle strings with null characters", () => {
-          const result = getBoreDOM2().llm.apply(`state.text = "before\\x00after"`);
-          expect(result.success).to.be.true;
-          expect(getState2().text).to.include("\0");
-        });
-        it("should handle very long strings", () => {
-          const longStr = "a".repeat(1e4);
-          const result = getBoreDOM2().llm.apply(`state.text = "${longStr}"`);
-          expect(result.success).to.be.true;
-          expect(getState2().text.length).to.equal(1e4);
-        });
-        it("should handle empty string", async () => {
-          await inflictBoreDOM({ text: "not empty" }, {});
-          const result = getBoreDOM2().llm.apply(`state.text = ""`);
-          expect(result.success).to.be.true;
-          expect(getState2().text).to.equal("");
-        });
-      });
-      describe("Type coercion and falsy values", () => {
-        it("should correctly handle 0 vs null vs undefined", async () => {
-          await inflictBoreDOM({ zero: 0, nullVal: null, undef: void 0 }, {});
-          const result = getBoreDOM2().llm.apply(`
-        state.zero = state.zero || 42
-        state.nullVal = state.nullVal ?? 43
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().zero).to.equal(42);
-          expect(getState2().nullVal).to.equal(43);
-        });
-        it("should handle false boolean vs 0", async () => {
-          await inflictBoreDOM({ flag: false, num: 0 }, {});
-          const result = getBoreDOM2().llm.apply(`
-        if (state.flag === false) state.flag = true
-        if (state.num === 0) state.num = 1
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().flag).to.be.true;
-          expect(getState2().num).to.equal(1);
-        });
-        it("should handle NaN", async () => {
-          await inflictBoreDOM({ num: NaN }, {});
-          const result = getBoreDOM2().llm.apply(`
-        if (Number.isNaN(state.num)) state.num = 0
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().num).to.equal(0);
-        });
-        it("should handle Infinity", async () => {
-          await inflictBoreDOM({ num: Infinity }, {});
-          const result = getBoreDOM2().llm.apply(`
-        if (!Number.isFinite(state.num)) state.num = 999
-      `);
-          expect(result.success).to.be.true;
-          expect(getState2().num).to.equal(999);
-        });
+        );
+        await renderHTMLFrame6(`<component-helper></component-helper>`);
+        await inflictBoreDOM(
+          { message: "Inline" },
+          { "component-helper": Helper },
+          { singleFile: true }
+        );
+        await frame6();
+        await frame6();
+        const output = document.querySelector("component-helper p");
+        expect(output.textContent).to.equal("Inline");
       });
     });
   }
@@ -39269,9 +35977,10 @@ ${pad}}`;
   console_api_test_default();
   inside_out_test_default();
   llm_test_default();
-  type_inference_test_default();
-  validation_test_default();
-  validation_edge_cases_test_default();
+  patch_concurrency_test_default();
+  inlineLogicTests();
+  dispatchIndexTests();
+  bindings_test_default();
   mocha.checkLeaks();
   var results = {
     stats: {},

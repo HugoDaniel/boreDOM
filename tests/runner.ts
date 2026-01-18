@@ -6,9 +6,10 @@ import debugTests from "./debug.test";
 import consoleApiTests from "./console-api.test";
 import insideOutTests from "./inside-out.test";
 import llmTests from "./llm.test";
-import typeInferenceTests from "./type-inference.test";
-import validationTests from "./validation.test";
-import validationEdgeCaseTests from "./validation-edge-cases.test";
+import patchConcurrencyTests from "./patch-concurrency.test";
+import inlineLogicTests from "./inline-logic.test";
+import dispatchIndexTests from "./dispatch-index.test";
+import bindingsTests from "./bindings.test";
 
 mocha.setup("bdd");
 
@@ -25,9 +26,10 @@ debugTests();
 consoleApiTests();
 insideOutTests();
 llmTests();
-typeInferenceTests();
-validationTests();
-validationEdgeCaseTests();
+patchConcurrencyTests();
+inlineLogicTests();
+dispatchIndexTests();
+bindingsTests();
 
 mocha.checkLeaks();
 
