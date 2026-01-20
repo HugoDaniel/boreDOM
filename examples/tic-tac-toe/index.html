@@ -5,153 +5,225 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>boreDOM Tic Tac Toe</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="game-board.css">
-  <link rel="stylesheet" href="game-button.css">
+
+  <!-- STYLES -->
+  <style>
+    :root {
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      color: #18202a;
+      background: #f7f4ef;
+    }
+    body {
+      margin: 0;
+      padding: 2rem;
+    }
+  </style>
+
+  <style data-component="game-board">
+    .game-shell {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 12px 30px rgba(16, 24, 40, 0.08);
+      display: grid;
+      gap: 1.5rem;
+    }
+    .game-header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .game-status {
+      font-size: 1.25rem;
+      font-weight: 600;
+      text-align: center;
+      color: #1d4ed8;
+    }
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin: 1rem 0;
+    }
+    .game-controls {
+      display: flex;
+      justify-content: center;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 0.75rem 1.5rem;
+      background: #1d4ed8;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary {
+      background: #e2e8f0;
+      color: #1d1b1a;
+    }
+  </style>
+
+  <style data-component="game-button">
+    .game-button {
+      aspect-ratio: 1;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      background: #ffffff;
+      font-size: 2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .game-button:hover {
+      background: #f9fafb;
+    }
+    .game-button.x {
+      color: #dc2626;
+    }
+    .game-button.o {
+      color: #1d4ed8;
+    }
+  </style>
+
+  <style data-component="game-turn">
+    .game-turn {
+      text-align: center;
+      font-size: 1.1rem;
+      color: #52606d;
+    }
+  </style>
 </head>
 
 <body>
-  <h1>Tic Tac Toe</h1>
+  <!-- STATE -->
+  <script id="initial-state" type="application/json">
+    {
+      "gameState": {
+        "board": [null, null, null, null, null, null, null, null, null],
+        "nextToPlay": "O",
+        "winner": null
+      }
+    }
+  </script>
 
   <game-turn></game-turn>
-  <game-board>
-  </game-board>
+  <game-board></game-board>
 
+  <!-- TEMPLATES -->
   <template data-component="game-button">
-    <!-- 
-      Event Dispatching:
-      We use data-dispatch="play" which automatically attaches metadata to the event:
-      - index: The index of this component within its parent
-      - component: Reference to this component instance
-    -->
-    <button data-dispatch="play">
-      <slot name="valuePlayed"></slot>
+    <button class="game-button" data-dispatch="play">
+      <span data-text="detail.value"></span>
     </button>
   </template>
 
-  
   <template data-component="game-board">
-    <!-- First row -->
-    <game-button></game-button>
-    <game-button></game-button>
-    <game-button></game-button>
-    <!-- Second row -->
-    <game-button></game-button>
-    <game-button></game-button>
-    <game-button></game-button>
-    <!-- Third row -->
-    <game-button></game-button>
-    <game-button></game-button>
-    <game-button></game-button>
+    <div class="game-shell">
+      <div class="game-header">
+        <h2>Tic Tac Toe</h2>
+        <p class="game-status" data-text="state.gameState.winner ? 'Victory for Player ' + state.gameState.winner : 'Next player: ' + state.gameState.nextToPlay"></p>
+      </div>
 
-    <div class="controls">
-      <button data-ref="reset">Reset Game</button>
+      <div class="game-grid">
+        <game-button data-prop-index="0"></game-button>
+        <game-button data-prop-index="1"></game-button>
+        <game-button data-prop-index="2"></game-button>
+        <game-button data-prop-index="3"></game-button>
+        <game-button data-prop-index="4"></game-button>
+        <game-button data-prop-index="5"></game-button>
+        <game-button data-prop-index="6"></game-button>
+        <game-button data-prop-index="7"></game-button>
+        <game-button data-prop-index="8"></game-button>
+      </div>
+
+      <div class="game-controls">
+        <button data-dispatch="reset" class="secondary">Reset Game</button>
+      </div>
     </div>
+  </template>
 
-    <script type="module">
-      /**
-       * Taken from https://react.dev/learn/tutorial-tic-tac-toe
-       */
-      function calculateWinner(squares) {
-        const lines = [
-          [0, 1, 2],
-          [3, 4, 5],
-          [6, 7, 8],
-          [0, 3, 6],
-          [1, 4, 7],
-          [2, 5, 8],
-          [0, 4, 8],
-          [2, 4, 6],
-        ];
-        for (let i = 0; i < lines.length; i++) {
-          const [a, b, c] = lines[i];
-          if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-            return squares[a];
+  <template data-component="game-turn">
+    <p class="game-turn">
+      <span data-text="state.gameState.winner ? 'Victory for Player ' + state.gameState.winner : 'Next player: ' + state.gameState.nextToPlay"></span>
+    </p>
+  </template>
+
+  <!-- LOGIC -->
+  <script type="text/boredom" data-component="game-board">
+    /**
+     * Taken from https://react.dev/learn/tutorial-tic-tac-toe
+     */
+    function calculateWinner(squares) {
+      const lines = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6],
+      ];
+      for (let i = 0; i < lines.length; i++) {
+        const [a, b, c] = lines[i];
+        if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+          return squares[a];
+        }
+      }
+      return null;
+    }
+
+    export default ({ on, self }) => {
+      on("play", ({ state, e }) => {
+        const index = Number(e.dispatcher.dataset.index);
+        const { gameState } = state;
+
+        const isGameWon = gameState.winner !== null;
+        const isEmptySquare = gameState.board[index] == null;
+
+        if (!isGameWon && isEmptySquare) {
+          gameState.board[index] = gameState.nextToPlay;
+          gameState.nextToPlay = gameState.nextToPlay === "O" ? "X" : "O";
+          gameState.winner = calculateWinner(gameState.board);
+        }
+      });
+
+      on("reset", ({ state }) => {
+        state.gameState.board = new Array(9).fill(null);
+        state.gameState.nextToPlay = "O";
+        state.gameState.winner = null;
+      });
+
+      return ({ state }) => {
+        for (const child of self.querySelectorAll("game-button")) {
+          const index = Number(child.dataset.index);
+          const boardValue = state.gameState.board[index];
+          
+          if (boardValue && child.slots) {
+            child.slots.value = boardValue;
+            child.querySelector("button").classList.add(boardValue.toLowerCase());
+          } else if (!boardValue && child.slots) {
+            child.slots.value = "";
+            child.querySelector("button").classList.remove("x", "o");
           }
         }
-        return null;
-      }
-
-      export default ({ on, self, refs, state }) => {
-        // Event Handling:
-        // We listen for the 'play' event dispatched by our children (<game-button>).
-        // 'e' contains the CustomEvent detail, which boreDOM automatically populates with 'index'.
-        on("play", ({ state, e }) => {
-          const { index } = e;
-          const { gameState } = state;
-
-          const isGameWon = gameState.winner !== null;
-          const isEmptySquare = gameState.board[index] == null;
-
-          if (!isGameWon && isEmptySquare) {
-            gameState.board[index] = gameState.nextToPlay;
-            // Update the next to play:
-            gameState.nextToPlay =
-              gameState.nextToPlay === "O" ? "X" : "O";
-            // Update the winner state
-            gameState.winner = calculateWinner(gameState.board);
-          }
-        });
-
-        // Hybrid Approach:
-        // For singular elements like this Reset button, we use 'refs' directly.
-        // This is more intuitive for LLMs than dispatching a custom event for a simple click.
-        refs.reset.onclick = () => {
-          console.log("Resetting game...");
-          state.gameState.board = new Array(9).fill(null);
-          state.gameState.nextToPlay = "O";
-          state.gameState.winner = null;
-        };
-
-        return ({ state }) => {
-          let index = 0;
-          for (const child of self.children) {
-            // Skip the controls div
-            if (child.tagName === 'DIV') continue;
-
-            const boardValue = state.gameState.board[index++];
-
-            // If the child is a component with slots, we can update them directly.
-            // This is safer than manipulating innerHTML.
-            if (boardValue && child.slots) {
-              child.slots.valuePlayed = boardValue;
-            } else if (!boardValue && child.slots) {
-               // Clear the slot if the board value is empty (on reset)
-               child.slots.valuePlayed = '';
-            }
-          }
-        };
       };
-    </script>
-  </template>
-  
-  <template data-component="game-turn">
-    <p><slot name="playerTurn"></slot></p>
-    <script type="module">
-      export default () => {
-        return ({ state, slots }) => {
-          if (state.gameState.winner) {
-            slots.playerTurn = `Victory for Player ${state.gameState.winner}`;
-          } else {
-            slots.playerTurn = `Next player: ${state.gameState.nextToPlay}`;
-          }
-        };
-      };
-    </script>
-  </template>
-
-  <script type="module">
-    import { inflictBoreDOM } from "./boreDOM.js?v=2";
-
-    await inflictBoreDOM({
-      gameState: {
-        board: new Array(9),
-        nextToPlay: "O",
-        winner: null,
-      },
-    });
+    };
   </script>
 
-</body>
+  <script type="text/boredom" data-component="game-turn">
+    export default () => {
+      return () => {};
+    };
+  </script>
 
+  <!-- RUNTIME -->
+  <script type="module" src="../../dist/boreDOM.full.js" data-state="#initial-state"></script>
+
+</body>
 </html>

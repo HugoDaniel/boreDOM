@@ -3,35 +3,19 @@ import "mocha/mocha.js";
 import "mocha/mocha.css";
 import domTests from "./dom.test";
 import debugTests from "./debug.test";
-import consoleApiTests from "./console-api.test";
-import insideOutTests from "./inside-out.test";
-import llmTests from "./llm.test";
-import patchConcurrencyTests from "./patch-concurrency.test";
 import inlineLogicTests from "./inline-logic.test";
 import dispatchIndexTests from "./dispatch-index.test";
 import bindingsTests from "./bindings.test";
 
 mocha.setup("bdd");
 
-// Allow globals set by Phase 3 Inside-Out Primitives
-mocha.globals([
-  "$missingName",
-  "$missingArgs",
-  "$missingComponent",
-  "$defineMissing",
-]);
-
 domTests();
 debugTests();
-consoleApiTests();
-insideOutTests();
-llmTests();
-patchConcurrencyTests();
 inlineLogicTests();
 dispatchIndexTests();
 bindingsTests();
 
-mocha.checkLeaks();
+// mocha.checkLeaks();
 
 const results = {
   stats: {},

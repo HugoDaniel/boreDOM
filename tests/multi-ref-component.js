@@ -1,7 +1,5 @@
-import { webComponent } from "/dist/boreDOM.min.js"
-
 // Tests multiple elements with the same data-ref name
-export const MultiRefComponent = webComponent(() => {
+export default (() => {
   return ({ self, refs }) => {
     const items = refs.item
     if (Array.isArray(items)) {

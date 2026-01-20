@@ -1,18 +1,18 @@
 import {
-  createAndRunCode,
   createEventsHandler,
   createRefsAccessor,
   createSlotsAccessor,
   createStateAccessor,
   proxify,
   runComponentsInitializer,
+  getComponentInitializer,
 } from "./bore";
 import {
   Bored,
-  dynamicImportScripts,
   registerTemplates,
   registerComponent,
   dispatch,
+  setComponentInitializer,
 } from "./dom";
 import {
   setDebugConfig,
@@ -27,149 +27,46 @@ import {
   clearGlobals,
   markComponentError,
   clearComponentErrorMark,
+  getDebugConfig,
 } from "./debug";
-import {
-  storeComponentContext,
-  consoleAPI,
-} from "./console-api";
 import { setCurrentAppState, WEB_COMPONENT_MARKER } from "./runtime-state";
-import {
-  createRenderHelpers,
-  observeUndefinedElements,
-  insideOutAPI,
-} from "./inside-out";
-import { llmAPI } from "./llm";
 import { applyBindings } from "./bindings";
-// Re-export debug utilities for testing and advanced usage
-export { setDebugConfig, isDebugEnabled, clearGlobals, getDebugConfig } from "./debug";
-// Re-export for console-api dynamic import
-export { registerComponent } from "./dom";
-import type { AppState, InitFunction, BoreDOMConfig, ErrorContext } from "./types";
-export { queryComponent } from "./dom";
+import type { AppState, InitFunction, ErrorContext } from "./types";
 import { VERSION } from "./version";
-export { VERSION } from "./version";
-export type { BoreDOMConfig, DebugOptions, ErrorContext } from "./types";
+
+// Re-export debug utilities for testing and advanced usage
+export { setDebugConfig, isDebugEnabled, clearGlobals, getDebugConfig };
+export { VERSION };
+export type { DebugOptions, ErrorContext } from "./types";
 
 // Build-time flags
-declare const __SINGLE_FILE__: boolean;
 declare const __DEBUG__: boolean;
-declare const __LLM__: boolean;
 
 let hasLoggedVersion = false;
-const isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
-const debugApiEnabled = !isLLMBuild &&
-  (typeof __DEBUG__ === "undefined" || __DEBUG__);
-
-export const html = (
-  strings: TemplateStringsArray,
-  ...values: Array<string | number>
-) => {
-  let result = "";
-  for (let i = 0; i < strings.length; i++) {
-    result += strings[i];
-    if (i < values.length) result += String(values[i]);
-  }
-  return result;
-};
-
-export function component<S>(
-  tagName: string,
-  template: string,
-  initFunction: InitFunction<S | undefined>,
-) {
-  if (typeof document !== "undefined") {
-    const existing = document.querySelector(
-      `template[data-component="${tagName}"]`,
-    );
-    if (existing) {
-      existing.innerHTML = template;
-    } else {
-      const templateEl = document.createElement("template");
-      templateEl.setAttribute("data-component", tagName);
-      templateEl.innerHTML = template;
-      document.body.appendChild(templateEl);
-    }
-  }
-
-  return webComponent(initFunction);
-}
+const debugApiEnabled = typeof __DEBUG__ === "undefined" || __DEBUG__;
 
 /**
- * Global boreDOM object for debugging and programmatic access.
- * Exposed on window.boreDOM when running in browser.
- *
- * Note: We define getters explicitly instead of spreading debugAPI
- * because spread evaluates getters at spread-time, copying VALUES
- * instead of preserving the getters. This would cause lastError
- * and config to be frozen at module load time.
+ * Global boreDOM object.
+ * In production, it only contains the version.
+ * In development, it exposes debug tools and state access.
  */
-export const boreDOM = {
-  /** Map of all current errors by component name */
-  get errors() {
-    return debugAPI.errors;
-  },
-  /** Most recent error context */
-  get lastError() {
-    return debugAPI.lastError;
-  },
-  /** Re-render a specific component or the last errored one */
-  rerender: debugAPI.rerender,
-  /** Clear error state for a component */
-  clearError: debugAPI.clearError,
-  /** Export state snapshot */
-  export: debugAPI.export,
-  /** Current debug configuration (read-only) */
-  get config() {
-    return debugAPI.config;
-  },
-  /** @internal Set debug configuration (used by tests with multiple bundles) */
-  _setDebugConfig: setDebugConfig,
-  /** Framework version */
+export const boreDOM: any = {
   version: VERSION,
-  // LLM Integration API (Phase 4)
-  /** LLM context and output utilities */
-  llm: llmAPI,
-  /** Create a template-backed component in single-file mode */
-  component,
-  /** Template literal helper for HTML strings */
-  html,
 };
 
 if (debugApiEnabled) {
-  Object.assign(boreDOM as any, {
-    /** Define a new component at runtime */
-    define: consoleAPI.define,
-    /** Get live access to a component's internals */
-    operate: consoleAPI.operate,
-    /** Export component state and template */
-    exportComponent: consoleAPI.exportComponent,
-    /** Define a helper function available to all render functions */
-    defineHelper: insideOutAPI.defineHelper,
-    /** Clear a helper definition */
-    clearHelper: insideOutAPI.clearHelper,
-    /** Clear all missing function records */
-    clearMissingFunctions: insideOutAPI.clearMissingFunctions,
-    /** Manually infer template for a tag */
-    inferTemplate: insideOutAPI.inferTemplate,
+  // Attach debug API properties dynamically to allow tree-shaking in production
+  Object.defineProperties(boreDOM, {
+    errors: { get: () => debugAPI.errors },
+    lastError: { get: () => debugAPI.lastError },
+    config: { get: () => debugAPI.config },
   });
 
-  Object.defineProperties(boreDOM as any, {
-    /** Map of missing function calls by function name */
-    missingFunctions: {
-      get: () => insideOutAPI.missingFunctions,
-    },
-    /** Most recent missing function context */
-    lastMissing: {
-      get: () => insideOutAPI.lastMissing,
-    },
-    /** Get all defined helpers */
-    helpers: {
-      get: () => insideOutAPI.helpers,
-    },
-    /** Map of inferred templates by tag name */
-    inferredTemplates: {
-      get: () => insideOutAPI.inferredTemplates,
-    },
+  Object.assign(boreDOM, {
+    rerender: debugAPI.rerender,
+    clearError: debugAPI.clearError,
+    export: debugAPI.export,
+    _setDebugConfig: setDebugConfig,
   });
 }
 
@@ -180,82 +77,34 @@ if (typeof window !== "undefined") {
   (window as any).dispatch = dispatch;
 }
 
-/**
- * Queries all `<template>` elements that
- * have a `data-component` attribute defined and creates web components
- * with the tag name in that attribute.
- *
- * @param state An optional initial app state object. When provided this will
- * be proxified to allow for automatic updates of the dom whenever it
- * changes.
- *
- * @param componentsLogic An optional object that allows you to specify the
- * web components script code without having to place it in a separate file.
- * Its keys are the tag names and its value is the return type of
- * the `webComponent()` function. This overrides any external file
- * associated with the component.
- *
- * @param config Optional configuration for debug mode and other settings.
- * Set `{ debug: false }` for production-lite mode without a build step.
- *
- * @returns The app initial state.
- */
-export async function inflictBoreDOM<S>(
+const bootBoreDOM = async <S>(
   state?: S,
-  componentsLogic?: { [key: string]: ReturnType<typeof webComponent> },
-  config?: BoreDOMConfig,
-): Promise<AppState<S>["app"]> {
-  // Apply debug configuration if provided
-  if (config?.debug !== undefined) {
-    setDebugConfig(config.debug);
-  }
-
-  // Version logging (respects debug config)
-  if (!hasLoggedVersion && isDebugEnabled("versionLog")) {
+): Promise<AppState<S>["app"]> => {
+  if (debugApiEnabled && !hasLoggedVersion && isDebugEnabled("versionLog")) {
     hasLoggedVersion = true;
     if (typeof console !== "undefined" && typeof console.info === "function") {
-          }
+      console.info(`boreDOM v${VERSION}`);
+    }
   }
 
-  // Auto-wrapper for Inline Scripts (Single File Support)
-  // Ensures raw InitFunctions are wrapped in webComponent
   const wrapper = (fn: any) => {
     if (fn && fn[WEB_COMPONENT_MARKER]) {
-            return fn;
+      return fn;
     }
     if (typeof fn === "function") {
-            return webComponent(fn);
+      return webComponent(fn);
     }
-        return fn;
+    return fn;
   };
-
-  const isSingleFileBuild = typeof __SINGLE_FILE__ !== "undefined" &&
-    __SINGLE_FILE__;
-  const singleFile = config?.singleFile ?? isSingleFileBuild;
 
   const { names: registeredNames, inlineLogic } = await registerTemplates(
     wrapper,
-    {
-      mirrorAttributes: config?.mirrorAttributes,
-    },
   );
-  const componentsCode = singleFile
-    ? new Map<string, any>()
-    : await dynamicImportScripts(registeredNames);
+  const componentsCode = new Map<string, any>();
 
-  // Merge inline logic (Precedence: Logic Object > Inline Script > External File)
   if (inlineLogic) {
     for (const [tagName, logic] of inlineLogic) {
-      // Inline overrides external file, but Logic Object overrides Inline
-      if (!componentsCode.has(tagName) || componentsCode.get(tagName) === null) {
-         componentsCode.set(tagName, logic);
-      }
-    }
-  }
-
-  if (componentsLogic) {
-    for (const tagName of Object.keys(componentsLogic)) {
-      componentsCode.set(tagName, componentsLogic[tagName]);
+      componentsCode.set(tagName, logic);
     }
   }
 
@@ -290,20 +139,76 @@ export async function inflictBoreDOM<S>(
     proxifiedState.internal.updates.raf = undefined;
   }
 
-  // Store appState for console API access (pass function refs to avoid circular imports)
-  setCurrentAppState(proxifiedState, webComponent, registerComponent);
+  // Store appState
+  setCurrentAppState(proxifiedState);
+
+  // Set the logic attacher for dynamic components (declarative innerHTML support)
+  setComponentInitializer(getComponentInitializer(proxifiedState));
 
   // Call the code from the corresponding .js file of each component:
   runComponentsInitializer(proxifiedState);
 
-  // Start observing for undefined custom elements (Phase 3 template inference)
-  if (!isLLMBuild) {
-    observeUndefinedElements();
-  }
-
   // When no initial state is provided, return undefined. This still
   // initializes components, event wiring, and subscriptions.
   return proxifiedState.app;
+}
+
+const AUTO_START_SELECTOR = "script[data-state]";
+let startPromise: Promise<void> | null = null;
+
+const findAutoStartScript = () => {
+  if (typeof document === "undefined") return null;
+  const scripts = Array.from(document.querySelectorAll(AUTO_START_SELECTOR))
+    .filter((script): script is HTMLScriptElement =>
+      script instanceof HTMLScriptElement
+    );
+  if (scripts.length === 0) return null;
+  return scripts[scripts.length - 1] ?? null;
+};
+
+const parseStateFromAttribute = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("#")) {
+    const stateEl = document.querySelector(trimmed);
+    if (stateEl && stateEl.textContent) {
+      try {
+        return JSON.parse(stateEl.textContent);
+      } catch (error) {
+        console.error("[boreDOM] Failed to parse state JSON", error);
+      }
+    }
+    return undefined;
+  }
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      return JSON.parse(trimmed);
+    } catch (error) {
+      console.error("[boreDOM] Failed to parse inline state JSON", error);
+    }
+  }
+  return undefined;
+};
+
+const autoStart = () => {
+  if (startPromise) return;
+  const script = findAutoStartScript();
+  if (!script) return;
+  const state = parseStateFromAttribute(script.getAttribute("data-state") || "");
+  startPromise = bootBoreDOM(state as any)
+    .catch((error) => {
+      console.error("[boreDOM] Auto-start failed", error);
+    })
+    .finally(() => {
+      startPromise = null;
+    });
+};
+
+if (typeof window !== "undefined") {
+  document.addEventListener("DOMContentLoaded", autoStart);
+  if (document.readyState !== "loading") {
+    queueMicrotask(autoStart);
+  }
 }
 
 /**
@@ -312,7 +217,7 @@ export async function inflictBoreDOM<S>(
  * @param initFunction Initialization function that returns the render function
  * @return A curried function to use as callback for component initialization
  */
-export function webComponent<S>(
+function webComponent<S>(
   initFunction: InitFunction<S | undefined>,
 ): (appState: AppState<S>, detail?: any) => (c: Bored) => void {
   const result = (appState: AppState<S>, detail: any) => (c: Bored) => {
@@ -369,14 +274,11 @@ export function webComponent<S>(
         refs,
         on,
         self: c,
-        makeComponent: (tag, opts) => {
-          return createAndRunCode(tag, appState as any, opts?.detail);
-        },
       });
           } catch (error) {
       const err = error as Error;
             // Log init error
-      if (isDebugEnabled("console")) {
+      if (debugApiEnabled && isDebugEnabled("console")) {
         logInitError(detail?.name ?? c.tagName.toLowerCase(), err);
       }
       // Return a no-op renderer so the component stays static but doesn't break others
@@ -388,21 +290,16 @@ export function webComponent<S>(
     renderFunction = (renderState) => {
       const componentName = detail?.name ?? c.tagName.toLowerCase();
       
-      // Create helpers proxy for method-missing (Phase 3)
-      const helpers = isLLMBuild
-        ? {}
-        : createRenderHelpers(
-          componentName,
-          c,
-          () => renderFunction(renderState),
-        );
-
       // Create a READ-ONLY accessor for the renderer to record paths accurately
       // and prevent mutations during render
       const renderAccessor = createStateAccessor(renderState, log, false);
 
       // Check if error boundary is enabled
-      if (isDebugEnabled("errorBoundary")) {
+      // In production, we assume errorBoundary logic might still be desired, but 
+      // minimal logging is sufficient. However, for tree-shaking, we need to be careful.
+      // If we use isDebugEnabled("errorBoundary"), it might keep the call site.
+      
+      if (debugApiEnabled && isDebugEnabled("errorBoundary")) {
         try {
                               userDefinedRenderer({
             state: renderAccessor,
@@ -410,10 +307,6 @@ export function webComponent<S>(
             slots,
             self: c,
             detail,
-            makeComponent: (tag, opts) => {
-              return createAndRunCode(tag, appState as any, opts?.detail);
-            },
-            helpers,
           });
           applyBindings(c, { state: renderAccessor, detail, self: c });
           updateSubscribers();
@@ -455,32 +348,19 @@ export function webComponent<S>(
           markComponentError(c);
         }
       } else {
-        // No error boundary - run without catching (original behavior)
+        // No error boundary - run without catching (or production mode basic catch if desired)
         userDefinedRenderer({
           state: renderAccessor,
           refs,
           slots,
           self: c,
           detail,
-          makeComponent: (tag, opts) => {
-            return createAndRunCode(tag, appState as any, opts?.detail);
-          },
-          helpers,
         });
         applyBindings(c, { state: renderAccessor, detail, self: c });
         updateSubscribers();
       }
     };
 
-    // Store component context for console API operate()
-    storeComponentContext(c, {
-      state: app as S,
-      refs: refs as any,
-      slots: slots as any,
-      self: c,
-      detail,
-      rerender: () => renderFunction(app as S),
-    });
     // Internal handles for binding-based prop updates
     // @ts-ignore
     c.__boreDOMDetail = detail;

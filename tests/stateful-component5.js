@@ -1,6 +1,4 @@
-import { webComponent } from "/dist/boreDOM.min.js";
-
-export const StatefulComponent5 = webComponent(() => 
+export default (() => 
   ((opts) => {
     console.log('Rendering Stateful Component 5', opts)
     const p = document.createElement("p");

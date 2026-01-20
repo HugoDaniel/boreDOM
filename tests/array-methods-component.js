@@ -1,7 +1,5 @@
-import { webComponent } from "/dist/boreDOM.min.js"
-
 // Tests array method reactivity (push, splice, etc.)
-export const ArrayMethodsComponent = webComponent(({ on }) => {
+export default (({ on }) => {
   on("push", ({ state: mutable }) => {
     mutable.items.push("new item")
   })

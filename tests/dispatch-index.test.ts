@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { inflictBoreDOM, webComponent } from "../src/index";
+import { startAuto, resetAutoStart } from "./auto-start";
 import { fireEvent } from "@testing-library/dom";
 
 async function frame(): Promise<number> {
@@ -20,6 +20,7 @@ export default function dispatchIndexTests() {
     beforeEach(() => {
       const main = document.querySelector("main");
       if (main) main.innerHTML = "";
+      resetAutoStart();
     });
 
     it("should update state via direct ref onclick (Singular Approach)", async () => {
@@ -28,18 +29,18 @@ export default function dispatchIndexTests() {
         <template data-component="ref-comp">
           <button data-ref="btn">Click</button>
           <span data-ref="out"></span>
-          <script type="module">
-            export default ({ refs, state }) => {
-              refs.btn.onclick = () => state.val = 'ok';
-              return ({ state, refs }) => {
-                refs.out.textContent = state.val;
-              };
-            }
-          </script>
         </template>
+        <script type="text/boredom" data-component="ref-comp">
+          export default ({ refs, state }) => {
+            refs.btn.onclick = () => state.val = 'ok';
+            return ({ state, refs }) => {
+              refs.out.textContent = state.val;
+            };
+          }
+        </script>
       `);
       
-      const state = await inflictBoreDOM({ val: 'init' });
+      const state = await startAuto({ val: 'init' });
       const btn = document.querySelector('button');
       if (!btn) throw new Error("Button not found");
       
@@ -55,26 +56,25 @@ export default function dispatchIndexTests() {
         <list-comp></list-comp>
         <template data-component="list-comp">
           <div data-ref="container"></div>
-          <script type="module">
-            export default ({ on, state, makeComponent, refs }) => {
-              on('hit', ({ e }) => {
-                state.lastIndex = e.index;
-              });
-              return ({ state, refs }) => {
-                refs.container.innerHTML = '';
-                [0, 1, 2].forEach(() => {
-                  refs.container.appendChild(makeComponent('item-btn'));
-                });
-              };
-            }
-          </script>
         </template>
         <template data-component="item-btn">
-          <button onclick="dispatch('hit')">Hit</button>
+          <button data-dispatch="hit">Hit</button>
         </template>
+        <script type="text/boredom" data-component="list-comp">
+          export default ({ on, state, refs }) => {
+            on('hit', ({ e }) => {
+              state.lastIndex = e.index;
+            });
+            return () => {
+              refs.container.innerHTML = [0, 1, 2].map(i => 
+                \`<item-btn data-index="\${i}"></item-btn>\`
+              ).join('');
+            };
+          }
+        </script>
       `);
       
-      const state = await inflictBoreDOM({ lastIndex: -1 });
+      const state = await startAuto({ lastIndex: -1 });
       await frame(); // Wait for initial render of children
       
       const buttons = document.querySelectorAll('button');

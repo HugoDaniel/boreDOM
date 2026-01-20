@@ -16,7 +16,13 @@
       margin: 0;
       padding: 2rem;
     }
-    .panel {
+    [hidden] {
+      display: none !important;
+    }
+  </style>
+
+  <style data-component="llm-basics">
+    .basics-shell {
       max-width: 720px;
       margin: 0 auto;
       background: #ffffff;
@@ -24,34 +30,17 @@
       padding: 1.5rem 2rem;
       box-shadow: 0 20px 40px rgba(31, 41, 51, 0.08);
       display: grid;
-      gap: 1.5rem;
+      gap: 1rem;
     }
-    .row {
+  </style>
+
+  <style data-component="basics-header">
+    .basics-header {
       display: flex;
       gap: 0.75rem;
-      flex-wrap: wrap;
       align-items: center;
     }
-    button {
-      border: none;
-      background: #1f5dd9;
-      color: #fff;
-      padding: 0.5rem 0.9rem;
-      border-radius: 999px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    button.secondary {
-      background: #e4e7eb;
-      color: #1f2933;
-    }
-    input[type="text"] {
-      border-radius: 10px;
-      border: 1px solid #cfd4da;
-      padding: 0.5rem 0.75rem;
-      min-width: 220px;
-    }
-    .badge {
+    .basics-badge {
       display: inline-flex;
       align-items: center;
       padding: 0.25rem 0.6rem;
@@ -61,25 +50,74 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
-    .badge.calm {
+    .basics-badge.calm {
       background: #d7f3df;
       color: #1d6b38;
     }
-    .badge.hot {
+    .basics-badge.hot {
       background: #ffe0d2;
       color: #b2441a;
     }
-    .status {
-      display: grid;
-      gap: 0.5rem;
-      padding: 0.75rem 1rem;
+  </style>
+
+  <style data-component="basics-counter">
+    .basics-card {
       background: #f4f5f7;
       border-radius: 12px;
+      padding: 0.75rem 1rem;
     }
-    [hidden] {
-      display: none !important;
+    .basics-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
     }
-    label {
+    .basics-row button {
+      border: none;
+      background: #1f5dd9;
+      color: #fff;
+      padding: 0.5rem 0.9rem;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .basics-row button.secondary {
+      background: #e4e7eb;
+      color: #1f2933;
+    }
+  </style>
+
+  <style data-component="basics-details">
+    .basics-card {
+      background: #f4f5f7;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+    }
+    .basics-status {
+      display: grid;
+      gap: 0.5rem;
+    }
+  </style>
+
+  <style data-component="basics-form">
+    .basics-card {
+      background: #f4f5f7;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+    }
+    .basics-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .basics-row input[type="text"] {
+      border-radius: 10px;
+      border: 1px solid #cfd4da;
+      padding: 0.5rem 0.75rem;
+      min-width: 220px;
+    }
+    .basics-row label {
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -108,25 +146,44 @@
 
   <!-- COMPONENTS -->
   <template data-component="llm-basics">
-    <section class="panel">
-      <div class="row">
-        <h1>LLM Basics</h1>
-        <span class="badge" data-class="state.mode" data-text="state.mode"></span>
-      </div>
+    <section class="basics-shell">
+      <basics-header></basics-header>
+      <basics-counter></basics-counter>
+      <basics-details></basics-details>
+      <basics-form></basics-form>
+    </section>
+  </template>
 
-      <div class="row">
+  <template data-component="basics-header">
+    <div class="basics-header">
+      <h1>LLM Basics</h1>
+      <span class="basics-badge" data-class="state.mode" data-text="state.mode"></span>
+    </div>
+  </template>
+
+  <template data-component="basics-counter">
+    <section class="basics-card">
+      <div class="basics-row">
         <button data-dispatch="decrement">-</button>
         <strong data-text="state.countLabel"></strong>
         <button data-dispatch="increment">+</button>
         <button class="secondary" data-dispatch="toggleDetails" data-text="state.detailsLabel"></button>
       </div>
+    </section>
+  </template>
 
-      <div class="status" data-show="state.showDetails">
+  <template data-component="basics-details">
+    <section class="basics-card">
+      <div class="basics-status" data-show="state.showDetails">
         <div>Welcome, <span data-text="state.name"></span>!</div>
         <div data-text="state.statusLine"></div>
       </div>
+    </section>
+  </template>
 
-      <div class="row">
+  <template data-component="basics-form">
+    <section class="basics-card">
+      <div class="basics-row">
         <input
           type="text"
           placeholder="Type a name"
@@ -138,61 +195,70 @@
           I agree
         </label>
       </div>
-
-      <script type="module">
-        export default ({ on, state }) => {
-          const updateLabel = () => {
-            state.countLabel = String(state.count)
-            state.mode = state.count > 4 ? "hot" : "calm"
-            state.detailsLabel = state.showDetails ? "Hide details" : "Show details"
-            state.statusLine = state.agreed
-              ? `Agreement locked at ${state.count}`
-              : `Count is ${state.count}`
-          }
-
-          on("increment", () => {
-            state.count += 1
-            updateLabel()
-          })
-
-          on("decrement", () => {
-            state.count -= 1
-            updateLabel()
-          })
-
-          on("toggleDetails", () => {
-            state.showDetails = !state.showDetails
-            updateLabel()
-          })
-
-          on("nameInput", ({ e }) => {
-            const target = e.event.target
-            if (target && "value" in target) {
-              state.name = target.value || "Anon"
-            }
-          })
-
-          on("toggleAgree", () => {
-            state.agreed = !state.agreed
-            updateLabel()
-          })
-
-          updateLabel()
-          return () => {}
-        }
-      </script>
     </section>
   </template>
 
-  <!-- RUNTIME -->
-  <script type="module">
-    import { inflictBoreDOM } from "../dist/boreDOM.llm.js"
+  <!-- LOGIC -->
+  <script type="text/boredom" data-component="basics-counter">
+    export default ({ on, state }) => {
+      const syncBasics = () => {
+        state.countLabel = String(state.count)
+        state.mode = state.count > 4 ? "hot" : "calm"
+        state.detailsLabel = state.showDetails ? "Hide details" : "Show details"
+        state.statusLine = state.agreed
+          ? `Agreement locked at ${state.count}`
+          : `Count is ${state.count}`
+      }
 
-    const state = JSON.parse(
-      document.getElementById("initial-state").textContent || "{}"
-    )
+      on("increment", () => {
+        state.count += 1
+        syncBasics()
+      })
 
-    await inflictBoreDOM(state)
+      on("decrement", () => {
+        state.count -= 1
+        syncBasics()
+      })
+
+      on("toggleDetails", () => {
+        state.showDetails = !state.showDetails
+        syncBasics()
+      })
+
+      syncBasics()
+      return () => {}
+    }
   </script>
+
+  <script type="text/boredom" data-component="basics-form">
+    export default ({ on, state }) => {
+      const syncBasics = () => {
+        state.countLabel = String(state.count)
+        state.mode = state.count > 4 ? "hot" : "calm"
+        state.detailsLabel = state.showDetails ? "Hide details" : "Show details"
+        state.statusLine = state.agreed
+          ? `Agreement locked at ${state.count}`
+          : `Count is ${state.count}`
+      }
+
+      on("nameInput", ({ e }) => {
+        const target = e.event.target
+        if (target && "value" in target) {
+          state.name = target.value || "Anon"
+        }
+      })
+
+      on("toggleAgree", () => {
+        state.agreed = !state.agreed
+        syncBasics()
+      })
+
+      syncBasics()
+      return () => {}
+    }
+  </script>
+
+  <!-- RUNTIME -->
+  <script type="module" src="../dist/boreDOM.llm.js" data-state="#initial-state"></script>
 </body>
 </html>

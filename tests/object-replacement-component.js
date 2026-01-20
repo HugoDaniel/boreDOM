@@ -1,7 +1,5 @@
-import { webComponent } from "/dist/boreDOM.min.js"
-
 // Tests object replacement behavior
-export const ObjectReplacementComponent = webComponent(() => {
+export default (() => {
   let renderCount = 0
 
   return ({ self, state }) => {

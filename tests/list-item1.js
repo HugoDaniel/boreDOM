@@ -1,13 +1,13 @@
-import { webComponent } from "/dist/boreDOM.min.js";
-
-export const ListItem1 = webComponent(
+export default (
   (opts) => {
     console.log('Initializing List Item 1', opts);
 
-    return ({ self, detail }) => {
+    return ({ self, detail, state }) => {
       console.log("Rendering List Item 1", detail);
       if (detail === undefined) return;
-      self.innerText = detail.data;
+      const index = detail.index;
+      const item = state.content.items[index];
+      self.innerText = item;
     }
   }
 );

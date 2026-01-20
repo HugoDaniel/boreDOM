@@ -1,7 +1,5 @@
-import { webComponent } from "/dist/boreDOM.min.js"
-
 // Tests that new/replaced objects become reactive
-export const NewObjectReactivityComponent = webComponent(({ on }) => {
+export default (({ on }) => {
   on("replaceUser", ({ state: mutable }) => {
     mutable.user = { name: "Replaced", email: "replaced@test.com" }
   })

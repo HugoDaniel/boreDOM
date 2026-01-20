@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minimal Build Test</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .pass {
+      background: #d4edda;
+      color: #155724;
+    }
+    .fail {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .loading {
+      background: #fff3cd;
+      color: #856404;
+    }
+  </style>
+</head>
+<body>
+  <h1>Minimal Build Test</h1>
+  <div id="results"></div>
+
+  <script type="module" src="../dist/boreDOM.llm.minimal.js" data-state="#initial-state"></script>
+  
+  <script id="initial-state" type="application/json">
+    { "count": 0 }
+  </script>
+
+  <test-counter></test-counter>
+
+  <template data-component="test-counter">
+    <div>
+      <h2>Counter Test</h2>
+      <p data-text="state.count">0</p>
+      <button data-dispatch="increment">+</button>
+      <button data-dispatch="decrement">-</button>
+    </div>
+  </template>
+
+  <script type="text/boredom" data-component="test-counter">
+    export default ({ on }) => {
+      on("increment", ({ state }) => { state.count += 1 });
+      on("decrement", ({ state }) => { state.count -= 1 });
+      return () => {};
+    };
+  </script>
+
+  <script>
+    // Test that boreDOM is available and working
+    setTimeout(() => {
+      const resultDiv = document.createElement('div');
+      
+      if (typeof boreDOM !== 'undefined' && boreDOM.version) {
+        resultDiv.className = 'test-result pass';
+        resultDiv.innerHTML = `<strong>Minimal Build:</strong> boreDOM v${boreDOM.version} loaded successfully`;
+        
+        // Test LLM API
+        if (boreDOM.llm) {
+          const llmInfo = document.createElement('div');
+          llmInfo.className = 'test-result pass';
+          llmInfo.innerHTML = `<strong>LLM API:</strong> Available (vision: ${typeof boreDOM.llm.vision}, compact: ${typeof boreDOM.llm.compact})`;
+          resultDiv.appendChild(llmInfo);
+        }
+        
+        // Test that console API is NOT available (as intended)
+        if (!boreDOM.define && !boreDOM.operate) {
+          const consoleInfo = document.createElement('div');
+          consoleInfo.className = 'test-result pass';
+          consoleInfo.innerHTML = `<strong>Console API:</strong> Correctly excluded from minimal build`;
+          resultDiv.appendChild(consoleInfo);
+        }
+      } else {
+        resultDiv.className = 'test-result fail';
+        resultDiv.innerHTML = `<strong>Minimal Build:</strong> Failed to load boreDOM`;
+      }
+      
+      document.getElementById('results').appendChild(resultDiv);
+    }, 1000);
+  </script>
+</body>
+</html>

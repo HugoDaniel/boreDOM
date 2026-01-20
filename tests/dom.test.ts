@@ -10,7 +10,8 @@ import {
   queryByText,
 } from "@testing-library/dom";
 import "mocha/mocha.js";
-import { inflictBoreDOM, webComponent, setDebugConfig } from "../src/index";
+import { setDebugConfig } from "../src/index";
+import { startAuto, resetAutoStart } from "./auto-start";
 import { flatten } from "../src/utils/flatten";
 import { access } from "../src/utils/access";
 import { isPOJO } from "../src/utils/isPojo";
@@ -45,6 +46,7 @@ export default function () {
       const main = document.querySelector("main");
       if (!main) return;
       main.innerHTML = "";
+      resetAutoStart();
       // Reset debug config to defaults for test isolation
       setDebugConfig(true);
     });
@@ -54,7 +56,7 @@ export default function () {
         const container = renderHTML(
           `<template data-component="simple-component"></template>`,
         );
-        inflictBoreDOM();
+        await startAuto();
 
         const ctor = customElements.get("simple-component");
 
@@ -67,7 +69,7 @@ export default function () {
         const container = renderHTML(
           `<template data-component="nonvalid"></template>`,
         );
-        inflictBoreDOM();
+        await startAuto();
 
         const ctor = customElements.get("nonvalid");
 
@@ -79,7 +81,7 @@ export default function () {
           <simple-component2></simple-component2>
           <template data-component="simple-component2"><p>This is some random HTML</p></template>
         `);
-        inflictBoreDOM();
+        await startAuto();
 
         const elem = getByText(container, "This is some random HTML");
         expect(elem).to.be.an.instanceof(HTMLParagraphElement);
@@ -90,7 +92,7 @@ export default function () {
           <simple-component3></simple-component3>
           <template data-component="simple-component3" shadowrootmode="open"><p>Test</p></template>
         `);
-        inflictBoreDOM();
+        await startAuto();
 
         const elem = getByText(
           (container.firstElementChild as any).shadowRoot,
@@ -104,7 +106,7 @@ export default function () {
           <simple-component4></simple-component4>
           <template data-component="simple-component4" data-aria-label="Some Label"><p>Something</p></template>
         `);
-        inflictBoreDOM();
+        await startAuto();
 
         const elem = getByLabelText(container, "Some Label");
         expect(elem).to.be.an.instanceof(HTMLElement);
@@ -117,7 +119,7 @@ export default function () {
           <simple-component5></simple-component5>
           <template data-component="simple-component5" data-role="banner"><p>Something</p></template>
         `);
-        inflictBoreDOM();
+        await startAuto();
 
         const elem = getByRole(container, "banner");
         expect(elem).to.be.an.instanceof(HTMLElement);
@@ -136,7 +138,7 @@ export default function () {
           </template>
         `);
 
-        await inflictBoreDOM(); // replacing slots requires "shadowrootmode" to be set
+        await startAuto(); // replacing slots requires "shadowrootmode" to be set
         const elem = getByText(
           container,
           "Let's have some different text!",
@@ -151,37 +153,24 @@ export default function () {
       });
     });
     describe("Simple component events", () => {
-      it("should set a data-event-dispatches on the web component once the custom event is registered", () => {
-        const container = renderHTML(`
-          <eventful-component1></eventful-component1>
-          <template data-component="eventful-component1"><button onclick="dispatch('clickme')">Click me</button></template>
-        `);
-        inflictBoreDOM();
-
-        const elem = container.querySelector(
-          "[data-onclick-dispatches]",
-        ) as HTMLElement;
-        expect(elem).to.be.an.instanceof(HTMLElement);
-        expect(elem.dataset.onclickDispatches).to.eql("clickme");
-      });
-
-      it("should dispatch a custom event with the provided name in the dispatch function", async (done) => {
+      it("should dispatch a custom event with the provided name in the dispatch function", async () => {
         const container = renderHTML(`
           <eventful-component2></eventful-component2>
-          <template data-component="eventful-component2"><button onclick="dispatch('clickme')">Click me</button></template>
+          <template data-component="eventful-component2"><button onclick="dispatch('clickme', { event: event })">Click me</button></template>
         `);
-        inflictBoreDOM();
-
-        addEventListener("clickme", (e: any) => {
-          expect(e.detail.event).not.to.be.undefined;
-          expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
-          if (!(e.detail.event.target instanceof HTMLElement)) {
-            throw new Error("Event target not an html element");
-          }
-          expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
-            "button",
-          );
-          done();
+        await startAuto();
+        const eventPromise = new Promise<void>((resolve) => {
+          addEventListener("clickme", (e: any) => {
+            expect(e.detail.event).not.to.be.undefined;
+            expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
+            if (!(e.detail.event.target instanceof HTMLElement)) {
+              throw new Error("Event target not an html element");
+            }
+            expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
+              "button",
+            );
+            resolve();
+          }, { once: true });
         });
 
         const elem = getByText(
@@ -189,46 +178,52 @@ export default function () {
           "Click me",
         );
         fireEvent.click(elem);
+        await eventPromise;
       });
 
-      it("should dispatch more than one custom event when more than one string is in the dispatch function", async (done) => {
+      it("should dispatch more than one custom event when more than one string is in the dispatch function", async () => {
         const container = renderHTML(`
           <eventful-component3></eventful-component3>
-          <template data-component="eventful-component3"><button onclick="dispatch('clickyou', 'clickthem')">Click me</button></template>
+          <template data-component="eventful-component3"><button onclick="dispatch('clickyou', { event: event }); dispatch('clickthem', { event: event })">Click me</button></template>
         `);
-        inflictBoreDOM();
+        await startAuto();
 
-        let triggeredEvents: string[] = [];
-        addEventListener("clickthem", (e: any) => {
-          expect(e.detail.event).not.to.be.undefined;
-          expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
-          if (!(e.detail.event.target instanceof HTMLElement)) {
-            throw new Error("Event target not an html element");
-          }
-          expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
-            "button",
-          );
+        const eventPromise = new Promise<void>((resolve) => {
+          const triggeredEvents: string[] = [];
+          const checkDone = () => {
+            if (triggeredEvents.includes("clickyou") &&
+              triggeredEvents.includes("clickthem")) {
+              resolve();
+            }
+          };
 
-          triggeredEvents.push("clickthem");
-          if (triggeredEvents.includes("clickyou")) {
-            done();
-          }
-        });
+          addEventListener("clickthem", (e: any) => {
+            expect(e.detail.event).not.to.be.undefined;
+            expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
+            if (!(e.detail.event.target instanceof HTMLElement)) {
+              throw new Error("Event target not an html element");
+            }
+            expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
+              "button",
+            );
 
-        addEventListener("clickyou", (e: any) => {
-          expect(e.detail.event).not.to.be.undefined;
-          expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
-          if (!(e.detail.event.target instanceof HTMLElement)) {
-            throw new Error("Event target not an html element");
-          }
-          expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
-            "button",
-          );
+            triggeredEvents.push("clickthem");
+            checkDone();
+          }, { once: true });
 
-          triggeredEvents.push("clickyou");
-          if (triggeredEvents.includes("clickthem")) {
-            done();
-          }
+          addEventListener("clickyou", (e: any) => {
+            expect(e.detail.event).not.to.be.undefined;
+            expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
+            if (!(e.detail.event.target instanceof HTMLElement)) {
+              throw new Error("Event target not an html element");
+            }
+            expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
+              "button",
+            );
+
+            triggeredEvents.push("clickyou");
+            checkDone();
+          }, { once: true });
         });
 
         const elem = getByText(
@@ -237,6 +232,7 @@ export default function () {
         );
         // One click, should trigger two custom events
         fireEvent.click(elem);
+        await eventPromise;
       });
     });
 
@@ -250,11 +246,11 @@ export default function () {
             <p>Stateful component 1</p>
           </template>
 
-          <script src="/stateful-component1.js"></script>
+          <script data-component="stateful-component1" src="/stateful-component1.js"></script>
         `);
         // The `stateful-component1.js` should be automatically imported dynamically and
         // its render function called.
-        await inflictBoreDOM();
+        await startAuto();
 
         const elem = getByText(
           container,
@@ -274,10 +270,10 @@ export default function () {
             <!-- ^ should be available as options.refs.something in the init function -->
           </template>
 
-          <script src="/stateful-component2.js"></script>
+          <script data-component="stateful-component2" src="/stateful-component2.js"></script>
         `);
 
-        await inflictBoreDOM(); // Runs the code in `stateful-component2.js`
+        await startAuto(); // Runs the code in `stateful-component2.js`
 
         const elem = getByText(
           container,
@@ -293,11 +289,11 @@ export default function () {
 
           <template data-component="stateful-component3"></template>
 
-          <script src="/stateful-component3.js"></script>
+          <script data-component="stateful-component3" src="/stateful-component3.js"></script>
         `);
 
         try {
-          await inflictBoreDOM(); // Runs the code in `stateful-component3.js`
+          await startAuto(); // Runs the code in `stateful-component3.js`
         } catch (e) {
           expect((e as Error).message).to.be.a.string(
             'Ref "somethingThatDoesNotExist" not found in <STATEFUL-COMPONENT3>',
@@ -316,14 +312,14 @@ export default function () {
             <!-- ^ should be available as options.slots["some-slot"] in the render function -->
           </template>
 
-          <script src="/stateful-component4.js"></script>
+          <script data-component="stateful-component4" src="/stateful-component4.js"></script>
 
           <template data-component="stateful-component4b">
             <p>This component will be placed in the slot by the .js code</p>
           </template>
         `);
 
-        await inflictBoreDOM(); // Runs the code in `stateful-component4.js`
+        await startAuto(); // Runs the code in `stateful-component4.js`
 
         const elem = getByText(
           container,
@@ -343,10 +339,10 @@ export default function () {
             <!-- ^ should be available to be replaced by setting options.slots["some-slot"] in the render function -->
           </template>
 
-          <script src="/stateful-component5.js"></script>
+          <script data-component="stateful-component5" src="/stateful-component5.js"></script>
         `);
 
-        await inflictBoreDOM(); // Runs the code in `stateful-component5.js`
+        await startAuto(); // Runs the code in `stateful-component5.js`
 
         const replaced = queryByText(
           container,
@@ -372,10 +368,10 @@ export default function () {
             <!-- ^ should be available to be replaced by setting options.slots["some-slot"] in the render function -->
           </template>
 
-          <script src="/stateful-component5.js"></script>
+          <script data-component="stateful-component5" src="/stateful-component5.js"></script>
         `);
 
-        await inflictBoreDOM(); // Runs the code in `stateful-component5.js`
+        await startAuto(); // Runs the code in `stateful-component5.js`
 
         const elem = getByText(
           container,
@@ -387,7 +383,7 @@ export default function () {
         );
       });
 
-      it("should allow script code to be defined in the `inflictBoreDOM()` function", async () => {
+      it("should allow inline triplet logic to initialize a component", async () => {
         const container = renderHTML(`
           <inline-component1></inline-component1>
 
@@ -395,14 +391,16 @@ export default function () {
             <p>Stateful inline component 1</p>
           </template>
 
-          <!-- code will be set in inflictBoreDOM -->
+          <script type="text/boredom" data-component="inline-component1">
+            export default () => {
+              return ({ self }) => {
+                self.innerHTML = "Inline code run";
+              }
+            }
+          </script>
         `);
 
-        await inflictBoreDOM(undefined, {
-          "inline-component1": webComponent(() => ({ self }) => {
-            self.innerHTML = "Inline code run";
-          }),
-        });
+        await startAuto();
 
         const elem = getByText(
           container,
@@ -421,10 +419,10 @@ export default function () {
             <p>Multi instance component</p>
           </template>
 
-          <script src="/multi-instance-component.js"></script>
+          <script data-component="multi-instance-component" src="/multi-instance-component.js"></script>
         `);
 
-        await inflictBoreDOM();
+        await startAuto();
 
         const instances = Array.from(
           container.querySelectorAll("multi-instance-component"),
@@ -443,31 +441,33 @@ export default function () {
     describe("Event handlers in scripts", () => {
       it(
         "should handle custom events with the provided 'on' function",
-        function (done) {
-          (async () => {
-            // The following code is accompanied by the `stateful-component5.js` file.
-            const container = await renderHTMLFrame(`
+        async function () {
+          const container = await renderHTMLFrame(`
           <on-event-component1></on-event-component1>
 
           <template data-component="on-event-component1">
-            <button onclick="dispatch('someCustomEventOnClick')">Click here to dispatch</butbbon>
+            <button onclick="dispatch('someCustomEventOnClick', { event: event })">Click here to dispatch</butbbon>
           </template>
-          <script src="/on-event-component1.js"></script>
+          <script data-component="on-event-component1" src="/on-event-component1.js"></script>
         `);
 
-            const state = { onDone: done };
+          let state = { clicked: false };
 
-            await inflictBoreDOM(state);
+          state = await startAuto(state);
 
-            const elem = getByText(
-              container,
-              "Click here to dispatch",
-            );
+          const elem = getByText(
+            container,
+            "Click here to dispatch",
+          );
 
-            // One click, should trigger the custom event, and call the registered callbackes
-            // provided to the 'on' function (see 'on-event-component1.js')
-            fireEvent.click(elem);
-          })();
+          // One click, should trigger the custom event, and call the registered callbackes
+          // provided to the 'on' function (see 'on-event-component1.js')
+          fireEvent.click(elem);
+          
+          await frame();
+          await frame();
+          
+          expect(state.clicked).to.be.true;
         },
       );
 
@@ -480,14 +480,14 @@ export default function () {
 
           <template data-component="on-event-component2">
             <p data-ref="label">Value</p>
-            <button onclick="dispatch('incrementClick')">Increment</button>
+            <button onclick="dispatch('incrementClick', { event: event })">Increment</button>
           </template>
-          <script src="/on-event-component2.js"></script>
+          <script data-component="on-event-component2" src="/on-event-component2.js"></script>
         `);
 
           const state = { value: 0 };
 
-          await inflictBoreDOM(state);
+          await startAuto(state);
 
           // Label should be "0", because the "value" attribute is being set on render:
           const labelElem = getByText(
@@ -525,10 +525,10 @@ export default function () {
             <p>Initial state is: <span data-ref="container"></span></p>
           </template>
 
-          <script src="/stateful-component6.js"></script>
+          <script data-component="stateful-component6" src="/stateful-component6.js"></script>
         `);
 
-        await inflictBoreDOM({ content: { value: "Initial state" } }); // Runs the code in `stateful-component6.js`
+        await startAuto({ content: { value: "Initial state" } }); // Runs the code in `stateful-component6.js`
 
         const elem = getByText(
           container,
@@ -546,15 +546,16 @@ export default function () {
             <p>Initial state is: <span data-ref="container"></span></p>
           </template>
 
-          <script src="/stateful-component6.js"></script>
+          <script data-component="stateful-component6" src="/stateful-component6.js"></script>
         `);
 
-        const state = { content: { value: "Initial state" } };
-        await inflictBoreDOM(state); // Runs the code in `stateful-component6.js`
+        let state = { content: { value: "Initial state" } };
+        state = await startAuto(state); // Runs the code in `stateful-component6.js`
 
         // Update the state:
         state.content.value = "This is new content";
 
+        await frame();
         await frame();
 
         const elem = getByText(
@@ -573,11 +574,11 @@ export default function () {
             <p>Initial state is: <span data-ref="container"></span></p>
           </template>
 
-          <script src="/stateful-component7.js"></script>
+          <script data-component="stateful-component7" src="/stateful-component7.js"></script>
         `);
 
-        const state = { content: { value: ["Initial state"] } };
-        await inflictBoreDOM(state); // Runs the code in `stateful-component7.js`
+        let state = { content: { value: ["Initial state"] } };
+        state = await startAuto(state); // Runs the code in `stateful-component7.js`
 
         // Update the state:
         state.content.value[0] = "This is new content";
@@ -596,16 +597,15 @@ export default function () {
         const container = await renderHTMLFrame(`
           <stateful-component8></stateful-component8>
 
-          <template data-component="stateful-component8">
-            <button onclick="dispatch('update')">Click to update</button>
+            <button onclick="dispatch('update', { event: event })">Click to update</button>
             <p>Initial state is: <span data-ref="container"></span></p>
           </template>
 
-          <script src="/stateful-component8.js"></script>
+          <script data-component="stateful-component8" src="/stateful-component8.js"></script>
         `);
 
         const state = { content: { value: ["Initial state"] } };
-        await inflictBoreDOM(state); // Runs the code in `stateful-component8.js`
+        await startAuto(state); // Runs the code in `stateful-component8.js`
 
         const btn = getByText(
           container,
@@ -614,6 +614,7 @@ export default function () {
 
         fireEvent.click(btn);
 
+        await frame();
         await frame();
 
         const elem = getByText(
@@ -628,15 +629,15 @@ export default function () {
           <stateful-component9></stateful-component9>
 
           <template data-component="stateful-component9">
-            <button onclick="dispatch('update')">Click to update</button>
+            <button onclick="dispatch('update', { event: event })">Click to update</button>
             <p>Initial state is: <span data-ref="container"></span></p>
           </template>
 
-          <script src="/stateful-component9.js"></script>
+          <script data-component="stateful-component9" src="/stateful-component9.js"></script>
         `);
 
         const state = { content: { value: "Initial state" } };
-        await inflictBoreDOM(state);
+        await startAuto(state);
 
         const btn = getByText(
           container,
@@ -664,11 +665,11 @@ export default function () {
             <span data-ref="value"></span>
           </template>
 
-          <script src="/stateful-component10.js"></script>
+          <script data-component="stateful-component10" src="/stateful-component10.js"></script>
         `);
 
-        const state = { content: { nested: { value: "initial" } } };
-        await inflictBoreDOM(state);
+        let state = { content: { nested: { value: "initial" } } };
+        state = await startAuto(state);
 
         state.content.nested = { value: "updated" };
 
@@ -689,16 +690,16 @@ export default function () {
             <p data-ref="info"></p>
           </template>
 
-          <script src="/stateful-component11.js"></script>
+          <script data-component="stateful-component11" src="/stateful-component11.js"></script>
         `);
 
-        const state = {
+        let state = {
           gpu: {
             isReady: false,
             info: { adapter: "none", device: "none" },
           },
         };
-        await inflictBoreDOM(state);
+        state = await startAuto(state);
 
         state.gpu.info = { adapter: "Ada", device: "RTX" };
 
@@ -735,11 +736,11 @@ export default function () {
           </template>
 
           <!-- Order matters for reproducing the bug - longer name first -->
-          <script src="/multi-hyphen-component-extra.js"></script>
-          <script src="/multi-hyphen-component.js"></script>
+          <script data-component="multi-hyphen-component-extra" src="/multi-hyphen-component-extra.js"></script>
+          <script data-component="multi-hyphen-component" src="/multi-hyphen-component.js"></script>
         `);
 
-        await inflictBoreDOM();
+        await startAuto();
 
         const shortComponent = container.querySelector("multi-hyphen-component");
         const longComponent = container.querySelector("multi-hyphen-component-extra");
@@ -764,7 +765,7 @@ export default function () {
           </template>
         `);
 
-        await inflictBoreDOM();
+        await startAuto();
 
         const elem = container.querySelector("my-super-cool-component");
         expect(elem).to.be.an.instanceof(HTMLElement);
@@ -783,17 +784,17 @@ export default function () {
             <ol>
             </ol>
           </template>
-          <script src="/list-component1.js"></script>
+          <script data-component="list-component1" src="/list-component1.js"></script>
 
           <template data-component="list-item1">
             <li></li>
           </template>
-          <script src="/list-item1.js"></script>
+          <script data-component="list-item1" src="/list-item1.js"></script>
         `);
 
         await frame();
 
-        await inflictBoreDOM({ content: { items: ["some item"] } }); // Runs the code in `list-component1.js`
+        await startAuto({ content: { items: ["some item"] } }); // Runs the code in `list-component1.js`
 
         const elem = getByText(
           container,
@@ -813,22 +814,25 @@ export default function () {
             <ol>
             </ol>
           </template>
-          <script src="/list-component1.js"></script>
+          <script data-component="list-component1" src="/list-component1.js"></script>
 
           <template data-component="list-item1">
             <li></li>
           </template>
-          <script src="/list-item1.js"></script>
+          <script data-component="list-item1" src="/list-item1.js"></script>
         `);
 
         await frame();
 
         // In this test, pass multiple items in the array
-        await inflictBoreDOM({
+        await startAuto({
           content: { items: ["item A", "item B", "item C"] },
         });
-        //    ^ Runs the code in `list-component1.js`
-        const elem1 = getByText(
+
+        await frame();
+        await frame();
+
+        const elem = getByText(
           container,
           "item A",
         );
@@ -856,11 +860,11 @@ export default function () {
               <p>Batching test</p>
             </template>
 
-            <script src="/batching-component.js"></script>
+            <script data-component="batching-component" src="/batching-component.js"></script>
           `);
 
           // Use the returned proxy for mutations (top-level props need proxy access)
-          const state = await inflictBoreDOM({ a: 0, b: 0, c: 0 });
+          const state = await startAuto({ a: 0, b: 0, c: 0 });
 
           const elem = container.querySelector("batching-component") as HTMLElement;
           const initialRenderCount = elem.getAttribute("data-render-count");
@@ -874,6 +878,7 @@ export default function () {
           // Before frame, render count should still be 1
           expect(elem.getAttribute("data-render-count")).to.equal("1");
 
+          await frame();
           await frame();
 
           // After frame, should have rendered only once more (batched)
@@ -889,11 +894,11 @@ export default function () {
               <p>Batching test</p>
             </template>
 
-            <script src="/batching-component.js"></script>
+            <script data-component="batching-component" src="/batching-component.js"></script>
           `);
 
           // Use the returned proxy for mutations (top-level props need proxy access)
-          const state = await inflictBoreDOM({ a: 0, b: 0, c: 0 });
+          const state = await startAuto({ a: 0, b: 0, c: 0 });
 
           const elem = container.querySelector("batching-component") as HTMLElement;
 
@@ -902,6 +907,7 @@ export default function () {
             state.a = i;
           }
 
+          await frame();
           await frame();
 
           // Should only have 2 renders: initial + 1 batched
@@ -926,11 +932,11 @@ export default function () {
               <p>Read-only test</p>
             </template>
 
-            <script src="/readonly-state-component.js"></script>
+            <script data-component="readonly-state-component" src="/readonly-state-component.js"></script>
           `);
 
           const state = { value: "original" };
-          await inflictBoreDOM(state);
+          await startAuto(state);
 
           console.error = originalError;
 
@@ -958,12 +964,13 @@ export default function () {
               <p>Symbol key test</p>
             </template>
 
-            <script src="/symbol-key-component.js"></script>
+            <script data-component="symbol-key-component" src="/symbol-key-component.js"></script>
           `);
 
           const RUNTIME = Symbol("runtime");
           // Use the returned proxy for mutations (top-level props need proxy access)
-          const state = await inflictBoreDOM({ count: 0, [RUNTIME]: { hidden: "initial" } }) as any;
+          const state = await startAuto({ count: 0 }) as any;
+          state[RUNTIME] = { hidden: "initial" };
 
           const elem = container.querySelector("symbol-key-component") as HTMLElement;
           expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -996,25 +1003,25 @@ export default function () {
             <template data-component="multi-access-component">
               <p>Multi-access test</p>
             </template>
+
+            <script type="text/boredom" data-component="multi-access-component">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  const view = state.currentView;
+                  const names = state.clients.map((c) => c.name);
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-view", view);
+                  self.setAttribute("data-names", names.join(","));
+                }
+              }
+            </script>
           `);
 
-          let renderCount = 0;
-          const state = await inflictBoreDOM({
+          const state = await startAuto({
             currentView: 'clients',
             clients: [{ id: 1, name: 'Alice', rate: 100 }]
-          }, {
-            "multi-access-component": webComponent(() => {
-              return ({ self, state }: any) => {
-                renderCount++;
-                // Access currentView first
-                const view = state.currentView;
-                // Then access clients array and iterate
-                const names = state.clients.map((c: any) => c.name);
-                self.setAttribute("data-render-count", String(renderCount));
-                self.setAttribute("data-view", view);
-                self.setAttribute("data-names", names.join(","));
-              };
-            }),
           });
 
           const elem = container.querySelector("multi-access-component") as HTMLElement;
@@ -1039,23 +1046,25 @@ export default function () {
             <template data-component="array-after-prop-component">
               <p>Array after prop test</p>
             </template>
+
+            <script type="text/boredom" data-component="array-after-prop-component">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  const title = state.title;
+                  const items = state.items;
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-title", title);
+                  self.setAttribute("data-items", items.join(","));
+                }
+              }
+            </script>
           `);
 
-          let renderCount = 0;
-          const state = await inflictBoreDOM({
+          const state = await startAuto({
             title: 'My App',
             items: ['a', 'b', 'c']
-          }, {
-            "array-after-prop-component": webComponent(() => {
-              return ({ self, state }: any) => {
-                renderCount++;
-                const title = state.title;
-                const items = state.items;
-                self.setAttribute("data-render-count", String(renderCount));
-                self.setAttribute("data-title", title);
-                self.setAttribute("data-items", items.join(","));
-              };
-            }),
           });
 
           const elem = container.querySelector("array-after-prop-component") as HTMLElement;
@@ -1077,27 +1086,28 @@ export default function () {
             <template data-component="nested-array-iter-component">
               <p>Nested array iteration test</p>
             </template>
+
+            <script type="text/boredom" data-component="nested-array-iter-component">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  const enabled = state.config.enabled;
+                  const emails = state.users.map((u) => u.profile.email);
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-enabled", String(enabled));
+                  self.setAttribute("data-emails", emails.join(","));
+                }
+              }
+            </script>
           `);
 
-          let renderCount = 0;
-          const state = await inflictBoreDOM({
+          const state = await startAuto({
             config: { enabled: true },
             users: [
               { id: 1, profile: { name: 'Alice', email: 'alice@test.com' } },
               { id: 2, profile: { name: 'Bob', email: 'bob@test.com' } }
             ]
-          }, {
-            "nested-array-iter-component": webComponent(() => {
-              return ({ self, state }: any) => {
-                renderCount++;
-                const enabled = state.config.enabled;
-                // Deep iteration accessing nested properties
-                const emails = state.users.map((u: any) => u.profile.email);
-                self.setAttribute("data-render-count", String(renderCount));
-                self.setAttribute("data-enabled", String(enabled));
-                self.setAttribute("data-emails", emails.join(","));
-              };
-            }),
           });
 
           const elem = container.querySelector("nested-array-iter-component") as HTMLElement;
@@ -1120,23 +1130,25 @@ export default function () {
             <template data-component="multi-array-iter-component">
               <p>Multi array iteration test</p>
             </template>
+
+            <script type="text/boredom" data-component="multi-array-iter-component">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  const clientNames = state.clients.map((c) => c.name);
+                  const projectTitles = state.projects.map((p) => p.title);
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-clients", clientNames.join(","));
+                  self.setAttribute("data-projects", projectTitles.join(","));
+                }
+              }
+            </script>
           `);
 
-          let renderCount = 0;
-          const state = await inflictBoreDOM({
+          const state = await startAuto({
             clients: [{ name: 'Client A' }, { name: 'Client B' }],
             projects: [{ title: 'Project 1' }, { title: 'Project 2' }]
-          }, {
-            "multi-array-iter-component": webComponent(() => {
-              return ({ self, state }: any) => {
-                renderCount++;
-                const clientNames = state.clients.map((c: any) => c.name);
-                const projectTitles = state.projects.map((p: any) => p.title);
-                self.setAttribute("data-render-count", String(renderCount));
-                self.setAttribute("data-clients", clientNames.join(","));
-                self.setAttribute("data-projects", projectTitles.join(","));
-              };
-            }),
           });
 
           const elem = container.querySelector("multi-array-iter-component") as HTMLElement;
@@ -1167,10 +1179,29 @@ export default function () {
             <template data-component="time-tracker-like-component">
               <p>Time tracker like test</p>
             </template>
+
+            <script type="text/boredom" data-component="time-tracker-like-component">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  const view = state.currentView;
+                  const clients = state.clients;
+                  const entries = state.entries;
+                  const clientSummary = clients.map((client) => {
+                    const clientEntries = entries.filter((e) => e.clientId === client.id);
+                    const totalHours = clientEntries.reduce((sum, e) => sum + e.hours, 0);
+                    return client.name + ":" + totalHours + "h";
+                  });
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-view", view);
+                  self.setAttribute("data-summary", clientSummary.join(";"));
+                }
+              }
+            </script>
           `);
 
-          let renderCount = 0;
-          const state = await inflictBoreDOM({
+          const state = await startAuto({
             currentView: 'clients',
             clients: [
               { id: 1, name: 'Acme Corp', rate: 150 },
@@ -1180,26 +1211,6 @@ export default function () {
               { id: 1, clientId: 1, hours: 8, note: 'Development' },
               { id: 2, clientId: 2, hours: 4, note: 'Meeting' }
             ]
-          }, {
-            "time-tracker-like-component": webComponent(() => {
-              return ({ self, state }: any) => {
-                renderCount++;
-                const view = state.currentView;
-                const clients = state.clients;
-                const entries = state.entries;
-
-                // Calculate totals like time-tracker does
-                const clientSummary = clients.map((client: any) => {
-                  const clientEntries = entries.filter((e: any) => e.clientId === client.id);
-                  const totalHours = clientEntries.reduce((sum: number, e: any) => sum + e.hours, 0);
-                  return `${client.name}:${totalHours}h`;
-                });
-
-                self.setAttribute("data-render-count", String(renderCount));
-                self.setAttribute("data-view", view);
-                self.setAttribute("data-summary", clientSummary.join(";"));
-              };
-            }),
           });
 
           const elem = container.querySelector("time-tracker-like-component") as HTMLElement;
@@ -1239,11 +1250,11 @@ export default function () {
               <p>Parent subscriber</p>
             </template>
 
-            <script src="/hierarchical-parent-component.js"></script>
+            <script data-component="hierarchical-parent-component" src="/hierarchical-parent-component.js"></script>
           `);
 
-          const state = { user: { name: "Alice", email: "alice@test.com" } };
-          await inflictBoreDOM(state);
+          let state = { user: { name: "Alice", email: "alice@test.com" } };
+          state = await startAuto(state);
 
           const elem = container.querySelector("hierarchical-parent-component") as HTMLElement;
           expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -1266,11 +1277,11 @@ export default function () {
               <p>Child subscriber</p>
             </template>
 
-            <script src="/hierarchical-child-component.js"></script>
+            <script data-component="hierarchical-child-component" src="/hierarchical-child-component.js"></script>
           `);
 
-          const state = { user: { name: "Alice", email: "alice@test.com" } };
-          await inflictBoreDOM(state);
+          let state = { user: { name: "Alice", email: "alice@test.com" } };
+          state = await startAuto(state);
 
           const elem = container.querySelector("hierarchical-child-component") as HTMLElement;
           expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -1304,11 +1315,11 @@ export default function () {
               <p>Object replacement test</p>
             </template>
 
-            <script src="/object-replacement-component.js"></script>
+            <script data-component="object-replacement-component" src="/object-replacement-component.js"></script>
           `);
 
           // Use the returned proxy for mutations (top-level props need proxy access)
-          const state = await inflictBoreDOM({ user: { name: "Alice", email: "alice@test.com" } });
+          const state = await startAuto({ user: { name: "Alice", email: "alice@test.com" } });
 
           const elem = container.querySelector("object-replacement-component") as HTMLElement;
           expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -1333,11 +1344,11 @@ export default function () {
               <p>New object reactivity test</p>
             </template>
 
-            <script src="/new-object-reactivity-component.js"></script>
+            <script data-component="new-object-reactivity-component" src="/new-object-reactivity-component.js"></script>
           `);
 
           // Use the returned proxy for mutations (top-level props need proxy access)
-          const state = await inflictBoreDOM({
+          const state = await startAuto({
             user: { name: "Alice", email: "alice@test.com" },
             data: { level1: { level2: { level3: { value: "initial" } } } },
             items: ["a", "b"],
@@ -1369,25 +1380,27 @@ export default function () {
             <template data-component="deep-object-test">
               <p>Deep object test</p>
             </template>
+
+            <script type="text/boredom" data-component="deep-object-test">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute(
+                    "data-deep-value",
+                    state.data?.level1?.level2?.level3?.value ?? "none",
+                  );
+                }
+              }
+            </script>
           `);
 
-          // Use inline component logic (same module as test) to avoid dual-module issues
-          let deepRenderCount = 0;
-          const deepObjectComponent = webComponent(() => {
-            return ({ self, state }: any) => {
-              deepRenderCount++;
-              self.setAttribute("data-render-count", String(deepRenderCount));
-              self.setAttribute("data-deep-value", state.data?.level1?.level2?.level3?.value ?? "none");
-            };
-          });
-
           // Use the returned proxy for mutations (top-level props need proxy access)
-          const state = await inflictBoreDOM({
+          const state = await startAuto({
             user: { name: "Alice" },
             data: {},
             items: [],
-          }, {
-            "deep-object-test": deepObjectComponent,
           }) as any;
 
           const elem = container.querySelector("deep-object-test") as HTMLElement;
@@ -1425,25 +1438,24 @@ export default function () {
             <template data-component="array-replace-test">
               <p>Array replacement test</p>
             </template>
+
+            <script type="text/boredom" data-component="array-replace-test">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-items", state.items?.join(",") ?? "none");
+                }
+              }
+            </script>
           `);
 
-          // Use inline component logic (same module as test) to avoid dual-module issues
-          let arrayRenderCount = 0;
-          const arrayReplaceComponent = webComponent(() => {
-            return ({ self, state }: any) => {
-              arrayRenderCount++;
-              self.setAttribute("data-render-count", String(arrayRenderCount));
-              self.setAttribute("data-items", state.items?.join(",") ?? "none");
-            };
-          });
-
           // Use the returned proxy for mutations (top-level props need proxy access)
-          const state = await inflictBoreDOM({
+          const state = await startAuto({
             user: { name: "Alice" },
             data: {},
             items: ["old1", "old2"],
-          }, {
-            "array-replace-test": arrayReplaceComponent,
           }) as any;
 
           const elem = container.querySelector("array-replace-test") as HTMLElement;
@@ -1480,25 +1492,24 @@ export default function () {
             <template data-component="dynamic-nested-test">
               <p>Dynamic nested test</p>
             </template>
+
+            <script type="text/boredom" data-component="dynamic-nested-test">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-profile-bio", state.user?.profile?.bio ?? "none");
+                }
+              }
+            </script>
           `);
 
-          // Use inline component logic (same module as test) to avoid dual-module issues
-          let dynamicRenderCount = 0;
-          const dynamicNestedComponent = webComponent(() => {
-            return ({ self, state }: any) => {
-              dynamicRenderCount++;
-              self.setAttribute("data-render-count", String(dynamicRenderCount));
-              self.setAttribute("data-profile-bio", state.user?.profile?.bio ?? "none");
-            };
-          });
-
           // Use the returned proxy for mutations (top-level props need proxy access)
-          const state = await inflictBoreDOM({
+          const state = await startAuto({
             user: { name: "Alice" },
             data: {},
             items: [],
-          }, {
-            "dynamic-nested-test": dynamicNestedComponent,
           }) as any;
 
           const elem = container.querySelector("dynamic-nested-test") as HTMLElement;
@@ -1526,14 +1537,14 @@ export default function () {
             <array-methods-component></array-methods-component>
 
             <template data-component="array-methods-component">
-              <button onclick="dispatch('push')">Push</button>
+              <button onclick="dispatch('push', { event: event })">Push</button>
             </template>
 
-            <script src="/array-methods-component.js"></script>
+            <script data-component="array-methods-component" src="/array-methods-component.js"></script>
           `);
 
           const state = { items: ["a", "b"] };
-          await inflictBoreDOM(state);
+          await startAuto(state);
 
           const elem = container.querySelector("array-methods-component") as HTMLElement;
           expect(elem.getAttribute("data-items")).to.equal("a,b");
@@ -1542,6 +1553,7 @@ export default function () {
           const btn = container.querySelector("button") as HTMLButtonElement;
           fireEvent.click(btn);
 
+          await frame();
           await frame();
 
           expect(elem.getAttribute("data-items")).to.equal("a,b,new item");
@@ -1553,14 +1565,14 @@ export default function () {
             <array-methods-component></array-methods-component>
 
             <template data-component="array-methods-component">
-              <button onclick="dispatch('pop')">Pop</button>
+              <button onclick="dispatch('pop', { event: event })">Pop</button>
             </template>
 
-            <script src="/array-methods-component.js"></script>
+            <script data-component="array-methods-component" src="/array-methods-component.js"></script>
           `);
 
           const state = { items: ["a", "b", "c"] };
-          await inflictBoreDOM(state);
+          await startAuto(state);
 
           const elem = container.querySelector("array-methods-component") as HTMLElement;
           expect(elem.getAttribute("data-items")).to.equal("a,b,c");
@@ -1568,6 +1580,7 @@ export default function () {
           const btn = container.querySelector("button") as HTMLButtonElement;
           fireEvent.click(btn);
 
+          await frame();
           await frame();
 
           expect(elem.getAttribute("data-items")).to.equal("a,b");
@@ -1578,14 +1591,14 @@ export default function () {
             <array-methods-component></array-methods-component>
 
             <template data-component="array-methods-component">
-              <button onclick="dispatch('splice')">Splice</button>
+              <button onclick="dispatch('splice', { event: event })">Splice</button>
             </template>
 
-            <script src="/array-methods-component.js"></script>
+            <script data-component="array-methods-component" src="/array-methods-component.js"></script>
           `);
 
           const state = { items: ["a", "b", "c"] };
-          await inflictBoreDOM(state);
+          await startAuto(state);
 
           const elem = container.querySelector("array-methods-component") as HTMLElement;
           expect(elem.getAttribute("data-items")).to.equal("a,b,c");
@@ -1593,6 +1606,7 @@ export default function () {
           const btn = container.querySelector("button") as HTMLButtonElement;
           fireEvent.click(btn);
 
+          await frame();
           await frame();
 
           expect(elem.getAttribute("data-items")).to.equal("a,spliced,c");
@@ -1606,11 +1620,11 @@ export default function () {
               <p>Array test</p>
             </template>
 
-            <script src="/array-methods-component.js"></script>
+            <script data-component="array-methods-component" src="/array-methods-component.js"></script>
           `);
 
-          const state = { items: ["a", "b", "c"] };
-          await inflictBoreDOM(state);
+          let state = { items: ["a", "b", "c"] };
+          state = await startAuto(state);
 
           const elem = container.querySelector("array-methods-component") as HTMLElement;
           expect(elem.getAttribute("data-items")).to.equal("a,b,c");
@@ -1640,10 +1654,10 @@ export default function () {
             </ul>
           </template>
 
-          <script src="/multi-ref-component.js"></script>
+          <script data-component="multi-ref-component" src="/multi-ref-component.js"></script>
         `);
 
-        await inflictBoreDOM();
+        await startAuto();
 
         const elem = container.querySelector("multi-ref-component") as HTMLElement;
         expect(elem.getAttribute("data-ref-count")).to.equal("3");
@@ -1664,10 +1678,10 @@ export default function () {
             </ul>
           </template>
 
-          <script src="/multi-ref-component.js"></script>
+          <script data-component="multi-ref-component" src="/multi-ref-component.js"></script>
         `);
 
-        await inflictBoreDOM();
+        await startAuto();
 
         const elem = container.querySelector("multi-ref-component") as HTMLElement;
         expect(elem.getAttribute("data-ref-count")).to.equal("1");
@@ -1685,38 +1699,30 @@ export default function () {
           <template data-component="slot-idempotent-component">
             <p><slot name="content">Default</slot></p>
           </template>
+
+          <script type="text/boredom" data-component="slot-idempotent-component">
+            export default () => {
+              let renderCount = 0;
+              return ({ slots, self, state }) => {
+                renderCount++;
+                slots.content = \`Render \${renderCount} trigger \${state?.trigger}\`;
+                self.setAttribute("data-render-count", String(renderCount));
+              }
+            }
+          </script>
         `);
 
-        await inflictBoreDOM(undefined, {
-          "slot-idempotent-component": webComponent(() => {
-            let renderCount = 0;
-            return ({ slots, self }) => {
-              renderCount++;
-              (slots as any).content = `Render ${renderCount}`;
-              self.setAttribute("data-render-count", String(renderCount));
-            };
-          }),
-        });
+        const state = await startAuto({ trigger: 0 });
 
         const elem = container.querySelector("slot-idempotent-component") as HTMLElement;
         expect(elem.getAttribute("data-render-count")).to.equal("1");
 
         // Query the slot content
         let slotContent = elem.querySelector("[data-slot='content']");
-        expect(slotContent?.textContent).to.equal("Render 1");
+        expect(slotContent?.textContent).to.equal("Render 1 trigger 0");
 
-        // Trigger re-render by creating a minimal state change
-        const state = { trigger: 0 };
-        await inflictBoreDOM(state, {
-          "slot-idempotent-component": webComponent(() => {
-            let renderCount = 0;
-            return ({ slots, self, state }) => {
-              renderCount++;
-              (slots as any).content = `Render ${renderCount} trigger ${state?.trigger}`;
-              self.setAttribute("data-render-count", String(renderCount));
-            };
-          }),
-        });
+        state.trigger = 1;
+        await frame();
 
         // Verify slot was replaced correctly (only one element with data-slot)
         const slotElements = elem.querySelectorAll("[data-slot='content']");
@@ -1730,18 +1736,20 @@ export default function () {
           <template data-component="slot-element-component">
             <div><slot name="custom">Placeholder</slot></div>
           </template>
+
+          <script type="text/boredom" data-component="slot-element-component">
+            export default () => {
+              return ({ slots }) => {
+                const customElem = document.createElement("strong");
+                customElem.textContent = "Bold content";
+                customElem.classList.add("custom-class");
+                slots.custom = customElem;
+              }
+            }
+          </script>
         `);
 
-        await inflictBoreDOM(undefined, {
-          "slot-element-component": webComponent(() => {
-            return ({ slots }) => {
-              const customElem = document.createElement("strong");
-              customElem.textContent = "Bold content";
-              customElem.classList.add("custom-class");
-              (slots as any).custom = customElem;
-            };
-          }),
-        });
+        await startAuto();
 
         const elem = container.querySelector("slot-element-component") as HTMLElement;
         const strongElem = elem.querySelector("strong.custom-class");
@@ -1761,16 +1769,18 @@ export default function () {
           <template data-component="index-component">
             <span></span>
           </template>
+
+          <script type="text/boredom" data-component="index-component">
+            export default ({ detail }) => {
+              return ({ self }) => {
+                self.setAttribute("data-index", String(detail.index));
+                self.setAttribute("data-name", detail.name);
+              }
+            }
+          </script>
         `);
 
-        await inflictBoreDOM(undefined, {
-          "index-component": webComponent(({ detail }) => {
-            return ({ self }) => {
-              self.setAttribute("data-index", String(detail.index));
-              self.setAttribute("data-name", detail.name);
-            };
-          }),
-        });
+        await startAuto();
 
         const components = container.querySelectorAll("index-component");
         expect(components[0].getAttribute("data-index")).to.equal("0");
@@ -1779,39 +1789,6 @@ export default function () {
 
         // All should have the same tag name
         expect(components[0].getAttribute("data-name")).to.equal("index-component");
-      });
-
-      it("should pass custom data through detail when using makeComponent", async () => {
-        const container = await renderHTMLFrame(`
-          <parent-detail-component></parent-detail-component>
-
-          <template data-component="parent-detail-component">
-            <div data-ref="container"></div>
-          </template>
-
-          <template data-component="child-detail-component">
-            <span></span>
-          </template>
-        `);
-
-        await inflictBoreDOM(undefined, {
-          "parent-detail-component": webComponent(() => {
-            return ({ refs, makeComponent }) => {
-              const child = makeComponent("child-detail-component", {
-                detail: { index: 42, name: "child-detail-component", data: { custom: "value" } },
-              });
-              (refs.container as HTMLElement).appendChild(child);
-            };
-          }),
-          "child-detail-component": webComponent(({ detail }) => {
-            return ({ self }) => {
-              self.setAttribute("data-custom", (detail as any).data?.custom ?? "none");
-            };
-          }),
-        });
-
-        const child = container.querySelector("child-detail-component") as HTMLElement;
-        expect(child.getAttribute("data-custom")).to.equal("value");
       });
     });
 
@@ -1823,20 +1800,22 @@ export default function () {
           <template data-component="undefined-state-component">
             <p data-ref="output">Waiting</p>
           </template>
+
+          <script type="text/boredom" data-component="undefined-state-component">
+            export default () => {
+              return ({ state, refs }) => {
+                if (!state) {
+                  refs.output.textContent = "No state";
+                  return;
+                }
+                refs.output.textContent = "Has state";
+              }
+            }
+          </script>
         `);
 
         // Initialize without state
-        await inflictBoreDOM(undefined, {
-          "undefined-state-component": webComponent(() => {
-            return ({ state, refs }) => {
-              if (!state) {
-                (refs.output as HTMLElement).textContent = "No state";
-                return;
-              }
-              (refs.output as HTMLElement).textContent = "Has state";
-            };
-          }),
-        });
+        await startAuto();
 
         const output = container.querySelector("[data-ref='output']") as HTMLElement;
         expect(output.textContent).to.equal("No state");
@@ -1853,21 +1832,23 @@ export default function () {
           <error-handler-component></error-handler-component>
 
           <template data-component="error-handler-component">
-            <button onclick="dispatch('throwError')">Throw</button>
+            <button data-dispatch="throwError">Throw</button>
             <p data-ref="status">OK</p>
           </template>
+
+          <script type="text/boredom" data-component="error-handler-component">
+            export default ({ on }) => {
+              on("throwError", () => {
+                throw new Error("Test error");
+              });
+              return ({ refs }) => {
+                refs.status.textContent = "Rendered";
+              };
+            }
+          </script>
         `);
 
-        await inflictBoreDOM(undefined, {
-          "error-handler-component": webComponent(({ on }) => {
-            on("throwError", () => {
-              throw new Error("Test error");
-            });
-            return ({ refs }) => {
-              (refs.status as HTMLElement).textContent = "Rendered";
-            };
-          }),
-        });
+        await startAuto();
 
         const btn = container.querySelector("button") as HTMLButtonElement;
         fireEvent.click(btn);
@@ -1892,23 +1873,22 @@ export default function () {
           <template data-component="same-value-component">
             <p>Same value test</p>
           </template>
+
+          <script type="text/boredom" data-component="same-value-component">
+            export default () => {
+              let renderCount = 0;
+              return ({ self, state }) => {
+                renderCount++;
+                self.setAttribute("data-value", state.value ?? "none");
+                self.setAttribute("data-render-count", String(renderCount));
+              }
+            }
+          </script>
         `);
 
-        let renderCount = 0;
-
-        // Use the returned proxy for mutations (top-level props need proxy access)
-        const state = await inflictBoreDOM({ value: "test" }, {
-          "same-value-component": webComponent(() => {
-            return ({ self, state }: any) => {
-              renderCount++;
-              // Must read from state to subscribe to changes
-              self.setAttribute("data-value", state.value ?? "none");
-              self.setAttribute("data-render-count", String(renderCount));
-            };
-          }),
-        });
-
-        expect(renderCount).to.equal(1);
+        const state = await startAuto({ value: "test" });
+        const elem = container.querySelector("same-value-component") as HTMLElement;
+        expect(elem.getAttribute("data-render-count")).to.equal("1");
 
         // Set same value - should NOT trigger re-render
         state.value = "test";
@@ -1916,7 +1896,7 @@ export default function () {
         await frame();
 
         // Should NOT have re-rendered (same value)
-        expect(renderCount).to.equal(1);
+        expect(elem.getAttribute("data-render-count")).to.equal("1");
 
         // Set different value - should trigger re-render
         state.value = "different";
@@ -1924,7 +1904,7 @@ export default function () {
         await frame();
 
         // Should have re-rendered
-        expect(renderCount).to.equal(2);
+        expect(elem.getAttribute("data-render-count")).to.equal("2");
       });
     });
   });

@@ -5,44 +5,95 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>boreDOM Counter</title>
+
+  <!-- STYLES -->
+  <style>
+    :root {
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      color: #1f2933;
+      background: #f5f3ef;
+    }
+    body {
+      margin: 0;
+      padding: 2rem;
+    }
+  </style>
+
+  <style data-component="simple-counter">
+    .counter-shell {
+      max-width: 400px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 12px 30px rgba(31, 41, 51, 0.08);
+      display: grid;
+      gap: 1.5rem;
+    }
+    .counter-display {
+      font-size: 3rem;
+      font-weight: 700;
+      text-align: center;
+      color: #1d4ed8;
+    }
+    .counter-controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 0.75rem 1.5rem;
+      background: #1d4ed8;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    button.secondary {
+      background: #e2e8f0;
+      color: #1d1b1a;
+    }
+  </style>
 </head>
 
 <body>
-  <h1>Simple counter</h1>
+  <!-- STATE -->
+  <script id="initial-state" type="application/json">
+    { "count": 0 }
+  </script>
 
   <simple-counter></simple-counter>
 
+  <!-- TEMPLATES -->
   <template data-component="simple-counter">
-    <slot name="counter">Some value</slot>
-
-    <button data-ref="inc">
-      Increase
-    </button>
-
-    <button data-ref="dec">
-      Decrease
-    </button>
-
-    <script type="module">
-      export default ({ refs, state }) => {
-        refs.inc.onclick = () => state.count++;
-        refs.dec.onclick = () => state.count--;
-
-        return ({ state, slots }) => {
-          slots.counter = String(state.count);
-        };
-      };
-    </script>
+    <div class="counter-shell">
+      <h2>Simple Counter</h2>
+      <p class="counter-display" data-text="state.count">0</p>
+      <div class="counter-controls">
+        <button data-dispatch="decrement">-</button>
+        <button data-dispatch="increment">+</button>
+        <button data-dispatch="reset" class="secondary">Reset</button>
+      </div>
+    </div>
   </template>
 
-  <script type="module">
-    import { inflictBoreDOM } from "./boreDOM.js";
-
-    await inflictBoreDOM({
-      count: 0
-    });
+  <!-- LOGIC -->
+  <script type="text/boredom" data-component="simple-counter">
+    export default ({ on }) => {
+      on("increment", ({ state }) => { state.count += 1 });
+      on("decrement", ({ state }) => { state.count -= 1 });
+      on("reset", ({ state }) => { state.count = 0 });
+      return () => {};
+    };
   </script>
 
-</body>
+  <!-- RUNTIME -->
+  <script type="module" src="../../dist/boreDOM.full.js" data-state="#initial-state"></script>
 
+</body>
 </html>

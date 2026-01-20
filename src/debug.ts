@@ -21,12 +21,8 @@ let debugConfig: DebugOptions = {
   visualIndicators: true,
   errorHistory: true,
   versionLog: true,
-  api: true,
-  methodMissing: true,
-  templateInference: true,
   strict: false,
   outputFormat: "human",
-  llm: true,
 }
 
 // Error storage
@@ -97,12 +93,8 @@ export function setDebugConfig(config: boolean | DebugOptions): void {
       visualIndicators: enabled,
       errorHistory: enabled,
       versionLog: enabled,
-      api: enabled,
-      methodMissing: enabled,
-      templateInference: enabled,
       strict: false, // Strict mode only enabled explicitly
       outputFormat: "human", // Always human format by default
-      llm: enabled, // LLM API follows debug mode
     }
   } else {
     debugConfig = { ...debugConfig, ...config }

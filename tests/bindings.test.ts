@@ -2,12 +2,8 @@ import "chai/chai.js";
 import { expect } from "chai";
 import { fireEvent } from "@testing-library/dom";
 import "mocha/mocha.js";
-import {
-  inflictBoreDOM,
-  webComponent,
-  setDebugConfig,
-  component,
-} from "../src/index";
+import { setDebugConfig } from "../src/index";
+import { startAuto, resetAutoStart } from "./auto-start";
 
 async function frame(): Promise<number> {
   return new Promise((resolve) => {
@@ -29,6 +25,7 @@ export default function () {
     beforeEach(() => {
       const main = document.querySelector("main");
       if (main) main.innerHTML = "";
+      resetAutoStart();
       setDebugConfig(true);
     });
 
@@ -44,18 +41,13 @@ export default function () {
         </template>
       `);
 
-      const state = await inflictBoreDOM(
-        {
-          message: "Hello",
-          visible: true,
-          active: true,
-          input: "test",
-          checked: true,
-        },
-        {
-          "binding-test": webComponent(() => () => {}),
-        },
-      );
+      const state = await startAuto({
+        message: "Hello",
+        visible: true,
+        active: true,
+        input: "test",
+        checked: true,
+      });
 
       const text = document.querySelector("[data-ref='text']") as HTMLElement;
       const visible = document.querySelector("[data-ref='visible']") as HTMLElement;
@@ -100,10 +92,7 @@ export default function () {
         </template>
       `);
 
-      const state = await inflictBoreDOM(
-        { items: [{ label: "A" }, { label: "B" }] },
-        { "list-test": webComponent(() => () => {}) },
-      );
+      const state = await startAuto({ items: [{ label: "A" }, { label: "B" }] });
 
       await frame();
       await frame();
@@ -131,17 +120,16 @@ export default function () {
         <template data-component="child-comp">
           <span data-ref="out"></span>
         </template>
+        <script type="text/boredom" data-component="child-comp">
+          export default ({ detail }) => {
+            return ({ refs }) => {
+              refs.out.textContent = String(detail?.data?.userId ?? "");
+            }
+          }
+        </script>
       `);
 
-      const state = await inflictBoreDOM(
-        { selectedId: 1 },
-        {
-          "parent-comp": webComponent(() => () => {}),
-          "child-comp": webComponent(() => ({ refs, detail }) => {
-            refs.out.textContent = String(detail?.data?.userId ?? "");
-          }),
-        },
-      );
+      const state = await startAuto({ selectedId: 1 });
 
       const output = document.querySelector("child-comp span") as HTMLElement;
       expect(output.textContent).to.equal("1");
@@ -153,19 +141,15 @@ export default function () {
       expect(output.textContent).to.equal("2");
     });
 
-    it("supports data-dispatch and on- attributes for events", async () => {
+    it("supports data-dispatch for events", async () => {
       await renderHTMLFrame(`
         <event-test></event-test>
         <template data-component="event-test">
           <button data-dispatch="hit" data-ref="hit"></button>
-          <button on-click="tap" data-ref="tap"></button>
+          <button data-dispatch="tap" data-ref="tap"></button>
         </template>
-      `);
-
-      const state = await inflictBoreDOM(
-        { hits: 0, taps: 0 },
-        {
-          "event-test": webComponent(({ on }) => {
+        <script type="text/boredom" data-component="event-test">
+          export default ({ on }) => {
             on("hit", ({ state }) => {
               state.hits += 1;
             });
@@ -173,9 +157,11 @@ export default function () {
               state.taps += 1;
             });
             return () => {};
-          }),
-        },
-      );
+          }
+        </script>
+      `);
+
+      const state = await startAuto({ hits: 0, taps: 0 });
 
       const hit = document.querySelector("[data-ref='hit']") as HTMLElement;
       const tap = document.querySelector("[data-ref='tap']") as HTMLElement;
@@ -190,20 +176,15 @@ export default function () {
       expect(state.taps).to.equal(1);
     });
 
-    it("creates templates via component() helper", async () => {
-      const Helper = component(
-        "component-helper",
-        `<p data-text="state.message"></p>`,
-        () => () => {},
-      );
+    it("binds data-text in a minimal triplet", async () => {
+      await renderHTMLFrame(`
+        <component-helper></component-helper>
+        <template data-component="component-helper">
+          <p data-text="state.message"></p>
+        </template>
+      `);
 
-      await renderHTMLFrame(`<component-helper></component-helper>`);
-
-      await inflictBoreDOM(
-        { message: "Inline" },
-        { "component-helper": Helper },
-        { singleFile: true },
-      );
+      await startAuto({ message: "Inline" });
 
       await frame();
       await frame();

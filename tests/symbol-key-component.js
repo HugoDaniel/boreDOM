@@ -1,7 +1,5 @@
-import { webComponent } from "/dist/boreDOM.min.js"
-
 // Tests that Symbol keys do not trigger re-renders
-export const SymbolKeyComponent = webComponent(() => {
+export default (() => {
   let renderCount = 0
 
   return ({ self, state }) => {

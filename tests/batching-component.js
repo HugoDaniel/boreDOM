@@ -1,7 +1,5 @@
-import { webComponent } from "/dist/boreDOM.min.js"
-
 // Exposes render count via data attribute for test verification
-export const BatchingComponent = webComponent(() => {
+export default (() => {
   let renderCount = 0
 
   return ({ self, state }) => {

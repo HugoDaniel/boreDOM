@@ -1,9 +1,6 @@
-import { webComponent } from "/dist/boreDOM.min.js";
-
-export const onEventComponent1 = webComponent(({ on, state }) => {
+export default (({ on, state }) => {
   on("someCustomEventOnClick", () => {
-    // Call the test `done()` function
-    state.onDone();
+    state.clicked = true;
   });
 
   return ((opts) => {

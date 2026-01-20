@@ -1,7 +1,5 @@
-import { webComponent } from "/dist/boreDOM.min.js"
-
 // Subscribes to child path, should re-render when parent changes
-export const HierarchicalChildComponent = webComponent(() => {
+export default (() => {
   let renderCount = 0
 
   return ({ self, state }) => {

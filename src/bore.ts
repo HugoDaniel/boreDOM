@@ -487,21 +487,37 @@ export function proxify<S>(boredom: AppState<S>) {
 }
 
 /**
- * Runs the init function of every webComponent tag that exists in the DOM
+ * Initializes a single component element with the logic defined in the state.
  */
+export function getComponentInitializer<S>(state: AppState<S>) {
+  return (element: Bored) => {
+    if ((element as any).isBoredInitialized) return;
+    
+    const tagName = element.tagName.toLowerCase();
+    const code = state.internal.components.get(tagName);
+    
+    if (!code) return;
+
+    const index = element.parentElement
+      ? Array.from(element.parentElement.children).indexOf(element)
+      : -1;
+
+    const detail = {
+      index,
+      name: tagName,
+      data: extractDetailData(element),
+    };
+    
+    code(state as any, detail)(element);
+    
+    // @ts-ignore
+    element.__boreDOMDetail = detail;
+    (element as any).isBoredInitialized = true;
+  };
+}
+
 /**
- * Initializes component scripts for all instances currently in the DOM.
- * For each registered tag with a loaded script, calls the webComponent-
- * provided function with instance-specific detail including its index.
- *
- * Example:
- * ```html
- * <item-card></item-card><item-card></item-card>
- * ```
- * ```ts
- * // both instances receive index 0 and 1 respectively
- * runComponentsInitializer(state);
- * ```
+ * Runs the init function of every webComponent tag that exists in the DOM
  */
 export function runComponentsInitializer<S>(state: AppState<S>) {
   // Start by finding all bored web component tags that are in the dom:
@@ -510,74 +526,23 @@ export function runComponentsInitializer<S>(state: AppState<S>) {
     document.querySelector(tag) !== null
   );
 
+  const initialize = getComponentInitializer(state);
+
   const components = state.internal.components;
   for (const [tagName, code] of components.entries()) {
     // Only proceed if there is a registered init function and if the tag is in the DOM
     if (code === null || !tagsInDom.includes(tagName)) continue;
-    // From this point forward, the `code` will be run for tags that are in the dom, this
-    // way, it prevents the `code` function from being run more than once if a given component
-    // `code` dynamically creates another component that is not yet in the DOM by now.
 
     const elements = Array.from(
       document.querySelectorAll(tagName),
     ).filter((el): el is Bored => isBored(el));
 
     if (elements.length === 0) {
-      // No upgraded elements yet; skip and let connectedCallback or later creation handle it
       continue;
     }
 
-    elements.forEach((componentClass, index) => {
-      if ((componentClass as any).isBoredInitialized) return;
-      const detail = {
-        index,
-        name: tagName,
-        data: extractDetailData(componentClass),
-      };
-      code(state as any, detail)(componentClass);
-      // @ts-ignore
-      componentClass.__boreDOMDetail = detail;
-      (componentClass as any).isBoredInitialized = true;
-    });
+    elements.forEach(initialize);
   }
 
   return;
-}
-
-/**
- * Creates a web component and runs the associated script if it has one defined.
- *
- * @param name the tagname of the component to create
- * @param state the
- * @param [detail]
- */
-/**
- * Creates a component element and, if a script exists for the tag, wires its
- * render callback by invoking the loaded function with the provided detail.
- *
- * Example:
- * ```ts
- * const el = createAndRunCode('user-card', appState, { index: 0, name: 'user-card' });
- * parent.appendChild(el);
- * ```
- */
-export function createAndRunCode<S extends object>(
-  name: string,
-  state: AppState<S>,
-  detail?: WebComponentDetail,
-) {
-  // "code" is the function returned by the `webComponent()` (index.ts), it
-  // creates the state reactive proxy and calls the initialization from
-  // the corresponding template .js file
-  const code = state.internal.components.get(name);
-  if (code) {
-    const info = { ...detail, tagName: name };
-    if (!info.data) info.data = {};
-    const element = createComponent(name, code(state as any, info));
-    // @ts-ignore
-    element.__boreDOMDetail = info;
-    return element;
-  }
-
-  return createComponent(name);
 }

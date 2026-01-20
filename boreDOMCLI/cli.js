@@ -96,23 +96,18 @@ const INIT_INDEX_HTML = `<!DOCTYPE html>
       /* Page-specific overrides go here */
     }
   </style>
-  <script type="module">
-    import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js"
+  <script id="initial-state" type="application/json">{ "count": 0 }</script>
+  <script type="text/boredom" data-component="my-app">
+    export default ({ on }) => {
+      on("increment", ({ state }) => state.count++)
+      on("decrement", ({ state }) => state.count--)
 
-    inflictBoreDOM(
-      { count: 0 },
-      {
-        "my-app": webComponent(({ on }) => {
-          on("increment", ({ state }) => state.count++)
-          on("decrement", ({ state }) => state.count--)
-
-          return ({ state, refs }) => {
-            refs.count.textContent = state.count
-          }
-        })
+      return ({ state, refs }) => {
+        refs.count.textContent = state.count
       }
-    )
+    }
   </script>
+  <script type="module" src="https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boredom.min.js" data-state="#initial-state"></script>
   <script src="http://localhost:31337"></script>
 </head>
 <body>
@@ -177,9 +172,9 @@ If you think:
 const state = { pads: [{ label: "Kick" }, { label: "Snare" }, { label: "Hat" }] }
 \`\`\`
 
-**Parent creates children with data-index:**
+**Parent creates children with data-index (pad-grid.js):**
 \`\`\`javascript
-"pad-grid": webComponent(() => {
+export default (() => {
   let initialized = false
   return ({ state, refs }) => {
     if (initialized) return
@@ -191,9 +186,9 @@ const state = { pads: [{ label: "Kick" }, { label: "Snare" }, { label: "Hat" }] 
 })
 \`\`\`
 
-**Child reads index, accesses state for its data:**
+**Child reads index, accesses state for its data (pad-button.js):**
 \`\`\`javascript
-"pad-button": webComponent(() => {
+export default (() => {
   return ({ state, refs, self }) => {
     const index = parseInt(self.dataset.index)
     const pad = state.pads[index]
@@ -271,23 +266,23 @@ app-root
 ### Bad: One monolithic component
 \`\`\`javascript
 // DON'T do this - everything in one component
-"my-app": webComponent(({ on }) => {
+export default ({ on }) => {
   on("addTask", ...)
   on("deleteTask", ...)
   on("editTask", ...)
   on("toggleDone", ...)
   on("filter", ...)
   // 100+ lines of handlers and render logic
-})
+}
 \`\`\`
 
 ### Good: Focused components
 \`\`\`javascript
 // Each component has ONE job
-"task-item": webComponent(...)    // Display single task
-"task-list": webComponent(...)    // Render list of task-items
-"task-form": webComponent(...)    // Handle task creation
-"task-filter": webComponent(...)  // Handle filtering
+export default (...)    // Display single task
+export default (...)    // Render list of task-items
+export default (...)    // Handle task creation
+export default (...)    // Handle filtering
 \`\`\`
 
 ## File Organization
@@ -298,11 +293,11 @@ app-root
 \`\`\`
 project/
 ├── index.html              # App shell only
-├── state.js                # Initial state + inflictBoreDOM call
+├── state.js                # Initial state JSON bootstrap
 ├── styles.css              # Global styles (@layer base)
 ├── components/
 │   ├── task-list.html      # <template data-component="task-list">
-│   ├── task-list.js        # webComponent logic
+│   ├── task-list.js        # triplet logic (export default)
 │   ├── task-list.css       # Component styles (@layer components)
 │   ├── task-item.html
 │   ├── task-item.js
@@ -330,7 +325,9 @@ project/
   </template>
 
   <!-- Scripts -->
+  <script id="initial-state" type="application/json"></script>
   <script type="module" src="state.js"></script>
+  <script type="module" src="https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js" data-state="#initial-state"></script>
   <script src="http://localhost:31337"></script>
 </body>
 </html>
@@ -338,20 +335,12 @@ project/
 
 ### state.js (app initialization):
 \`\`\`javascript
-import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js"
-import taskList from "./components/task-list.js"
-import taskItem from "./components/task-item.js"
-
 const initialState = {
   tasks: [],
   filter: "all"
 }
 
-inflictBoreDOM(initialState, {
-  "app-root": webComponent(() => () => {}),
-  "task-list": taskList,
-  "task-item": taskItem
-})
+document.getElementById("initial-state").textContent = JSON.stringify(initialState)
 \`\`\`
 
 ### components/task-item.html:
@@ -366,15 +355,14 @@ inflictBoreDOM(initialState, {
 
 ### components/task-item.js:
 \`\`\`javascript
-import { webComponent } from "boredom"
-export default webComponent(({ on }) => {
+export default ({ on }) => {
   on("delete", ({ state, detail }) => {
     state.tasks.splice(detail.index, 1)
   })
   return ({ refs, detail }) => {
     refs.name.textContent = detail.task.name
   }
-})
+}
 \`\`\`
 
 ### Running the app:
@@ -423,9 +411,9 @@ Don't use both. Pick one based on the situation.
 
 ## Exports
 
-Only two functions are exported from boreDOM:
-\`\`\`javascript
-import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boreDOM.min.js"
+Load the runtime once and let auto-start boot:
+\`\`\`html
+<script type="module" src="https://unpkg.com/@mr_hugo/boredom@0.26.1/dist/boredom.min.js" data-state="#initial-state"></script>
 \`\`\`
 
 **DO NOT** try to import \`makeComponent\` - it's only available inside render functions.
@@ -433,7 +421,7 @@ import { inflictBoreDOM, webComponent } from "https://unpkg.com/@mr_hugo/boredom
 ## Component Structure
 
 \`\`\`javascript
-webComponent(({ on }) => {
+export default ({ on }) => {
   // INIT PHASE: runs once when component is created
   // - Setup event handlers here
   // - Do NOT access refs here (template not attached yet)
@@ -448,7 +436,7 @@ webComponent(({ on }) => {
     refs.display.textContent = state.count
     slots.list = state.items.map(i => \`<li>\${i.name}</li>\`).join("")
   }
-})
+}
 \`\`\`
 
 **Key insight:** The render function runs AFTER the template is attached, so refs work there. Don't try to access refs in init phase.
@@ -566,7 +554,7 @@ Without it, parent re-renders destroy and recreate all children, breaking their 
 \`\`\`
 
 \`\`\`javascript
-"item-list": webComponent(() => {
+export default (() => {
   let initialized = false
   return ({ state, refs }) => {
     if (!state) return
@@ -617,7 +605,7 @@ When you set \`refs.container.innerHTML = '<my-component></my-component>'\`:
 </template>
 \`\`\`
 \`\`\`javascript
-"item-card": webComponent(({ on }) => {
+export default (({ on }) => {
   on("delete", ({ state, self }) => {
     const index = parseInt(self.dataset.index)
     state.items.splice(index, 1)
@@ -691,17 +679,17 @@ slots.content = state.loading
 
 \`window.state\` does NOT exist. To access state from global keyboard handlers:
 
-**Option 1: Capture return value from inflictBoreDOM**
+**Option 1: Use boreDOM.operate to access the proxied state**
 \`\`\`javascript
-const state = await inflictBoreDOM({...}, {...})
+const { state } = boreDOM.operate("mpc-app")
 document.addEventListener('keydown', (e) => {
-  state.activePad = index  // Works - state is the returned proxy
+  state.activePad = index
 })
 \`\`\`
 
 **Option 2: Handle keyboard inside component init (recommended)**
 \`\`\`javascript
-"mpc-app": webComponent(({ on }) => {
+export default ({ on }) => {
   document.addEventListener('keydown', (e) => {
     // Dispatch event that component can catch
     window.dispatchEvent(new CustomEvent('key-press', { detail: { key: e.key } }))
@@ -711,7 +699,7 @@ document.addEventListener('keydown', (e) => {
     state.activePad = keyToIndex[detail.key]  // state available here
   })
   return ...
-})
+}
 \`\`\`
 
 ## CSS Best Practices
@@ -1147,7 +1135,7 @@ async function copyStatic() {
 }
 
 async function copyBoreDOM() {
-  return fs.writeFile(path.join(BUILD_DIR, "boreDOM.js"), atob(boredom));
+  return fs.writeFile(path.join(BUILD_DIR, "boredom.js"), atob(boredom));
 }
 
 async function processComponents() {
@@ -1232,11 +1220,11 @@ async function updateIndex(components) {
   const $ = cheerio.load(indexContent, { decodeEntities: false });
   $("head").prepend(
     `\n  <script type="importmap">{ "imports": {\
-      "@mr_hugo/boredom/dist/boreDOM.full.js": "./boreDOM.js",\n \
-      "boredom": "./boreDOM.js"\n \
+      "@mr_hugo/boredom/dist/boredom.js": "./boredom.js",\n \
+      "boredom": "./boredom.js"\n \
     } }</script>`,
   );
-  $("body").append(`\n  <script src="boreDOM.js" type="module"></script>`);
+  $("body").append(`\n  <script src="boredom.js" type="module"></script>`);
 
   // For each component, add references to its JS/CSS files and inject its full <template> tag
   Object.keys(components).forEach((component) => {

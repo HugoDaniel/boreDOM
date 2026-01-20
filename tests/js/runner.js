@@ -2438,7 +2438,7 @@
           if (isUndefined(ctx.colors)) ctx.colors = false;
           if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
           if (ctx.colors) ctx.stylize = stylizeWithColor;
-          return formatValue2(ctx, obj, ctx.depth);
+          return formatValue(ctx, obj, ctx.depth);
         }
         inspect3.colors = {
           "bold": [1, 22],
@@ -2484,13 +2484,13 @@
           });
           return hash;
         }
-        function formatValue2(ctx, value, recurseTimes) {
-          if (ctx.customInspect && value && isFunction2(value.inspect) && // Filter out the util module, it's inspect function is special
+        function formatValue(ctx, value, recurseTimes) {
+          if (ctx.customInspect && value && isFunction(value.inspect) && // Filter out the util module, it's inspect function is special
           value.inspect !== inspect3 && // Also filter out any prototype objects using the circular check.
           !(value.constructor && value.constructor.prototype === value)) {
             var ret = value.inspect(recurseTimes, ctx);
             if (!isString$1(ret)) {
-              ret = formatValue2(ctx, ret, recurseTimes);
+              ret = formatValue(ctx, ret, recurseTimes);
             }
             return ret;
           }
@@ -2507,7 +2507,7 @@
             return formatError(value);
           }
           if (keys2.length === 0) {
-            if (isFunction2(value)) {
+            if (isFunction(value)) {
               var name2 = value.name ? ": " + value.name : "";
               return ctx.stylize("[Function" + name2 + "]", "special");
             }
@@ -2526,7 +2526,7 @@
             array2 = true;
             braces = ["[", "]"];
           }
-          if (isFunction2(value)) {
+          if (isFunction(value)) {
             var n = value.name ? ": " + value.name : "";
             base2 = " [Function" + n + "]";
           }
@@ -2628,9 +2628,9 @@
           if (!str) {
             if (ctx.seen.indexOf(desc.value) < 0) {
               if (isNull(recurseTimes)) {
-                str = formatValue2(ctx, desc.value, null);
+                str = formatValue(ctx, desc.value, null);
               } else {
-                str = formatValue2(ctx, desc.value, recurseTimes - 1);
+                str = formatValue(ctx, desc.value, recurseTimes - 1);
               }
               if (str.indexOf("\n") > -1) {
                 if (array2) {
@@ -2708,7 +2708,7 @@
         function isError$1(e) {
           return isObject2(e) && (objectToString(e) === "[object Error]" || e instanceof Error);
         }
-        function isFunction2(arg) {
+        function isFunction(arg) {
           return typeof arg === "function";
         }
         function isPrimitive2(arg) {
@@ -2768,7 +2768,7 @@
           log,
           isBuffer: isBuffer$1,
           isPrimitive: isPrimitive2,
-          isFunction: isFunction2,
+          isFunction,
           isError: isError$1,
           isDate,
           isObject: isObject2,
@@ -2804,7 +2804,7 @@
           isObject: isObject2,
           isDate,
           isError: isError$1,
-          isFunction: isFunction2,
+          isFunction,
           isPrimitive: isPrimitive2,
           isBuffer: isBuffer$1,
           log,
@@ -4531,25 +4531,25 @@
             components.reverse();
             var componentPos = 0, componentLen = components.length, newPos = 0, oldPos = 0;
             for (; componentPos < componentLen; componentPos++) {
-              var component3 = components[componentPos];
-              if (!component3.removed) {
-                if (!component3.added && useLongestToken) {
-                  var value = newString.slice(newPos, newPos + component3.count);
+              var component2 = components[componentPos];
+              if (!component2.removed) {
+                if (!component2.added && useLongestToken) {
+                  var value = newString.slice(newPos, newPos + component2.count);
                   value = value.map(function(value2, i) {
                     var oldValue = oldString[oldPos + i];
                     return oldValue.length > value2.length ? oldValue : value2;
                   });
-                  component3.value = diff2.join(value);
+                  component2.value = diff2.join(value);
                 } else {
-                  component3.value = diff2.join(newString.slice(newPos, newPos + component3.count));
+                  component2.value = diff2.join(newString.slice(newPos, newPos + component2.count));
                 }
-                newPos += component3.count;
-                if (!component3.added) {
-                  oldPos += component3.count;
+                newPos += component2.count;
+                if (!component2.added) {
+                  oldPos += component2.count;
                 }
               } else {
-                component3.value = diff2.join(oldString.slice(oldPos, oldPos + component3.count));
-                oldPos += component3.count;
+                component2.value = diff2.join(oldString.slice(oldPos, oldPos + component2.count));
+                oldPos += component2.count;
                 if (componentPos && components[componentPos - 1].added) {
                   var tmp = components[componentPos - 1];
                   components[componentPos - 1] = components[componentPos];
@@ -5042,14 +5042,14 @@
         Object.defineProperty(apply2, "__esModule", {
           value: true
         });
-        apply2.applyPatch = applyPatch2;
+        apply2.applyPatch = applyPatch;
         apply2.applyPatches = applyPatches;
         var _parse$1 = parse$2;
         var _distanceIterator = _interopRequireDefault(distanceIterator);
         function _interopRequireDefault(obj) {
           return obj && obj.__esModule ? obj : { "default": obj };
         }
-        function applyPatch2(source, uniDiff) {
+        function applyPatch(source, uniDiff) {
           var options = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {};
           if (typeof uniDiff === "string") {
             uniDiff = /*istanbul ignore start*/
@@ -5163,7 +5163,7 @@
               if (err) {
                 return options.complete(err);
               }
-              var updatedContent = applyPatch2(data, index, options);
+              var updatedContent = applyPatch(data, index, options);
               options.patched(index, updatedContent, function(err2) {
                 if (err2) {
                   return options.complete(err2);
@@ -7872,13 +7872,13 @@
               "useNamedReferences": false,
               "decimal": false
             };
-            var decode = function(html3, options) {
+            var decode = function(html2, options) {
               options = merge2(options, decode.options);
               var strict = options.strict;
-              if (strict && regexInvalidEntity.test(html3)) {
+              if (strict && regexInvalidEntity.test(html2)) {
                 parseError("malformed character reference");
               }
-              return html3.replace(regexDecode, function($0, $1, $2, $3, $4, $5, $6, $7, $8) {
+              return html2.replace(regexDecode, function($0, $1, $2, $3, $4, $5, $6, $7, $8) {
                 var codePoint;
                 var semicolon;
                 var decDigits;
@@ -7967,8 +7967,8 @@
           var he$1 = he.exports;
           const MOCHA_ID_PROP_NAME2 = "__mocha_id__";
           exports2.inherits = util.inherits;
-          exports2.escape = function(html3) {
-            return he$1.encode(String(html3), { useNamedReferences: false });
+          exports2.escape = function(html2) {
+            return he$1.encode(String(html2), { useNamedReferences: false });
           };
           exports2.isString = function(obj) {
             return typeof obj === "string";
@@ -11218,7 +11218,7 @@
           }
           JSONReporter.description = "single JSON object";
         })(json);
-        var html2 = { exports: {} };
+        var html = { exports: {} };
         (function(module3, exports2) {
           var Base = base$1.exports;
           var utils2 = utils$3;
@@ -11426,11 +11426,11 @@
           function error(msg) {
             document.body.appendChild(fragment('<div id="mocha-error">%s</div>', msg));
           }
-          function fragment(html3) {
+          function fragment(html2) {
             var args = arguments;
             var div = document.createElement("div");
             var i = 1;
-            div.innerHTML = html3.replace(/%([se])/g, function(_, type3) {
+            div.innerHTML = html2.replace(/%([se])/g, function(_, type3) {
               switch (type3) {
                 case "s":
                   return String(args[i++]);
@@ -11470,7 +11470,7 @@
             }
           }
           HTML.browserOnly = true;
-        })(html2);
+        })(html);
         var list = { exports: {} };
         (function(module3, exports2) {
           var Base = base$1.exports;
@@ -12114,7 +12114,7 @@
           exports2.Doc = exports2.doc = doc.exports;
           exports2.TAP = exports2.tap = tap.exports;
           exports2.JSON = exports2.json = json.exports;
-          exports2.HTML = exports2.html = html2.exports;
+          exports2.HTML = exports2.html = html.exports;
           exports2.List = exports2.list = list.exports;
           exports2.Min = exports2.min = min.exports;
           exports2.Spec = exports2.spec = spec.exports;
@@ -26404,7 +26404,7 @@
   __name(use, "use");
 
   // tests/runner.ts
-  var import_mocha7 = __toESM(require_mocha());
+  var import_mocha4 = __toESM(require_mocha());
 
   // node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/@testing-library/dom.esm.js
   var prettyFormat = __toESM(require_build());
@@ -27367,10 +27367,10 @@
     picocolors = nodeRequire.call(module, "picocolors");
   } catch {
   }
-  function getCodeFrame(frame7) {
-    const locationStart = frame7.indexOf("(") + 1;
-    const locationEnd = frame7.indexOf(")");
-    const frameLocation = frame7.slice(locationStart, locationEnd);
+  function getCodeFrame(frame5) {
+    const locationStart = frame5.indexOf("(") + 1;
+    const locationEnd = frame5.indexOf(")");
+    const frameLocation = frame5.slice(locationStart, locationEnd);
     const frameLocationElements = frameLocation.split(":");
     const [filename, line, column] = [frameLocationElements[0], parseInt(frameLocationElements[1], 10), parseInt(frameLocationElements[2], 10)];
     let rawFileContents = "";
@@ -27395,7 +27395,7 @@
       return "";
     }
     const err = new Error();
-    const firstClientCodeFrame = err.stack.split("\n").slice(1).find((frame7) => !frame7.includes("node_modules/"));
+    const firstClientCodeFrame = err.stack.split("\n").slice(1).find((frame5) => !frame5.includes("node_modules/"));
     return getCodeFrame(firstClientCodeFrame);
   }
   var TEXT_NODE = 3;
@@ -28098,9 +28098,9 @@
         }
         intervalId = setInterval(checkRealTimersCallback, interval);
         const {
-          MutationObserver: MutationObserver2
+          MutationObserver
         } = getWindowFromNode(container);
-        observer = new MutationObserver2(checkRealTimersCallback);
+        observer = new MutationObserver(checkRealTimersCallback);
         observer.observe(container, mutationObserverOptions);
         checkCallback();
       }
@@ -29711,58 +29711,107 @@
   var import_mocha = __toESM(require_mocha());
 
   // src/dom.ts
-  var isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
-  var parseCustomEventNames = (value) => value.split("'").filter(
-    (s) => s.length > 2 && !(s.includes("(") || s.includes(",") || s.includes(")"))
-  );
-  var parseDirectEventNames = (value) => value.split(/[\s,]+/g).map((s) => s.trim()).filter(Boolean);
-  var parseEventNames = isLLMBuild ? parseDirectEventNames : (value) => {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) return [];
-    if (trimmed.includes("dispatch(") || trimmed.includes("'")) {
-      return parseCustomEventNames(value);
-    }
-    return parseDirectEventNames(value);
+  var componentInitializer = null;
+  var setComponentInitializer = (fn) => {
+    componentInitializer = fn;
   };
-  var dynamicImportScripts = async (names) => {
+  var parseDirectEventNames = (value) => value.split(/[\s,]+/g).map((s) => s.trim()).filter(Boolean);
+  var parseEventNames = parseDirectEventNames;
+  var BOREDOM_SCRIPT_TYPES = /* @__PURE__ */ new Set([
+    "text/boredom",
+    "application/boredom"
+  ]);
+  var pickModuleExport = (module2) => {
+    if (!module2) return null;
+    if ("default" in module2 && module2.default) return module2.default;
+    const keys = Object.keys(module2);
+    return keys.length > 0 ? module2[keys[0]] : null;
+  };
+  var importInlineModule = async (code) => {
+    const blob = new Blob([code], { type: "text/javascript" });
+    const url = URL.createObjectURL(blob);
+    try {
+      return await import(url);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  };
+  var loadTripletScripts = async (webComponentFactory) => {
+    const scripts = Array.from(queryAll("script[data-component]")).filter(
+      (elem) => elem instanceof HTMLScriptElement
+    );
     const result = /* @__PURE__ */ new Map();
-    for (let i = 0; i < names.length; ++i) {
-      const scripts = Array.from(queryAll("script[src]"));
-      const matchingScript = scripts.find((script) => {
-        const src = script.getAttribute("src") ?? "";
-        const filename = src.split("/").pop() ?? "";
-        return filename === `${names[i]}.js`;
-      });
-      const scriptLocation = matchingScript?.getAttribute("src");
-      let f = null;
-      if (scriptLocation) {
+    for (const script of scripts) {
+      const name = script.dataset.component ?? "";
+      if (!name) continue;
+      let rawLogic = null;
+      const src = script.getAttribute("src");
+      const type3 = (script.getAttribute("type") || "").trim().toLowerCase();
+      if (src) {
         try {
-          const moduleUrl = new URL(scriptLocation, document.baseURI).href;
-          const exports = await import(moduleUrl);
-          for (const exported of Object.keys(exports)) {
-            f = exports[exported];
-            break;
-          }
-          result.set(names[i], f);
+          const moduleUrl = new URL(src, document.baseURI).href;
+          const module2 = await import(moduleUrl);
+          rawLogic = pickModuleExport(module2);
         } catch (e) {
-          console.error(`Unable to import "${scriptLocation}"`, e);
+          console.error(`Unable to import "${src}"`, e);
         }
+      } else if (BOREDOM_SCRIPT_TYPES.has(type3)) {
+        const code = script.textContent;
+        if (code && code.trim().length > 0) {
+          try {
+            const module2 = await importInlineModule(code);
+            rawLogic = pickModuleExport(module2);
+          } catch (e) {
+            console.error(`Unable to load inline logic for "${name}"`, e);
+          }
+        }
+      }
+      if (rawLogic) {
+        const logic = webComponentFactory ? webComponentFactory(rawLogic) : rawLogic;
+        result.set(name, logic);
       }
     }
     return result;
   };
-  var registerTemplates = async (webComponentFactory, options) => {
-    const shouldMirrorAttributes = !isLLMBuild && (options?.mirrorAttributes ?? true);
+  var attachTripletStyles = (templates) => {
+    const styles2 = Array.from(queryAll("style[data-component]")).filter(
+      (elem) => elem instanceof HTMLStyleElement
+    );
+    if (styles2.length === 0) return;
+    const styleMap = /* @__PURE__ */ new Map();
+    styles2.forEach((style) => {
+      const name = style.dataset.component ?? "";
+      if (!name) return;
+      const list = styleMap.get(name) ?? [];
+      list.push(style);
+      styleMap.set(name, list);
+    });
+    templates.forEach((template) => {
+      if (!isTemplate(template)) return;
+      const name = template.dataset.component ?? "";
+      if (!name) return;
+      const entries = styleMap.get(name);
+      if (!entries || entries.length === 0) return;
+      entries.forEach((style) => {
+        const clone = style.cloneNode(true);
+        template.content.prepend(clone);
+        style.remove();
+      });
+    });
+  };
+  var registerTemplates = async (webComponentFactory) => {
     const names = [];
     const inlineLogic = /* @__PURE__ */ new Map();
     const templates = Array.from(queryAll("template[data-component]")).filter((elem) => elem instanceof HTMLElement);
+    attachTripletStyles(templates);
+    const tripletLogic = await loadTripletScripts(webComponentFactory);
     for (const t of templates) {
       let name = "";
       const attributes = [];
       for (const attribute in t.dataset) {
         if (attribute === "component") {
           name = t.dataset[attribute] ?? "";
-        } else if (shouldMirrorAttributes) {
+        } else {
           attributes.push([
             decamelize(attribute),
             t.dataset[attribute] ?? ""
@@ -29773,53 +29822,22 @@
         console.error(`Invalid <template> found: missing data-component`, t);
         continue;
       }
+      if (!name.includes("-")) {
+        console.error(`Invalid <template> found: "${name}" is not a custom element name`, t);
+        continue;
+      }
       if (isTemplate(t)) {
-        const script = t.content.querySelector("script");
-        if (script) {
-          const code = script.textContent;
-          if (code && code.trim().length > 0) {
-            try {
-              const blob = new Blob([code], { type: "text/javascript" });
-              const url = URL.createObjectURL(blob);
-              const module2 = await import(url);
-              URL.revokeObjectURL(url);
-              script.remove();
-              let rawLogic = null;
-              if (module2.default) {
-                rawLogic = module2.default;
-              } else {
-                const keys = Object.keys(module2);
-                if (keys.length > 0) {
-                  rawLogic = module2[keys[0]];
-                }
-              }
-              if (rawLogic) {
-                const logic = webComponentFactory ? webComponentFactory(rawLogic) : rawLogic;
-                inlineLogic.set(name, logic);
-              }
-            } catch (e) {
-            }
-          }
-        }
+        t.content.querySelectorAll("script").forEach((script) => script.remove());
       }
       component(name, { attributes });
       names.push(name);
     }
+    if (tripletLogic.size > 0) {
+      for (const [tagName, logic] of tripletLogic) {
+        inlineLogic.set(tagName, logic);
+      }
+    }
     return { names, inlineLogic };
-  };
-  var createComponent = (name, update) => {
-    const element = create(name);
-    if (!isBored(element)) {
-      const error = `The tag name "${name}" is not a BoreDOM  component.
-      
-"createComponent" only accepts tag-names with matching <template> tags that have a data-component attribute in them.`;
-      console.error(error);
-      throw new Error(error);
-    }
-    if (update) {
-      element.renderCallback = update;
-    }
-    return element;
   };
   var query = (query2) => document.querySelector(query2);
   var queryAll = (query2) => document.querySelectorAll(query2);
@@ -29842,7 +29860,6 @@
   };
   var isTemplate = (e) => e instanceof HTMLTemplateElement;
   var isObject = (t) => typeof t === "object";
-  var isFunction = (t) => typeof t === "function";
   var isBored = (t) => isObject(t) && "isBored" in t && Boolean(t.isBored);
   var decamelize = (str) => {
     if (str === "" || !str.split("").some((char) => char !== char.toLowerCase())) {
@@ -29857,14 +29874,6 @@
       result += char.toLowerCase();
     }
     return result;
-  };
-  var isStartsWithOn = (s) => s.startsWith("on");
-  var isStartsWithQueriedOn = (s) => s.startsWith("queriedOn");
-  var getEventName = (s) => {
-    if (isStartsWithOn(s)) {
-      return s.slice(2).toLowerCase();
-    }
-    return s.slice(9).toLowerCase();
   };
   var Bored = class extends HTMLElement {
   };
@@ -29890,7 +29899,7 @@
         );
       });
     };
-    const createDispatchersLLM = (host) => {
+    const createDispatchers = (host) => {
       traverse(host, (node) => {
         for (let i = 0; i < node.attributes.length; i++) {
           const attribute = node.attributes[i];
@@ -29908,103 +29917,14 @@
         }
       }, { traverseShadowRoot: true });
     };
-    const createDispatchersFull = (host) => {
-      traverse(host, (node) => {
-        for (let i = 0; i < node.attributes.length; i++) {
-          const attribute = node.attributes[i];
-          const attributeName = attribute.name;
-          if (attributeName.startsWith("on-")) {
-            const eventName = attributeName.slice(3);
-            addDispatchers(
-              host,
-              node,
-              eventName,
-              parseEventNames(attribute.value)
-            );
-            node.removeAttribute(attributeName);
-            continue;
-          }
-          if (attributeName === "data-dispatch" || attributeName.startsWith("data-dispatch-")) {
-            const eventName = attributeName === "data-dispatch" ? "click" : attributeName.slice("data-dispatch-".length);
-            addDispatchers(
-              host,
-              node,
-              eventName,
-              parseEventNames(attribute.value)
-            );
-            node.removeAttribute(attributeName);
-            continue;
-          }
-          if (isStartsWithOn(attributeName)) {
-            const eventNames = parseCustomEventNames(attribute.value);
-            if (eventNames.length > 0) {
-              addDispatchers(host, node, getEventName(attributeName), eventNames);
-            }
-            node.setAttribute(
-              `data-${attributeName}-dispatches`,
-              eventNames.join()
-            );
-            node.removeAttribute(attributeName);
-          }
-        }
-      }, { traverseShadowRoot: true });
-    };
-    const createDispatchers = isLLMBuild ? createDispatchersLLM : createDispatchersFull;
-    const initInstanceLLM = (host) => {
-      const template = query(`[data-component="${tag}"]`) ?? create("template");
-      host.appendChild(template.content.cloneNode(true));
-      if (props.attributes && Array.isArray(props.attributes)) {
-        props.attributes.forEach(([attr, value]) => host.setAttribute(attr, value));
-      }
-      createDispatchers(host);
-      host.isInitialized = true;
-    };
-    const initInstanceFull = (host) => {
+    const initInstance = (host) => {
       const template = query(`[data-component="${tag}"]`) ?? create("template");
       const templateShadowRootMode = template.getAttribute("shadowrootmode");
-      const useShadowRoot = props.style || props.shadow || templateShadowRootMode;
-      if (useShadowRoot) {
-        const shadowRootMode = props.shadowrootmode ?? templateShadowRootMode ?? "open";
-        const shadowRoot = host.attachShadow({ mode: shadowRootMode });
-        if (props.style) {
-          const style = create("style");
-          style.textContent = props.style;
-          shadowRoot.appendChild(style);
-        }
-        if (props.shadow) {
-          const tmp = create("template");
-          tmp.innerHTML = props.shadow;
-          shadowRoot.appendChild(tmp.content.cloneNode(true));
-        } else if (templateShadowRootMode) {
-          shadowRoot.appendChild(template.content.cloneNode(true));
-        }
-      }
-      if (template && !templateShadowRootMode) {
+      if (templateShadowRootMode) {
+        const shadowRoot = host.attachShadow({ mode: templateShadowRootMode });
+        shadowRoot.appendChild(template.content.cloneNode(true));
+      } else {
         host.appendChild(template.content.cloneNode(true));
-      }
-      if (props.onSlotChange) {
-        traverse(host, (elem) => {
-          if (!(elem instanceof HTMLSlotElement)) return;
-          elem.addEventListener("slotchange", (e) => props.onSlotChange?.(e));
-        }, { traverseShadowRoot: true });
-      }
-      if (isFunction(props.onClick)) {
-        host.addEventListener("click", props.onClick);
-      }
-      for (const [key, value] of Object.entries(props)) {
-        if (isStartsWithOn(key)) {
-          if (!isFunction(value)) continue;
-          host.addEventListener(getEventName(key), value);
-        } else if (isStartsWithQueriedOn(key)) {
-          const queries2 = value;
-          if (!isObject(queries2)) continue;
-          const eventName = getEventName(key);
-          for (const [query2, handler] of Object.entries(queries2)) {
-            traverse(host, (node) => {
-              node.addEventListener(eventName, handler);
-            }, { traverseShadowRoot: true, query: query2 });
-          }
-        }
       }
       if (props.attributes && Array.isArray(props.attributes)) {
         props.attributes.forEach(([attr, value]) => host.setAttribute(attr, value));
@@ -30012,7 +29932,6 @@
       createDispatchers(host);
       host.isInitialized = true;
     };
-    const initInstance = isLLMBuild ? initInstanceLLM : initInstanceFull;
     customElements.define(
       tag,
       class extends Bored {
@@ -30034,6 +29953,7 @@
         };
         connectedCallback() {
           if (!this.isInitialized) initInstance(this);
+          if (componentInitializer) componentInitializer(this);
           this.renderCallback(this);
           props.connectedCallback?.(this);
         }
@@ -30054,9 +29974,6 @@
         }
       }
     );
-  };
-  var registerComponent = (tagName) => {
-    component(tagName, {});
   };
 
   // src/utils/access.ts
@@ -30377,6 +30294,23 @@
     });
     return boredom;
   }
+  function getComponentInitializer(state) {
+    return (element) => {
+      if (element.isBoredInitialized) return;
+      const tagName = element.tagName.toLowerCase();
+      const code = state.internal.components.get(tagName);
+      if (!code) return;
+      const index = element.parentElement ? Array.from(element.parentElement.children).indexOf(element) : -1;
+      const detail = {
+        index,
+        name: tagName,
+        data: extractDetailData(element)
+      };
+      code(state, detail)(element);
+      element.__boreDOMDetail = detail;
+      element.isBoredInitialized = true;
+    };
+  }
   function runComponentsInitializer(state) {
     const tagsInDom = state.internal.customTags.filter(
       (tag) => (
@@ -30384,6 +30318,7 @@
         document.querySelector(tag) !== null
       )
     );
+    const initialize = getComponentInitializer(state);
     const components = state.internal.components;
     for (const [tagName, code] of components.entries()) {
       if (code === null || !tagsInDom.includes(tagName)) continue;
@@ -30393,30 +30328,9 @@
       if (elements.length === 0) {
         continue;
       }
-      elements.forEach((componentClass, index) => {
-        if (componentClass.isBoredInitialized) return;
-        const detail = {
-          index,
-          name: tagName,
-          data: extractDetailData(componentClass)
-        };
-        code(state, detail)(componentClass);
-        componentClass.__boreDOMDetail = detail;
-        componentClass.isBoredInitialized = true;
-      });
+      elements.forEach(initialize);
     }
     return;
-  }
-  function createAndRunCode(name, state, detail) {
-    const code = state.internal.components.get(name);
-    if (code) {
-      const info = { ...detail, tagName: name };
-      if (!info.data) info.data = {};
-      const element = createComponent(name, code(state, info));
-      element.__boreDOMDetail = info;
-      return element;
-    }
-    return createComponent(name);
   }
 
   // src/debug.ts
@@ -30427,12 +30341,8 @@
     visualIndicators: true,
     errorHistory: true,
     versionLog: true,
-    api: true,
-    methodMissing: true,
-    templateInference: true,
     strict: false,
-    outputFormat: "human",
-    llm: true
+    outputFormat: "human"
   };
   var errors = /* @__PURE__ */ new Map();
   var lastError = null;
@@ -30460,15 +30370,10 @@
         visualIndicators: enabled,
         errorHistory: enabled,
         versionLog: enabled,
-        api: enabled,
-        methodMissing: enabled,
-        templateInference: enabled,
         strict: false,
         // Strict mode only enabled explicitly
-        outputFormat: "human",
+        outputFormat: "human"
         // Always human format by default
-        llm: enabled
-        // LLM API follows debug mode
       };
     } else {
       debugConfig = { ...debugConfig, ...config3 };
@@ -30536,17 +30441,17 @@
       console.log(`   boreDOM.export('${ctx.component}')`);
     }
   }
-  function logErrorMinimal(component3, error) {
-    console.error(`[boreDOM] Render error in <${component3}>: ${error.message}`);
+  function logErrorMinimal(component2, error) {
+    console.error(`[boreDOM] Render error in <${component2}>: ${error.message}`);
   }
-  function logInitError(component3, error) {
+  function logInitError(component2, error) {
     if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
     if (!isDebugEnabled("console")) return;
     console.log(
       "%c\u{1F534} boreDOM: Error in %c<%s>%c init",
       "color: #ff6b6b; font-weight: bold",
       "color: #4ecdc4; font-weight: bold",
-      component3,
+      component2,
       "color: #ff6b6b"
     );
     console.error(error);
@@ -30557,12 +30462,12 @@
     errors.set(ctx.component, ctx);
     lastError = ctx;
   }
-  function clearError(component3) {
+  function clearError(component2) {
     if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
     if (!isDebugEnabled("errorHistory")) return;
-    if (component3) {
-      errors.delete(component3);
-      if (lastError?.component === component3) {
+    if (component2) {
+      errors.delete(component2);
+      if (lastError?.component === component2) {
         lastError = null;
       }
     } else if (lastError) {
@@ -30645,768 +30550,22 @@
   // src/runtime-state.ts
   var WEB_COMPONENT_MARKER = Symbol("boreDOM.webComponent");
   var currentAppState = null;
-  var storedWebComponent = null;
-  var storedRegisterComponent = null;
-  function setCurrentAppState(state, webComponentFn, registerComponentFn) {
+  function setCurrentAppState(state) {
     currentAppState = state;
-    if (webComponentFn) storedWebComponent = webComponentFn;
-    if (registerComponentFn) storedRegisterComponent = registerComponentFn;
   }
   function getCurrentAppState() {
     return currentAppState;
   }
-  function getStoredWebComponent() {
-    return storedWebComponent;
-  }
-  function getStoredRegisterComponent() {
-    return storedRegisterComponent;
-  }
-
-  // src/console-api.ts
-  var componentContexts = /* @__PURE__ */ new WeakMap();
-  function storeComponentContext(element, context) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("api")) return;
-    componentContexts.set(element, context);
-  }
-  function isWebComponentResult(fn) {
-    return typeof fn === "function" && fn[WEB_COMPONENT_MARKER] === true;
-  }
-  function define2(tagName, template, logic) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      console.warn("[boreDOM] define() is not available in production build");
-      return false;
-    }
-    if (!isDebugEnabled("api")) {
-      console.warn("[boreDOM] define() is disabled (debug.api is false)");
-      return false;
-    }
-    const appState = getCurrentAppState();
-    if (!appState) {
-      throw new Error("[boreDOM] Cannot define component before inflictBoreDOM()");
-    }
-    if (!tagName.includes("-")) {
-      throw new Error(`[boreDOM] Invalid tag name "${tagName}": must contain a hyphen`);
-    }
-    if (customElements.get(tagName)) {
-      throw new Error(`[boreDOM] Component "${tagName}" is already defined`);
-    }
-    const webComponentFn = getStoredWebComponent();
-    const registerComponentFn = getStoredRegisterComponent();
-    if (!webComponentFn || !registerComponentFn) {
-      throw new Error("[boreDOM] Console API not initialized. Call inflictBoreDOM() first.");
-    }
-    const templateEl = document.createElement("template");
-    templateEl.innerHTML = template;
-    templateEl.setAttribute("data-component", tagName);
-    document.body.appendChild(templateEl);
-    const componentLogic = isWebComponentResult(logic) ? logic : webComponentFn(logic);
-    appState.internal.components.set(tagName, componentLogic);
-    appState.internal.customTags.push(tagName);
-    registerComponentFn(tagName);
-    initializeExistingElements(tagName, componentLogic);
-    if (isDebugEnabled("console")) {
-      console.log(
-        "%c\u2705 boreDOM: Defined %c<%s>",
-        "color: #27ae60; font-weight: bold",
-        "color: #4ecdc4; font-weight: bold",
-        tagName
-      );
-    }
-    return true;
-  }
-  function initializeExistingElements(tagName, logic) {
-    const appState = getCurrentAppState();
-    if (!appState) return;
-    const elements = Array.from(document.querySelectorAll(tagName));
-    const failedCount = { count: 0 };
-    elements.forEach((elem, index) => {
-      if (elem instanceof HTMLElement && "renderCallback" in elem) {
-        try {
-          const detail = { index, name: tagName, data: void 0 };
-          const renderCallback = logic(appState, detail);
-          elem.renderCallback = renderCallback;
-          renderCallback(elem);
-        } catch (error) {
-          failedCount.count++;
-          if (isDebugEnabled("console")) {
-            console.error(
-              `[boreDOM] Failed to initialize <${tagName}> instance ${index}:`,
-              error
-            );
-          }
-        }
-      }
-    });
-    if (failedCount.count > 0 && isDebugEnabled("console")) {
-      console.warn(
-        `[boreDOM] ${failedCount.count} of ${elements.length} <${tagName}> instances failed to initialize`
-      );
-    }
-  }
-  function operate(selectorOrElement, index = 0) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      console.warn("[boreDOM] operate() is not available in production build");
-      return void 0;
-    }
-    if (!isDebugEnabled("api")) {
-      console.warn("[boreDOM] operate() is disabled (debug.api is false)");
-      return void 0;
-    }
-    let element = null;
-    if (typeof selectorOrElement === "string") {
-      const elements = Array.from(document.querySelectorAll(selectorOrElement)).filter((el) => el instanceof HTMLElement);
-      element = elements[index] ?? null;
-    } else {
-      element = selectorOrElement;
-    }
-    if (!element) {
-      if (isDebugEnabled("console")) {
-        console.warn(`[boreDOM] operate(): No element found for "${selectorOrElement}"`);
-      }
-      return void 0;
-    }
-    const context = componentContexts.get(element);
-    if (!context) {
-      if (isDebugEnabled("console")) {
-        console.warn(`[boreDOM] operate(): Element is not a boreDOM component or not initialized`);
-      }
-      return void 0;
-    }
-    return context;
-  }
-  function exportComponent(selector) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      console.warn("[boreDOM] exportComponent() is not available in production build");
-      return null;
-    }
-    if (!isDebugEnabled("api")) {
-      console.warn("[boreDOM] exportComponent() is disabled (debug.api is false)");
-      return null;
-    }
-    const ctx = operate(selector);
-    if (!ctx) return null;
-    const templateEl = document.querySelector(`template[data-component="${ctx.detail.name}"]`);
-    const templateHtml = templateEl?.innerHTML ?? void 0;
-    try {
-      return {
-        component: ctx.detail.name,
-        state: JSON.parse(JSON.stringify(ctx.state)),
-        template: templateHtml,
-        timestamp: (/* @__PURE__ */ new Date()).toISOString()
-      };
-    } catch (e) {
-      if (isDebugEnabled("console")) {
-        console.warn(
-          `[boreDOM] exportComponent: Unable to serialize state for <${ctx.detail.name}>:`,
-          e instanceof Error ? e.message : e
-        );
-      }
-      return {
-        component: ctx.detail.name,
-        state: "[Unable to serialize - contains circular references or functions]",
-        template: templateHtml,
-        timestamp: (/* @__PURE__ */ new Date()).toISOString()
-      };
-    }
-  }
-  var consoleAPI = {
-    define: define2,
-    operate,
-    exportComponent
-  };
-
-  // src/inside-out.ts
-  var userDefinedHelpers = /* @__PURE__ */ new Map();
-  var missingFunctions = /* @__PURE__ */ new Map();
-  var lastMissing = null;
-  var inferredTemplates = /* @__PURE__ */ new Map();
-  var templateObserver = null;
-  function createRenderHelpers(componentName, element, rerender) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) {
-      return {};
-    }
-    if (!isDebugEnabled("methodMissing")) {
-      return {};
-    }
-    return new Proxy({}, {
-      get(_target, prop) {
-        if (typeof prop === "symbol" || prop === "then" || prop === "toJSON") {
-          return void 0;
-        }
-        if (userDefinedHelpers.has(prop)) {
-          const helper = userDefinedHelpers.get(prop);
-          return (...args) => {
-            const result = helper(...args);
-            return result;
-          };
-        }
-        return (...args) => {
-          const ctx = {
-            name: prop,
-            args,
-            component: componentName,
-            element,
-            timestamp: Date.now(),
-            define: (impl) => {
-              defineHelper(prop, impl);
-              rerender();
-            }
-          };
-          logMissingFunction(ctx);
-          storeMissingFunction(ctx);
-          exposeMissingGlobals(ctx);
-          return void 0;
-        };
-      },
-      has(_target, prop) {
-        return typeof prop === "string" && userDefinedHelpers.has(prop);
-      }
-    });
-  }
-  function defineHelper(name, implementation) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("methodMissing")) return;
-    userDefinedHelpers.set(name, implementation);
-    if (isDebugEnabled("console")) {
-      console.log(
-        "%c\u2705 boreDOM: Defined helper %c%s",
-        "color: #27ae60; font-weight: bold",
-        "color: #9b59b6; font-weight: bold",
-        name
-      );
-    }
-  }
-  function clearHelper(name) {
-    userDefinedHelpers.delete(name);
-  }
-  function clearMissingFunctions() {
-    missingFunctions.clear();
-    lastMissing = null;
-  }
-  function logMissingFunction(ctx) {
-    if (!isDebugEnabled("console")) return;
-    console.log(
-      "%c\u26A0\uFE0F boreDOM: Missing function %c%s%c in <%s>",
-      "color: #f39c12; font-weight: bold",
-      "color: #9b59b6; font-weight: bold",
-      ctx.name,
-      "color: #f39c12",
-      ctx.component
-    );
-    if (ctx.args.length > 0) {
-      console.log("   Arguments:", ctx.args);
-    }
-    console.log("%c\u{1F4A1} Define it:", "color: #3498db; font-weight: bold");
-    console.log(`   $defineMissing((${generateArgNames(ctx.args)}) => { ... })`);
-    console.log(
-      `   boreDOM.defineHelper('${ctx.name}', (${generateArgNames(ctx.args)}) => { ... })`
-    );
-  }
-  function generateArgNames(args) {
-    if (args.length === 0) return "";
-    return args.map((arg, i) => {
-      if (arg === null || arg === void 0) return `arg${i}`;
-      if (Array.isArray(arg)) return "items";
-      if (typeof arg === "object") {
-        if ("name" in arg && "email" in arg) return "user";
-        if ("id" in arg && "title" in arg) return "item";
-        if ("id" in arg) return "record";
-        return "data";
-      }
-      if (typeof arg === "string") return "text";
-      if (typeof arg === "number") return "count";
-      if (typeof arg === "boolean") return "flag";
-      return `arg${i}`;
-    }).join(", ");
-  }
-  function storeMissingFunction(ctx) {
-    if (!isDebugEnabled("errorHistory")) return;
-    const existing = missingFunctions.get(ctx.name) || [];
-    if (existing.length >= 10) {
-      existing.shift();
-    }
-    existing.push(ctx);
-    missingFunctions.set(ctx.name, existing);
-    lastMissing = ctx;
-  }
-  function exposeMissingGlobals(ctx) {
-    if (!isDebugEnabled("globals")) return;
-    if (typeof window === "undefined") return;
-    const w = window;
-    w.$missingName = ctx.name;
-    w.$missingArgs = ctx.args;
-    w.$missingComponent = ctx.component;
-    w.$defineMissing = ctx.define;
-  }
-  function clearMissingGlobals() {
-    if (typeof window === "undefined") return;
-    const w = window;
-    delete w.$missingName;
-    delete w.$missingArgs;
-    delete w.$missingComponent;
-    delete w.$defineMissing;
-  }
-  function inferTemplate(tagName, element) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return null;
-    if (!isDebugEnabled("templateInference")) return null;
-    if (isDebugEnabled("strict")) return null;
-    const props = {};
-    const slots = [];
-    if (element) {
-      for (const attr of Array.from(element.attributes)) {
-        if (attr.name.startsWith("data-")) continue;
-        if (["class", "id", "style"].includes(attr.name)) continue;
-        const camelName = kebabToCamel(attr.name);
-        props[camelName] = parseAttributeValue(attr.value);
-      }
-      for (const child of Array.from(element.children)) {
-        const slotName = child.getAttribute("slot");
-        if (slotName && !slots.includes(slotName)) {
-          slots.push(slotName);
-        }
-      }
-    }
-    const propsSlots = Object.keys(props).map((p) => `    <slot name="${camelToKebab(p)}">${formatValue(props[p])}</slot>`).join("\n");
-    const defaultSlot = slots.length === 0 && Object.keys(props).length === 0 ? '    <slot name="content">Loading...</slot>' : "";
-    const template = `<div class="${tagName}-skeleton" data-inferred>
-${propsSlots || defaultSlot}
-  </div>`;
-    return { tagName, template, props, slots };
-  }
-  function registerInferredComponent(tagName, element) {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return false;
-    if (!isDebugEnabled("templateInference")) return false;
-    if (customElements.get(tagName)) return false;
-    if (!getCurrentAppState()) return false;
-    const inference = inferTemplate(tagName, element);
-    if (!inference) return false;
-    const { template, props } = inference;
-    inferredTemplates.set(tagName, inference);
-    logInferredComponent(tagName, props);
-    try {
-      define2(
-        tagName,
-        template,
-        // Stub render that logs what it receives
-        ({ state }) => ({ slots }) => {
-          if (isDebugEnabled("console")) {
-            console.log(
-              "%c\u{1F52E} boreDOM: Inferred <%s> rendering",
-              "color: #9b59b6; font-weight: bold",
-              tagName
-            );
-            console.log("   Inferred props:", props);
-            console.log("   App state:", state);
-          }
-          for (const [key, value] of Object.entries(props)) {
-            const slotKey = camelToKebab(key);
-            if (slots[slotKey]) {
-              slots[slotKey] = String(value);
-            }
-          }
-        }
-      );
-      return true;
-    } catch (e) {
-      if (isDebugEnabled("console")) {
-        console.warn(`[boreDOM] Failed to register inferred <${tagName}>:`, e);
-      }
-      return false;
-    }
-  }
-  function logInferredComponent(tagName, props) {
-    if (!isDebugEnabled("console")) return;
-    console.log(
-      "%c\u{1F52E} boreDOM: Inferring template for %c<%s>",
-      "color: #9b59b6; font-weight: bold",
-      "color: #4ecdc4; font-weight: bold",
-      tagName
-    );
-    if (Object.keys(props).length > 0) {
-      console.log("%c\u{1F4CB} Inferred props from attributes:", "color: #95a5a6");
-      for (const [key, value] of Object.entries(props)) {
-        console.log(`   ${key}: ${JSON.stringify(value)}`);
-      }
-    }
-    console.log("%c\u{1F4A1} Define properly with:", "color: #3498db; font-weight: bold");
-    console.log(
-      `   boreDOM.define('${tagName}', '<your template>', ({ state }) => ({ slots }) => { ... })`
-    );
-  }
-  function observeUndefinedElements() {
-    if (typeof __DEBUG__ !== "undefined" && !__DEBUG__) return;
-    if (!isDebugEnabled("templateInference")) return;
-    if (typeof window === "undefined") return;
-    if (templateObserver) return;
-    templateObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of Array.from(mutation.addedNodes)) {
-          if (node instanceof HTMLElement && node.tagName.includes("-")) {
-            const tagName = node.tagName.toLowerCase();
-            if (!customElements.get(tagName)) {
-              const template = document.querySelector(
-                `template[data-component="${tagName}"]`
-              );
-              if (!template) {
-                queueMicrotask(() => {
-                  if (!customElements.get(tagName)) {
-                    registerInferredComponent(tagName, node);
-                  }
-                });
-              }
-            }
-          }
-        }
-      }
-    });
-    templateObserver.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-  function stopObservingUndefinedElements() {
-    if (templateObserver) {
-      templateObserver.disconnect();
-      templateObserver = null;
-    }
-  }
-  function kebabToCamel(str) {
-    return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-  }
-  function camelToKebab(str) {
-    return str.replace(/([A-Z])/g, "-$1").toLowerCase();
-  }
-  function parseAttributeValue(value) {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    const num = Number(value);
-    if (!isNaN(num) && value !== "") return num;
-    if (value.startsWith("{") || value.startsWith("[")) {
-      try {
-        return JSON.parse(value);
-      } catch {
-        return value;
-      }
-    }
-    return value;
-  }
-  function formatValue(value) {
-    if (value === null || value === void 0) return "";
-    if (typeof value === "object") return JSON.stringify(value);
-    return String(value);
-  }
-  var insideOutAPI = {
-    /** Map of missing function calls by function name */
-    get missingFunctions() {
-      return missingFunctions;
-    },
-    /** Most recent missing function context */
-    get lastMissing() {
-      return lastMissing;
-    },
-    /** Define a helper function available to all render functions */
-    defineHelper,
-    /** Get all defined helpers */
-    get helpers() {
-      return new Map(userDefinedHelpers);
-    },
-    /** Clear a helper definition */
-    clearHelper,
-    /** Clear all missing function records */
-    clearMissingFunctions,
-    /** Map of inferred templates by tag name */
-    get inferredTemplates() {
-      return inferredTemplates;
-    },
-    /** Manually infer template for a tag (useful for testing) */
-    inferTemplate
-  };
-
-  // src/vision.ts
-  var IGNORED_TAGS = /* @__PURE__ */ new Set([
-    "script",
-    "style",
-    "noscript",
-    "template",
-    "link",
-    "meta",
-    "head",
-    "title"
-  ]);
-  var IMPORTANT_ATTRS = /* @__PURE__ */ new Set([
-    "id",
-    "class",
-    "type",
-    "value",
-    "checked",
-    "disabled",
-    "placeholder",
-    "href",
-    "src",
-    "alt",
-    "title",
-    "role"
-  ]);
-  function isVisible(element) {
-    if (element.hasAttribute("hidden")) return false;
-    if (element.style.display === "none") return false;
-    if (element.style.visibility === "hidden") return false;
-    if (element.getAttribute("aria-hidden") === "true") return false;
-    return true;
-  }
-  function getSemanticDOM(element) {
-    if (!(element instanceof HTMLElement)) return null;
-    const tagName = element.tagName.toLowerCase();
-    if (IGNORED_TAGS.has(tagName)) return null;
-    if (!isVisible(element)) return null;
-    const node = { tagName };
-    const attributes = {};
-    let hasAttrs = false;
-    for (const attr of Array.from(element.attributes)) {
-      const name = attr.name;
-      if (IMPORTANT_ATTRS.has(name) || name.startsWith("aria-") || name.startsWith("data-")) {
-        if (name === "checked" || name === "disabled") {
-          attributes[name] = element[name];
-        } else if (name === "value" && (tagName === "input" || tagName === "textarea" || tagName === "select")) {
-          attributes[name] = element.value;
-        } else {
-          attributes[name] = attr.value;
-        }
-        hasAttrs = true;
-      }
-    }
-    if (hasAttrs) node.attributes = attributes;
-    let text = "";
-    for (const child of Array.from(element.childNodes)) {
-      if (child.nodeType === Node.TEXT_NODE) {
-        const val = child.nodeValue?.trim();
-        if (val) text += val + " ";
-      }
-    }
-    text = text.trim();
-    if (text) node.text = text;
-    const children = [];
-    for (const child of Array.from(element.children)) {
-      const semanticChild = getSemanticDOM(child);
-      if (semanticChild) {
-        children.push(semanticChild);
-      }
-    }
-    if (children.length > 0) node.children = children;
-    if (tagName === "div" && !hasAttrs && !text && children.length === 0) return null;
-    return node;
-  }
-
-  // src/patch.ts
-  function applyPatch(state, patch) {
-    const undoStack = [];
-    try {
-      for (const op of patch) {
-        const inverse = applyOp(state, op);
-        if (inverse) undoStack.push(inverse);
-      }
-      return { success: true };
-    } catch (e) {
-      for (let i = undoStack.length - 1; i >= 0; i--) {
-        try {
-          applyOp(state, undoStack[i]);
-        } catch (rollbackError) {
-          console.error("Critical: Rollback failed", rollbackError);
-        }
-      }
-      return { success: false, error: e.message || String(e) };
-    }
-  }
-  function deepEqual2(a, b) {
-    if (a === b) return true;
-    if (typeof a !== "object" || a === null || typeof b !== "object" || b === null) return false;
-    if (Array.isArray(a) !== Array.isArray(b)) return false;
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-    if (keysA.length !== keysB.length) return false;
-    for (const key of keysA) {
-      if (!keysB.includes(key) || !deepEqual2(a[key], b[key])) return false;
-    }
-    return true;
-  }
-  function parsePath2(path) {
-    if (path === "") return [];
-    if (path === "/") return [""];
-    return path.split("/").slice(1).map(
-      (segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~")
-    );
-  }
-  function applyOp(root, op) {
-    const parts = parsePath2(op.path);
-    if (parts.length === 0) {
-      throw new Error("Cannot operate on root state directly");
-    }
-    const key = parts.pop();
-    let target = root;
-    for (const segment of parts) {
-      if (target === void 0 || target === null) {
-        throw new Error(`Path not found: ${op.path}`);
-      }
-      if (Array.isArray(target)) {
-        const index = parseInt(segment, 10);
-        if (isNaN(index)) throw new Error(`Invalid array index: ${segment}`);
-        target = target[index];
-      } else {
-        target = target[segment];
-      }
-    }
-    if (target === void 0 || target === null) {
-      throw new Error(`Path not found: ${op.path}`);
-    }
-    if (op.op === "test") {
-      let valueToCheck;
-      if (Array.isArray(target)) {
-        if (key === "-") {
-          valueToCheck = void 0;
-        } else {
-          const index = parseInt(key, 10);
-          if (isNaN(index) || index < 0 || index >= target.length) {
-            valueToCheck = void 0;
-          } else {
-            valueToCheck = target[index];
-          }
-        }
-      } else {
-        valueToCheck = target[key];
-      }
-      if (!deepEqual2(valueToCheck, op.value)) {
-        throw new Error(`Test failed at ${op.path}: expected ${JSON.stringify(op.value)}, got ${JSON.stringify(valueToCheck)}`);
-      }
-      return null;
-    }
-    if (Array.isArray(target)) {
-      if (key === "-") {
-        if (op.op === "add") {
-          target.push(op.value);
-          return { op: "remove", path: op.path.replace(/-$/, (target.length - 1).toString()) };
-        } else {
-          throw new Error("Can only add to '-' index");
-        }
-      }
-      const index = parseInt(key, 10);
-      if (isNaN(index) || index < 0) {
-        throw new Error(`Invalid array index: ${key}`);
-      }
-      if (op.op === "add") {
-        if (index > target.length) throw new Error("Index out of bounds");
-        target.splice(index, 0, op.value);
-        return { op: "remove", path: op.path };
-      } else if (op.op === "remove") {
-        if (index >= target.length) throw new Error("Index out of bounds");
-        const oldValue = target[index];
-        target.splice(index, 1);
-        return { op: "add", path: op.path, value: oldValue };
-      } else if (op.op === "replace") {
-        if (index >= target.length) throw new Error("Index out of bounds");
-        const oldValue = target[index];
-        target[index] = op.value;
-        return { op: "replace", path: op.path, value: oldValue };
-      }
-    } else {
-      if (op.op === "add") {
-        const oldValue = target[key];
-        const existed = Object.prototype.hasOwnProperty.call(target, key);
-        target[key] = op.value;
-        return existed ? { op: "replace", path: op.path, value: oldValue } : { op: "remove", path: op.path };
-      } else if (op.op === "replace") {
-        if (!Object.prototype.hasOwnProperty.call(target, key)) {
-          throw new Error(`Path not found: ${op.path}`);
-        }
-        const oldValue = target[key];
-        target[key] = op.value;
-        return { op: "replace", path: op.path, value: oldValue };
-      } else if (op.op === "remove") {
-        if (!Object.prototype.hasOwnProperty.call(target, key)) {
-          throw new Error(`Path not found: ${op.path}`);
-        }
-        const oldValue = target[key];
-        delete target[key];
-        return { op: "add", path: op.path, value: oldValue };
-      }
-    }
-    return null;
-  }
-
-  // src/version.ts
-  var VERSION = "0.25.25";
-
-  // src/llm.ts
-  var isLLMEnabled = typeof __LLM__ !== "undefined" ? __LLM__ : typeof __DEBUG__ === "undefined" || __DEBUG__;
-  var _vision = (root) => {
-    return getSemanticDOM(root || document.body);
-  };
-  var _transact = (patch) => {
-    const appState = getCurrentAppState();
-    if (!appState || !appState.app) {
-      return { success: false, error: "No app state found" };
-    }
-    return applyPatch(appState.app, patch);
-  };
-  var llmAPI = {
-    /**
-     * Returns a lightweight, semantic JSON tree of the DOM.
-     * Use this to "see" the UI structure, attributes, and text without
-     * the noise of full DOM nodes. Hidden elements and scripts are ignored.
-     * 
-     * @returns {SemanticNode | null} The root node of the semantic tree.
-     */
-    vision: isLLMEnabled ? _vision : () => null,
-    /**
-     * Safely modifies the app state using a JSON Patch transaction.
-     * Supports operations: "add", "remove", "replace", "test".
-     * 
-     * ATOMICITY: If any operation fails (including a "test"), the entire
-     * transaction is rolled back, and the state remains unchanged.
-     * 
-     * REACTIVITY: Successful patches automatically trigger DOM updates.
-     * 
-     * @param {JSONPatchOp[]} patch - Array of patch operations.
-     * @returns {TransactionResult} { success: true } or { success: false, error: string }
-     */
-    transact: isLLMEnabled ? _transact : () => ({ success: false, error: "Production mode" }),
-    /**
-     * Returns a compact, LLM-friendly summary of the app.
-     * Includes framework/version, component list, and state paths.
-     */
-    compact: isLLMEnabled ? () => {
-      const appState = getCurrentAppState();
-      if (!appState || !appState.app) return null;
-      const state = appState.app;
-      const paths = flatten(state).map((entry) => entry.path.join("."));
-      const sample = {};
-      Object.entries(state).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          sample[key] = `[${value.length}]`;
-        } else if (value && typeof value === "object") {
-          sample[key] = "{...}";
-        } else {
-          sample[key] = value;
-        }
-      });
-      const components = Array.from(appState.internal.components.entries()).map(([tag, logic]) => ({ tag, hasLogic: Boolean(logic) }));
-      return {
-        framework: { name: "boreDOM", version: VERSION },
-        state: { paths, sample },
-        components
-      };
-    } : () => null
-  };
 
   // src/bindings.ts
   var toCamelCase = (value) => value.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-  var parsePath3 = (raw) => {
+  var parsePath2 = (raw) => {
     const normalized = raw.replace(/\[(\d+)\]/g, ".$1").replace(/^\./, "");
     return normalized.split(".").filter(Boolean);
   };
   var resolvePath = (target, raw) => {
     if (target === void 0 || target === null) return void 0;
-    const path = parsePath3(raw);
+    const path = parsePath2(raw);
     if (path.length === 0) return target;
     return access(path, target);
   };
@@ -31562,112 +30721,37 @@ ${propsSlots || defaultSlot}
     });
   };
 
+  // src/version.ts
+  var VERSION = "0.25.25";
+
   // src/index.ts
   var hasLoggedVersion = false;
-  var isLLMBuild2 = typeof __LLM__ !== "undefined" && __LLM__;
-  var debugApiEnabled = !isLLMBuild2 && (typeof __DEBUG__ === "undefined" || __DEBUG__);
-  var html = (strings, ...values) => {
-    let result = "";
-    for (let i = 0; i < strings.length; i++) {
-      result += strings[i];
-      if (i < values.length) result += String(values[i]);
-    }
-    return result;
-  };
-  function component2(tagName, template, initFunction) {
-    if (typeof document !== "undefined") {
-      const existing = document.querySelector(
-        `template[data-component="${tagName}"]`
-      );
-      if (existing) {
-        existing.innerHTML = template;
-      } else {
-        const templateEl = document.createElement("template");
-        templateEl.setAttribute("data-component", tagName);
-        templateEl.innerHTML = template;
-        document.body.appendChild(templateEl);
-      }
-    }
-    return webComponent(initFunction);
-  }
+  var debugApiEnabled = typeof __DEBUG__ === "undefined" || __DEBUG__;
   var boreDOM = {
-    /** Map of all current errors by component name */
-    get errors() {
-      return debugAPI.errors;
-    },
-    /** Most recent error context */
-    get lastError() {
-      return debugAPI.lastError;
-    },
-    /** Re-render a specific component or the last errored one */
-    rerender: debugAPI.rerender,
-    /** Clear error state for a component */
-    clearError: debugAPI.clearError,
-    /** Export state snapshot */
-    export: debugAPI.export,
-    /** Current debug configuration (read-only) */
-    get config() {
-      return debugAPI.config;
-    },
-    /** @internal Set debug configuration (used by tests with multiple bundles) */
-    _setDebugConfig: setDebugConfig,
-    /** Framework version */
-    version: VERSION,
-    // LLM Integration API (Phase 4)
-    /** LLM context and output utilities */
-    llm: llmAPI,
-    /** Create a template-backed component in single-file mode */
-    component: component2,
-    /** Template literal helper for HTML strings */
-    html
+    version: VERSION
   };
   if (debugApiEnabled) {
-    Object.assign(boreDOM, {
-      /** Define a new component at runtime */
-      define: consoleAPI.define,
-      /** Get live access to a component's internals */
-      operate: consoleAPI.operate,
-      /** Export component state and template */
-      exportComponent: consoleAPI.exportComponent,
-      /** Define a helper function available to all render functions */
-      defineHelper: insideOutAPI.defineHelper,
-      /** Clear a helper definition */
-      clearHelper: insideOutAPI.clearHelper,
-      /** Clear all missing function records */
-      clearMissingFunctions: insideOutAPI.clearMissingFunctions,
-      /** Manually infer template for a tag */
-      inferTemplate: insideOutAPI.inferTemplate
-    });
     Object.defineProperties(boreDOM, {
-      /** Map of missing function calls by function name */
-      missingFunctions: {
-        get: () => insideOutAPI.missingFunctions
-      },
-      /** Most recent missing function context */
-      lastMissing: {
-        get: () => insideOutAPI.lastMissing
-      },
-      /** Get all defined helpers */
-      helpers: {
-        get: () => insideOutAPI.helpers
-      },
-      /** Map of inferred templates by tag name */
-      inferredTemplates: {
-        get: () => insideOutAPI.inferredTemplates
-      }
+      errors: { get: () => debugAPI.errors },
+      lastError: { get: () => debugAPI.lastError },
+      config: { get: () => debugAPI.config }
+    });
+    Object.assign(boreDOM, {
+      rerender: debugAPI.rerender,
+      clearError: debugAPI.clearError,
+      export: debugAPI.export,
+      _setDebugConfig: setDebugConfig
     });
   }
   if (typeof window !== "undefined") {
     window.boreDOM = boreDOM;
     window.dispatch = dispatch;
   }
-  async function inflictBoreDOM(state, componentsLogic, config3) {
-    if (config3?.debug !== void 0) {
-      setDebugConfig(config3.debug);
-    }
-    if (!hasLoggedVersion && isDebugEnabled("versionLog")) {
+  var bootBoreDOM = async (state) => {
+    if (debugApiEnabled && !hasLoggedVersion && isDebugEnabled("versionLog")) {
       hasLoggedVersion = true;
       if (typeof console !== "undefined" && typeof console.info === "function") {
+        console.info(`boreDOM v${VERSION}`);
       }
     }
     const wrapper = (fn) => {
@@ -31679,25 +30763,13 @@ ${propsSlots || defaultSlot}
       }
       return fn;
     };
-    const isSingleFileBuild = typeof __SINGLE_FILE__ !== "undefined" && __SINGLE_FILE__;
-    const singleFile = config3?.singleFile ?? isSingleFileBuild;
     const { names: registeredNames, inlineLogic } = await registerTemplates(
-      wrapper,
-      {
-        mirrorAttributes: config3?.mirrorAttributes
-      }
+      wrapper
     );
-    const componentsCode = singleFile ? /* @__PURE__ */ new Map() : await dynamicImportScripts(registeredNames);
+    const componentsCode = /* @__PURE__ */ new Map();
     if (inlineLogic) {
       for (const [tagName, logic] of inlineLogic) {
-        if (!componentsCode.has(tagName) || componentsCode.get(tagName) === null) {
-          componentsCode.set(tagName, logic);
-        }
-      }
-    }
-    if (componentsLogic) {
-      for (const tagName of Object.keys(componentsLogic)) {
-        componentsCode.set(tagName, componentsLogic[tagName]);
+        componentsCode.set(tagName, logic);
       }
     }
     for (const name of registeredNames) {
@@ -31726,12 +30798,60 @@ ${propsSlots || defaultSlot}
       cancelAnimationFrame(proxifiedState.internal.updates.raf);
       proxifiedState.internal.updates.raf = void 0;
     }
-    setCurrentAppState(proxifiedState, webComponent, registerComponent);
+    setCurrentAppState(proxifiedState);
+    setComponentInitializer(getComponentInitializer(proxifiedState));
     runComponentsInitializer(proxifiedState);
-    if (!isLLMBuild2) {
-      observeUndefinedElements();
-    }
     return proxifiedState.app;
+  };
+  var AUTO_START_SELECTOR = "script[data-state]";
+  var startPromise = null;
+  var findAutoStartScript = () => {
+    if (typeof document === "undefined") return null;
+    const scripts = Array.from(document.querySelectorAll(AUTO_START_SELECTOR)).filter(
+      (script) => script instanceof HTMLScriptElement
+    );
+    if (scripts.length === 0) return null;
+    return scripts[scripts.length - 1] ?? null;
+  };
+  var parseStateFromAttribute = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return void 0;
+    if (trimmed.startsWith("#")) {
+      const stateEl = document.querySelector(trimmed);
+      if (stateEl && stateEl.textContent) {
+        try {
+          return JSON.parse(stateEl.textContent);
+        } catch (error) {
+          console.error("[boreDOM] Failed to parse state JSON", error);
+        }
+      }
+      return void 0;
+    }
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      try {
+        return JSON.parse(trimmed);
+      } catch (error) {
+        console.error("[boreDOM] Failed to parse inline state JSON", error);
+      }
+    }
+    return void 0;
+  };
+  var autoStart = () => {
+    if (startPromise) return;
+    const script = findAutoStartScript();
+    if (!script) return;
+    const state = parseStateFromAttribute(script.getAttribute("data-state") || "");
+    startPromise = bootBoreDOM(state).catch((error) => {
+      console.error("[boreDOM] Auto-start failed", error);
+    }).finally(() => {
+      startPromise = null;
+    });
+  };
+  if (typeof window !== "undefined") {
+    document.addEventListener("DOMContentLoaded", autoStart);
+    if (document.readyState !== "loading") {
+      queueMicrotask(autoStart);
+    }
   }
   function webComponent(initFunction) {
     const result = (appState, detail) => (c) => {
@@ -31765,14 +30885,11 @@ ${propsSlots || defaultSlot}
           state,
           refs,
           on,
-          self: c,
-          makeComponent: (tag, opts) => {
-            return createAndRunCode(tag, appState, opts?.detail);
-          }
+          self: c
         });
       } catch (error) {
         const err = error;
-        if (isDebugEnabled("console")) {
+        if (debugApiEnabled && isDebugEnabled("console")) {
           logInitError(detail?.name ?? c.tagName.toLowerCase(), err);
         }
         userDefinedRenderer = () => {
@@ -31780,24 +30897,15 @@ ${propsSlots || defaultSlot}
       }
       renderFunction = (renderState) => {
         const componentName = detail?.name ?? c.tagName.toLowerCase();
-        const helpers = isLLMBuild2 ? {} : createRenderHelpers(
-          componentName,
-          c,
-          () => renderFunction(renderState)
-        );
         const renderAccessor = createStateAccessor(renderState, log, false);
-        if (isDebugEnabled("errorBoundary")) {
+        if (debugApiEnabled && isDebugEnabled("errorBoundary")) {
           try {
             userDefinedRenderer({
               state: renderAccessor,
               refs,
               slots,
               self: c,
-              detail,
-              makeComponent: (tag, opts) => {
-                return createAndRunCode(tag, appState, opts?.detail);
-              },
-              helpers
+              detail
             });
             applyBindings(c, { state: renderAccessor, detail, self: c });
             updateSubscribers();
@@ -31832,24 +30940,12 @@ ${propsSlots || defaultSlot}
             refs,
             slots,
             self: c,
-            detail,
-            makeComponent: (tag, opts) => {
-              return createAndRunCode(tag, appState, opts?.detail);
-            },
-            helpers
+            detail
           });
           applyBindings(c, { state: renderAccessor, detail, self: c });
           updateSubscribers();
         }
       };
-      storeComponentContext(c, {
-        state: app,
-        refs,
-        slots,
-        self: c,
-        detail,
-        rerender: () => renderFunction(app)
-      });
       c.__boreDOMDetail = detail;
       c.__boreDOMRerender = () => renderFunction(app);
       renderFunction(state);
@@ -31858,11 +30954,68 @@ ${propsSlots || defaultSlot}
     return result;
   }
 
+  // tests/auto-start.ts
+  var AUTO_STATE_ID = "initial-state";
+  var removeAutoStartScripts = () => {
+    document.querySelectorAll("script[data-state]").forEach(
+      (script) => script.remove()
+    );
+    const stateScript = document.getElementById(AUTO_STATE_ID);
+    if (stateScript && stateScript.tagName.toLowerCase() === "script") {
+      stateScript.remove();
+    }
+  };
+  var ensureStateScript = (state) => {
+    const script = document.createElement("script");
+    script.type = "application/json";
+    script.id = AUTO_STATE_ID;
+    script.textContent = JSON.stringify(state ?? {});
+    document.body.appendChild(script);
+  };
+  var addAutoStartMarker = (hasState) => {
+    const script = document.createElement("script");
+    script.setAttribute("data-state", hasState ? `#${AUTO_STATE_ID}` : "");
+    document.body.appendChild(script);
+  };
+  var waitForAppState = (timeoutMs = 2e3) => new Promise((resolve, reject) => {
+    const start = Date.now();
+    const check = () => {
+      const appState = getCurrentAppState();
+      if (appState) {
+        resolve();
+        return;
+      }
+      if (Date.now() - start > timeoutMs) {
+        reject(new Error("Timed out waiting for boreDOM auto-start"));
+        return;
+      }
+      requestAnimationFrame(check);
+    };
+    check();
+  });
+  var startAuto = async (state) => {
+    removeAutoStartScripts();
+    if (state !== void 0) {
+      ensureStateScript(state);
+    }
+    addAutoStartMarker(state !== void 0);
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+    await waitForAppState();
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+    return getCurrentAppState()?.app;
+  };
+  var resetAutoStart = () => {
+    removeAutoStartScripts();
+    setCurrentAppState(null);
+  };
+
   // tests/dom.test.ts
-  function renderHTML(html2) {
+  function renderHTML(html) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html2;
+    main.innerHTML = html;
     return main;
   }
   async function frame() {
@@ -31870,10 +31023,10 @@ ${propsSlots || defaultSlot}
       requestAnimationFrame((t) => resolve(t));
     });
   }
-  async function renderHTMLFrame(html2) {
+  async function renderHTMLFrame(html) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html2;
+    main.innerHTML = html;
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
         resolve(main);
@@ -31886,6 +31039,7 @@ ${propsSlots || defaultSlot}
         const main = document.querySelector("main");
         if (!main) return;
         main.innerHTML = "";
+        resetAutoStart();
         setDebugConfig(true);
       });
       describe("Simple component", () => {
@@ -31893,7 +31047,7 @@ ${propsSlots || defaultSlot}
           const container = renderHTML(
             `<template data-component="simple-component"></template>`
           );
-          inflictBoreDOM();
+          await startAuto();
           const ctor = customElements.get("simple-component");
           expect(ctor).not.to.be.undefined;
           if (!ctor) throw new Error("Undefined tag");
@@ -31903,7 +31057,7 @@ ${propsSlots || defaultSlot}
           const container = renderHTML(
             `<template data-component="nonvalid"></template>`
           );
-          inflictBoreDOM();
+          await startAuto();
           const ctor = customElements.get("nonvalid");
           expect(ctor).to.be.undefined;
         });
@@ -31912,7 +31066,7 @@ ${propsSlots || defaultSlot}
           <simple-component2></simple-component2>
           <template data-component="simple-component2"><p>This is some random HTML</p></template>
         `);
-          inflictBoreDOM();
+          await startAuto();
           const elem = getByText(container, "This is some random HTML");
           expect(elem).to.be.an.instanceof(HTMLParagraphElement);
         });
@@ -31921,7 +31075,7 @@ ${propsSlots || defaultSlot}
           <simple-component3></simple-component3>
           <template data-component="simple-component3" shadowrootmode="open"><p>Test</p></template>
         `);
-          inflictBoreDOM();
+          await startAuto();
           const elem = getByText(
             container.firstElementChild.shadowRoot,
             "Test"
@@ -31933,7 +31087,7 @@ ${propsSlots || defaultSlot}
           <simple-component4></simple-component4>
           <template data-component="simple-component4" data-aria-label="Some Label"><p>Something</p></template>
         `);
-          inflictBoreDOM();
+          await startAuto();
           const elem = getByLabelTextWithSuggestions(container, "Some Label");
           expect(elem).to.be.an.instanceof(HTMLElement);
           expect(elem.tagName).to.equal("SIMPLE-COMPONENT4");
@@ -31944,7 +31098,7 @@ ${propsSlots || defaultSlot}
           <simple-component5></simple-component5>
           <template data-component="simple-component5" data-role="banner"><p>Something</p></template>
         `);
-          inflictBoreDOM();
+          await startAuto();
           const elem = getByRole(container, "banner");
           expect(elem).to.be.an.instanceof(HTMLElement);
           expect(elem.tagName).to.equal("SIMPLE-COMPONENT5");
@@ -31960,7 +31114,7 @@ ${propsSlots || defaultSlot}
             <p><slot name="my-text">My default text</slot></p>
           </template>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const elem = getByText(
             container,
             "Let's have some different text!"
@@ -31974,81 +31128,76 @@ ${propsSlots || defaultSlot}
         });
       });
       describe("Simple component events", () => {
-        it("should set a data-event-dispatches on the web component once the custom event is registered", () => {
-          const container = renderHTML(`
-          <eventful-component1></eventful-component1>
-          <template data-component="eventful-component1"><button onclick="dispatch('clickme')">Click me</button></template>
-        `);
-          inflictBoreDOM();
-          const elem = container.querySelector(
-            "[data-onclick-dispatches]"
-          );
-          expect(elem).to.be.an.instanceof(HTMLElement);
-          expect(elem.dataset.onclickDispatches).to.eql("clickme");
-        });
-        it("should dispatch a custom event with the provided name in the dispatch function", async (done) => {
+        it("should dispatch a custom event with the provided name in the dispatch function", async () => {
           const container = renderHTML(`
           <eventful-component2></eventful-component2>
-          <template data-component="eventful-component2"><button onclick="dispatch('clickme')">Click me</button></template>
+          <template data-component="eventful-component2"><button onclick="dispatch('clickme', { event: event })">Click me</button></template>
         `);
-          inflictBoreDOM();
-          addEventListener("clickme", (e) => {
-            expect(e.detail.event).not.to.be.undefined;
-            expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
-            if (!(e.detail.event.target instanceof HTMLElement)) {
-              throw new Error("Event target not an html element");
-            }
-            expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
-              "button"
-            );
-            done();
+          await startAuto();
+          const eventPromise = new Promise((resolve) => {
+            addEventListener("clickme", (e) => {
+              expect(e.detail.event).not.to.be.undefined;
+              expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
+              if (!(e.detail.event.target instanceof HTMLElement)) {
+                throw new Error("Event target not an html element");
+              }
+              expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
+                "button"
+              );
+              resolve();
+            }, { once: true });
           });
           const elem = getByText(
             container,
             "Click me"
           );
           fireEvent.click(elem);
+          await eventPromise;
         });
-        it("should dispatch more than one custom event when more than one string is in the dispatch function", async (done) => {
+        it("should dispatch more than one custom event when more than one string is in the dispatch function", async () => {
           const container = renderHTML(`
           <eventful-component3></eventful-component3>
-          <template data-component="eventful-component3"><button onclick="dispatch('clickyou', 'clickthem')">Click me</button></template>
+          <template data-component="eventful-component3"><button onclick="dispatch('clickyou', { event: event }); dispatch('clickthem', { event: event })">Click me</button></template>
         `);
-          inflictBoreDOM();
-          let triggeredEvents = [];
-          addEventListener("clickthem", (e) => {
-            expect(e.detail.event).not.to.be.undefined;
-            expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
-            if (!(e.detail.event.target instanceof HTMLElement)) {
-              throw new Error("Event target not an html element");
-            }
-            expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
-              "button"
-            );
-            triggeredEvents.push("clickthem");
-            if (triggeredEvents.includes("clickyou")) {
-              done();
-            }
-          });
-          addEventListener("clickyou", (e) => {
-            expect(e.detail.event).not.to.be.undefined;
-            expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
-            if (!(e.detail.event.target instanceof HTMLElement)) {
-              throw new Error("Event target not an html element");
-            }
-            expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
-              "button"
-            );
-            triggeredEvents.push("clickyou");
-            if (triggeredEvents.includes("clickthem")) {
-              done();
-            }
+          await startAuto();
+          const eventPromise = new Promise((resolve) => {
+            const triggeredEvents = [];
+            const checkDone = () => {
+              if (triggeredEvents.includes("clickyou") && triggeredEvents.includes("clickthem")) {
+                resolve();
+              }
+            };
+            addEventListener("clickthem", (e) => {
+              expect(e.detail.event).not.to.be.undefined;
+              expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
+              if (!(e.detail.event.target instanceof HTMLElement)) {
+                throw new Error("Event target not an html element");
+              }
+              expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
+                "button"
+              );
+              triggeredEvents.push("clickthem");
+              checkDone();
+            }, { once: true });
+            addEventListener("clickyou", (e) => {
+              expect(e.detail.event).not.to.be.undefined;
+              expect(e.detail.event.target).to.be.an.instanceof(HTMLElement);
+              if (!(e.detail.event.target instanceof HTMLElement)) {
+                throw new Error("Event target not an html element");
+              }
+              expect(e.detail.event.target.tagName.toLowerCase()).to.equal(
+                "button"
+              );
+              triggeredEvents.push("clickyou");
+              checkDone();
+            }, { once: true });
           });
           const elem = getByText(
             container,
             "Click me"
           );
           fireEvent.click(elem);
+          await eventPromise;
         });
       });
       describe("Component with <script> code", () => {
@@ -32060,9 +31209,9 @@ ${propsSlots || defaultSlot}
             <p>Stateful component 1</p>
           </template>
 
-          <script src="/stateful-component1.js"><\/script>
+          <script data-component="stateful-component1" src="/stateful-component1.js"><\/script>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const elem = getByText(
             container,
             "Render"
@@ -32079,9 +31228,9 @@ ${propsSlots || defaultSlot}
             <!-- ^ should be available as options.refs.something in the init function -->
           </template>
 
-          <script src="/stateful-component2.js"><\/script>
+          <script data-component="stateful-component2" src="/stateful-component2.js"><\/script>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const elem = getByText(
             container,
             "Something ref innerText updated"
@@ -32094,10 +31243,10 @@ ${propsSlots || defaultSlot}
 
           <template data-component="stateful-component3"></template>
 
-          <script src="/stateful-component3.js"><\/script>
+          <script data-component="stateful-component3" src="/stateful-component3.js"><\/script>
         `);
           try {
-            await inflictBoreDOM();
+            await startAuto();
           } catch (e) {
             expect(e.message).to.be.a.string(
               'Ref "somethingThatDoesNotExist" not found in <STATEFUL-COMPONENT3>'
@@ -32114,13 +31263,13 @@ ${propsSlots || defaultSlot}
             <!-- ^ should be available as options.slots["some-slot"] in the render function -->
           </template>
 
-          <script src="/stateful-component4.js"><\/script>
+          <script data-component="stateful-component4" src="/stateful-component4.js"><\/script>
 
           <template data-component="stateful-component4b">
             <p>This component will be placed in the slot by the .js code</p>
           </template>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const elem = getByText(
             container,
             "This component will be placed in the slot by the .js code"
@@ -32137,9 +31286,9 @@ ${propsSlots || defaultSlot}
             <!-- ^ should be available to be replaced by setting options.slots["some-slot"] in the render function -->
           </template>
 
-          <script src="/stateful-component5.js"><\/script>
+          <script data-component="stateful-component5" src="/stateful-component5.js"><\/script>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const replaced = queryByText(
             container,
             "This will be replaced"
@@ -32161,9 +31310,9 @@ ${propsSlots || defaultSlot}
             <!-- ^ should be available to be replaced by setting options.slots["some-slot"] in the render function -->
           </template>
 
-          <script src="/stateful-component5.js"><\/script>
+          <script data-component="stateful-component5" src="/stateful-component5.js"><\/script>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const elem = getByText(
             container,
             "Text in a paragraph that replaced the slot"
@@ -32173,7 +31322,7 @@ ${propsSlots || defaultSlot}
             "Should have a `data-slot='slot-name' attribute`"
           );
         });
-        it("should allow script code to be defined in the `inflictBoreDOM()` function", async () => {
+        it("should allow inline triplet logic to initialize a component", async () => {
           const container = renderHTML(`
           <inline-component1></inline-component1>
 
@@ -32181,13 +31330,15 @@ ${propsSlots || defaultSlot}
             <p>Stateful inline component 1</p>
           </template>
 
-          <!-- code will be set in inflictBoreDOM -->
+          <script type="text/boredom" data-component="inline-component1">
+            export default () => {
+              return ({ self }) => {
+                self.innerHTML = "Inline code run";
+              }
+            }
+          <\/script>
         `);
-          await inflictBoreDOM(void 0, {
-            "inline-component1": webComponent(() => ({ self: self2 }) => {
-              self2.innerHTML = "Inline code run";
-            })
-          });
+          await startAuto();
           const elem = getByText(
             container,
             "Inline code run"
@@ -32204,9 +31355,9 @@ ${propsSlots || defaultSlot}
             <p>Multi instance component</p>
           </template>
 
-          <script src="/multi-instance-component.js"><\/script>
+          <script data-component="multi-instance-component" src="/multi-instance-component.js"><\/script>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const instances = Array.from(
             container.querySelectorAll("multi-instance-component")
           );
@@ -32220,24 +31371,25 @@ ${propsSlots || defaultSlot}
       describe("Event handlers in scripts", () => {
         it(
           "should handle custom events with the provided 'on' function",
-          function(done) {
-            (async () => {
-              const container = await renderHTMLFrame(`
+          async function() {
+            const container = await renderHTMLFrame(`
           <on-event-component1></on-event-component1>
 
           <template data-component="on-event-component1">
-            <button onclick="dispatch('someCustomEventOnClick')">Click here to dispatch</butbbon>
+            <button onclick="dispatch('someCustomEventOnClick', { event: event })">Click here to dispatch</butbbon>
           </template>
-          <script src="/on-event-component1.js"><\/script>
+          <script data-component="on-event-component1" src="/on-event-component1.js"><\/script>
         `);
-              const state = { onDone: done };
-              await inflictBoreDOM(state);
-              const elem = getByText(
-                container,
-                "Click here to dispatch"
-              );
-              fireEvent.click(elem);
-            })();
+            let state = { clicked: false };
+            state = await startAuto(state);
+            const elem = getByText(
+              container,
+              "Click here to dispatch"
+            );
+            fireEvent.click(elem);
+            await frame();
+            await frame();
+            expect(state.clicked).to.be.true;
           }
         );
         it(
@@ -32248,12 +31400,12 @@ ${propsSlots || defaultSlot}
 
           <template data-component="on-event-component2">
             <p data-ref="label">Value</p>
-            <button onclick="dispatch('incrementClick')">Increment</button>
+            <button onclick="dispatch('incrementClick', { event: event })">Increment</button>
           </template>
-          <script src="/on-event-component2.js"><\/script>
+          <script data-component="on-event-component2" src="/on-event-component2.js"><\/script>
         `);
             const state = { value: 0 };
-            await inflictBoreDOM(state);
+            await startAuto(state);
             const labelElem = getByText(
               container,
               "0"
@@ -32281,9 +31433,9 @@ ${propsSlots || defaultSlot}
             <p>Initial state is: <span data-ref="container"></span></p>
           </template>
 
-          <script src="/stateful-component6.js"><\/script>
+          <script data-component="stateful-component6" src="/stateful-component6.js"><\/script>
         `);
-          await inflictBoreDOM({ content: { value: "Initial state" } });
+          await startAuto({ content: { value: "Initial state" } });
           const elem = getByText(
             container,
             "Initial state"
@@ -32298,11 +31450,12 @@ ${propsSlots || defaultSlot}
             <p>Initial state is: <span data-ref="container"></span></p>
           </template>
 
-          <script src="/stateful-component6.js"><\/script>
+          <script data-component="stateful-component6" src="/stateful-component6.js"><\/script>
         `);
-          const state = { content: { value: "Initial state" } };
-          await inflictBoreDOM(state);
+          let state = { content: { value: "Initial state" } };
+          state = await startAuto(state);
           state.content.value = "This is new content";
+          await frame();
           await frame();
           const elem = getByText(
             container,
@@ -32318,10 +31471,10 @@ ${propsSlots || defaultSlot}
             <p>Initial state is: <span data-ref="container"></span></p>
           </template>
 
-          <script src="/stateful-component7.js"><\/script>
+          <script data-component="stateful-component7" src="/stateful-component7.js"><\/script>
         `);
-          const state = { content: { value: ["Initial state"] } };
-          await inflictBoreDOM(state);
+          let state = { content: { value: ["Initial state"] } };
+          state = await startAuto(state);
           state.content.value[0] = "This is new content";
           await frame();
           const elem = getByText(
@@ -32334,20 +31487,20 @@ ${propsSlots || defaultSlot}
           const container = await renderHTMLFrame(`
           <stateful-component8></stateful-component8>
 
-          <template data-component="stateful-component8">
-            <button onclick="dispatch('update')">Click to update</button>
+            <button onclick="dispatch('update', { event: event })">Click to update</button>
             <p>Initial state is: <span data-ref="container"></span></p>
           </template>
 
-          <script src="/stateful-component8.js"><\/script>
+          <script data-component="stateful-component8" src="/stateful-component8.js"><\/script>
         `);
           const state = { content: { value: ["Initial state"] } };
-          await inflictBoreDOM(state);
+          await startAuto(state);
           const btn = getByText(
             container,
             "Click to update"
           );
           fireEvent.click(btn);
+          await frame();
           await frame();
           const elem = getByText(
             container,
@@ -32360,14 +31513,14 @@ ${propsSlots || defaultSlot}
           <stateful-component9></stateful-component9>
 
           <template data-component="stateful-component9">
-            <button onclick="dispatch('update')">Click to update</button>
+            <button onclick="dispatch('update', { event: event })">Click to update</button>
             <p>Initial state is: <span data-ref="container"></span></p>
           </template>
 
-          <script src="/stateful-component9.js"><\/script>
+          <script data-component="stateful-component9" src="/stateful-component9.js"><\/script>
         `);
           const state = { content: { value: "Initial state" } };
-          await inflictBoreDOM(state);
+          await startAuto(state);
           const btn = getByText(
             container,
             "Click to update"
@@ -32389,10 +31542,10 @@ ${propsSlots || defaultSlot}
             <span data-ref="value"></span>
           </template>
 
-          <script src="/stateful-component10.js"><\/script>
+          <script data-component="stateful-component10" src="/stateful-component10.js"><\/script>
         `);
-          const state = { content: { nested: { value: "initial" } } };
-          await inflictBoreDOM(state);
+          let state = { content: { nested: { value: "initial" } } };
+          state = await startAuto(state);
           state.content.nested = { value: "updated" };
           await frame();
           const elem = getByText(
@@ -32409,15 +31562,15 @@ ${propsSlots || defaultSlot}
             <p data-ref="info"></p>
           </template>
 
-          <script src="/stateful-component11.js"><\/script>
+          <script data-component="stateful-component11" src="/stateful-component11.js"><\/script>
         `);
-          const state = {
+          let state = {
             gpu: {
               isReady: false,
               info: { adapter: "none", device: "none" }
             }
           };
-          await inflictBoreDOM(state);
+          state = await startAuto(state);
           state.gpu.info = { adapter: "Ada", device: "RTX" };
           await frame();
           let elem = queryByText(container, "Adapter: Ada | Device: RTX");
@@ -32443,10 +31596,10 @@ ${propsSlots || defaultSlot}
           </template>
 
           <!-- Order matters for reproducing the bug - longer name first -->
-          <script src="/multi-hyphen-component-extra.js"><\/script>
-          <script src="/multi-hyphen-component.js"><\/script>
+          <script data-component="multi-hyphen-component-extra" src="/multi-hyphen-component-extra.js"><\/script>
+          <script data-component="multi-hyphen-component" src="/multi-hyphen-component.js"><\/script>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const shortComponent = container.querySelector("multi-hyphen-component");
           const longComponent = container.querySelector("multi-hyphen-component-extra");
           expect(shortComponent?.getAttribute("data-loaded")).to.equal(
@@ -32466,7 +31619,7 @@ ${propsSlots || defaultSlot}
             <p>Three hyphen component</p>
           </template>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const elem = container.querySelector("my-super-cool-component");
           expect(elem).to.be.an.instanceof(HTMLElement);
           expect(elem?.querySelector("p")?.textContent).to.equal("Three hyphen component");
@@ -32482,15 +31635,15 @@ ${propsSlots || defaultSlot}
             <ol>
             </ol>
           </template>
-          <script src="/list-component1.js"><\/script>
+          <script data-component="list-component1" src="/list-component1.js"><\/script>
 
           <template data-component="list-item1">
             <li></li>
           </template>
-          <script src="/list-item1.js"><\/script>
+          <script data-component="list-item1" src="/list-item1.js"><\/script>
         `);
           await frame();
-          await inflictBoreDOM({ content: { items: ["some item"] } });
+          await startAuto({ content: { items: ["some item"] } });
           const elem = getByText(
             container,
             "some item"
@@ -32506,18 +31659,20 @@ ${propsSlots || defaultSlot}
             <ol>
             </ol>
           </template>
-          <script src="/list-component1.js"><\/script>
+          <script data-component="list-component1" src="/list-component1.js"><\/script>
 
           <template data-component="list-item1">
             <li></li>
           </template>
-          <script src="/list-item1.js"><\/script>
+          <script data-component="list-item1" src="/list-item1.js"><\/script>
         `);
           await frame();
-          await inflictBoreDOM({
+          await startAuto({
             content: { items: ["item A", "item B", "item C"] }
           });
-          const elem1 = getByText(
+          await frame();
+          await frame();
+          const elem = getByText(
             container,
             "item A"
           );
@@ -32544,9 +31699,9 @@ ${propsSlots || defaultSlot}
               <p>Batching test</p>
             </template>
 
-            <script src="/batching-component.js"><\/script>
+            <script data-component="batching-component" src="/batching-component.js"><\/script>
           `);
-            const state = await inflictBoreDOM({ a: 0, b: 0, c: 0 });
+            const state = await startAuto({ a: 0, b: 0, c: 0 });
             const elem = container.querySelector("batching-component");
             const initialRenderCount = elem.getAttribute("data-render-count");
             expect(initialRenderCount).to.equal("1");
@@ -32554,6 +31709,7 @@ ${propsSlots || defaultSlot}
             state.b = 2;
             state.c = 3;
             expect(elem.getAttribute("data-render-count")).to.equal("1");
+            await frame();
             await frame();
             expect(elem.getAttribute("data-render-count")).to.equal("2");
             expect(elem.getAttribute("data-values")).to.equal("1,2,3");
@@ -32566,13 +31722,14 @@ ${propsSlots || defaultSlot}
               <p>Batching test</p>
             </template>
 
-            <script src="/batching-component.js"><\/script>
+            <script data-component="batching-component" src="/batching-component.js"><\/script>
           `);
-            const state = await inflictBoreDOM({ a: 0, b: 0, c: 0 });
+            const state = await startAuto({ a: 0, b: 0, c: 0 });
             const elem = container.querySelector("batching-component");
             for (let i = 0; i < 10; i++) {
               state.a = i;
             }
+            await frame();
             await frame();
             expect(elem.getAttribute("data-render-count")).to.equal("2");
             expect(elem.getAttribute("data-values")).to.equal("9,0,0");
@@ -32593,10 +31750,10 @@ ${propsSlots || defaultSlot}
               <p>Read-only test</p>
             </template>
 
-            <script src="/readonly-state-component.js"><\/script>
+            <script data-component="readonly-state-component" src="/readonly-state-component.js"><\/script>
           `);
             const state = { value: "original" };
-            await inflictBoreDOM(state);
+            await startAuto(state);
             console.error = originalError;
             const readOnlyErrors = errors2.filter(
               (e) => e[0] && typeof e[0] === "string" && e[0].includes("read-only")
@@ -32616,10 +31773,11 @@ ${propsSlots || defaultSlot}
               <p>Symbol key test</p>
             </template>
 
-            <script src="/symbol-key-component.js"><\/script>
+            <script data-component="symbol-key-component" src="/symbol-key-component.js"><\/script>
           `);
             const RUNTIME = Symbol("runtime");
-            const state = await inflictBoreDOM({ count: 0, [RUNTIME]: { hidden: "initial" } });
+            const state = await startAuto({ count: 0 });
+            state[RUNTIME] = { hidden: "initial" };
             const elem = container.querySelector("symbol-key-component");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
             state[RUNTIME].hidden = "changed";
@@ -32640,22 +31798,24 @@ ${propsSlots || defaultSlot}
             <template data-component="multi-access-component">
               <p>Multi-access test</p>
             </template>
+
+            <script type="text/boredom" data-component="multi-access-component">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  const view = state.currentView;
+                  const names = state.clients.map((c) => c.name);
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-view", view);
+                  self.setAttribute("data-names", names.join(","));
+                }
+              }
+            <\/script>
           `);
-            let renderCount = 0;
-            const state = await inflictBoreDOM({
+            const state = await startAuto({
               currentView: "clients",
               clients: [{ id: 1, name: "Alice", rate: 100 }]
-            }, {
-              "multi-access-component": webComponent(() => {
-                return ({ self: self2, state: state2 }) => {
-                  renderCount++;
-                  const view = state2.currentView;
-                  const names = state2.clients.map((c) => c.name);
-                  self2.setAttribute("data-render-count", String(renderCount));
-                  self2.setAttribute("data-view", view);
-                  self2.setAttribute("data-names", names.join(","));
-                };
-              })
             });
             const elem = container.querySelector("multi-access-component");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -32673,22 +31833,24 @@ ${propsSlots || defaultSlot}
             <template data-component="array-after-prop-component">
               <p>Array after prop test</p>
             </template>
+
+            <script type="text/boredom" data-component="array-after-prop-component">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  const title = state.title;
+                  const items = state.items;
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-title", title);
+                  self.setAttribute("data-items", items.join(","));
+                }
+              }
+            <\/script>
           `);
-            let renderCount = 0;
-            const state = await inflictBoreDOM({
+            const state = await startAuto({
               title: "My App",
               items: ["a", "b", "c"]
-            }, {
-              "array-after-prop-component": webComponent(() => {
-                return ({ self: self2, state: state2 }) => {
-                  renderCount++;
-                  const title = state2.title;
-                  const items = state2.items;
-                  self2.setAttribute("data-render-count", String(renderCount));
-                  self2.setAttribute("data-title", title);
-                  self2.setAttribute("data-items", items.join(","));
-                };
-              })
             });
             const elem = container.querySelector("array-after-prop-component");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -32704,25 +31866,27 @@ ${propsSlots || defaultSlot}
             <template data-component="nested-array-iter-component">
               <p>Nested array iteration test</p>
             </template>
+
+            <script type="text/boredom" data-component="nested-array-iter-component">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  const enabled = state.config.enabled;
+                  const emails = state.users.map((u) => u.profile.email);
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-enabled", String(enabled));
+                  self.setAttribute("data-emails", emails.join(","));
+                }
+              }
+            <\/script>
           `);
-            let renderCount = 0;
-            const state = await inflictBoreDOM({
+            const state = await startAuto({
               config: { enabled: true },
               users: [
                 { id: 1, profile: { name: "Alice", email: "alice@test.com" } },
                 { id: 2, profile: { name: "Bob", email: "bob@test.com" } }
               ]
-            }, {
-              "nested-array-iter-component": webComponent(() => {
-                return ({ self: self2, state: state2 }) => {
-                  renderCount++;
-                  const enabled = state2.config.enabled;
-                  const emails = state2.users.map((u) => u.profile.email);
-                  self2.setAttribute("data-render-count", String(renderCount));
-                  self2.setAttribute("data-enabled", String(enabled));
-                  self2.setAttribute("data-emails", emails.join(","));
-                };
-              })
             });
             const elem = container.querySelector("nested-array-iter-component");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -32739,22 +31903,24 @@ ${propsSlots || defaultSlot}
             <template data-component="multi-array-iter-component">
               <p>Multi array iteration test</p>
             </template>
+
+            <script type="text/boredom" data-component="multi-array-iter-component">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  const clientNames = state.clients.map((c) => c.name);
+                  const projectTitles = state.projects.map((p) => p.title);
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-clients", clientNames.join(","));
+                  self.setAttribute("data-projects", projectTitles.join(","));
+                }
+              }
+            <\/script>
           `);
-            let renderCount = 0;
-            const state = await inflictBoreDOM({
+            const state = await startAuto({
               clients: [{ name: "Client A" }, { name: "Client B" }],
               projects: [{ title: "Project 1" }, { title: "Project 2" }]
-            }, {
-              "multi-array-iter-component": webComponent(() => {
-                return ({ self: self2, state: state2 }) => {
-                  renderCount++;
-                  const clientNames = state2.clients.map((c) => c.name);
-                  const projectTitles = state2.projects.map((p) => p.title);
-                  self2.setAttribute("data-render-count", String(renderCount));
-                  self2.setAttribute("data-clients", clientNames.join(","));
-                  self2.setAttribute("data-projects", projectTitles.join(","));
-                };
-              })
             });
             const elem = container.querySelector("multi-array-iter-component");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -32776,9 +31942,28 @@ ${propsSlots || defaultSlot}
             <template data-component="time-tracker-like-component">
               <p>Time tracker like test</p>
             </template>
+
+            <script type="text/boredom" data-component="time-tracker-like-component">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  const view = state.currentView;
+                  const clients = state.clients;
+                  const entries = state.entries;
+                  const clientSummary = clients.map((client) => {
+                    const clientEntries = entries.filter((e) => e.clientId === client.id);
+                    const totalHours = clientEntries.reduce((sum, e) => sum + e.hours, 0);
+                    return client.name + ":" + totalHours + "h";
+                  });
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-view", view);
+                  self.setAttribute("data-summary", clientSummary.join(";"));
+                }
+              }
+            <\/script>
           `);
-            let renderCount = 0;
-            const state = await inflictBoreDOM({
+            const state = await startAuto({
               currentView: "clients",
               clients: [
                 { id: 1, name: "Acme Corp", rate: 150 },
@@ -32788,23 +31973,6 @@ ${propsSlots || defaultSlot}
                 { id: 1, clientId: 1, hours: 8, note: "Development" },
                 { id: 2, clientId: 2, hours: 4, note: "Meeting" }
               ]
-            }, {
-              "time-tracker-like-component": webComponent(() => {
-                return ({ self: self2, state: state2 }) => {
-                  renderCount++;
-                  const view = state2.currentView;
-                  const clients = state2.clients;
-                  const entries = state2.entries;
-                  const clientSummary = clients.map((client) => {
-                    const clientEntries = entries.filter((e) => e.clientId === client.id);
-                    const totalHours = clientEntries.reduce((sum, e) => sum + e.hours, 0);
-                    return `${client.name}:${totalHours}h`;
-                  });
-                  self2.setAttribute("data-render-count", String(renderCount));
-                  self2.setAttribute("data-view", view);
-                  self2.setAttribute("data-summary", clientSummary.join(";"));
-                };
-              })
             });
             const elem = container.querySelector("time-tracker-like-component");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -32833,10 +32001,10 @@ ${propsSlots || defaultSlot}
               <p>Parent subscriber</p>
             </template>
 
-            <script src="/hierarchical-parent-component.js"><\/script>
+            <script data-component="hierarchical-parent-component" src="/hierarchical-parent-component.js"><\/script>
           `);
-            const state = { user: { name: "Alice", email: "alice@test.com" } };
-            await inflictBoreDOM(state);
+            let state = { user: { name: "Alice", email: "alice@test.com" } };
+            state = await startAuto(state);
             const elem = container.querySelector("hierarchical-parent-component");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
             expect(elem.getAttribute("data-user-name")).to.equal("Alice");
@@ -32853,10 +32021,10 @@ ${propsSlots || defaultSlot}
               <p>Child subscriber</p>
             </template>
 
-            <script src="/hierarchical-child-component.js"><\/script>
+            <script data-component="hierarchical-child-component" src="/hierarchical-child-component.js"><\/script>
           `);
-            const state = { user: { name: "Alice", email: "alice@test.com" } };
-            await inflictBoreDOM(state);
+            let state = { user: { name: "Alice", email: "alice@test.com" } };
+            state = await startAuto(state);
             const elem = container.querySelector("hierarchical-child-component");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
             state.user.email = "alice2@test.com";
@@ -32877,9 +32045,9 @@ ${propsSlots || defaultSlot}
               <p>Object replacement test</p>
             </template>
 
-            <script src="/object-replacement-component.js"><\/script>
+            <script data-component="object-replacement-component" src="/object-replacement-component.js"><\/script>
           `);
-            const state = await inflictBoreDOM({ user: { name: "Alice", email: "alice@test.com" } });
+            const state = await startAuto({ user: { name: "Alice", email: "alice@test.com" } });
             const elem = container.querySelector("object-replacement-component");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
             expect(elem.getAttribute("data-name")).to.equal("Alice");
@@ -32897,9 +32065,9 @@ ${propsSlots || defaultSlot}
               <p>New object reactivity test</p>
             </template>
 
-            <script src="/new-object-reactivity-component.js"><\/script>
+            <script data-component="new-object-reactivity-component" src="/new-object-reactivity-component.js"><\/script>
           `);
-            const state = await inflictBoreDOM({
+            const state = await startAuto({
               user: { name: "Alice", email: "alice@test.com" },
               data: { level1: { level2: { level3: { value: "initial" } } } },
               items: ["a", "b"]
@@ -32922,21 +32090,25 @@ ${propsSlots || defaultSlot}
             <template data-component="deep-object-test">
               <p>Deep object test</p>
             </template>
+
+            <script type="text/boredom" data-component="deep-object-test">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute(
+                    "data-deep-value",
+                    state.data?.level1?.level2?.level3?.value ?? "none",
+                  );
+                }
+              }
+            <\/script>
           `);
-            let deepRenderCount = 0;
-            const deepObjectComponent = webComponent(() => {
-              return ({ self: self2, state: state2 }) => {
-                deepRenderCount++;
-                self2.setAttribute("data-render-count", String(deepRenderCount));
-                self2.setAttribute("data-deep-value", state2.data?.level1?.level2?.level3?.value ?? "none");
-              };
-            });
-            const state = await inflictBoreDOM({
+            const state = await startAuto({
               user: { name: "Alice" },
               data: {},
               items: []
-            }, {
-              "deep-object-test": deepObjectComponent
             });
             const elem = container.querySelector("deep-object-test");
             await frame();
@@ -32965,21 +32137,22 @@ ${propsSlots || defaultSlot}
             <template data-component="array-replace-test">
               <p>Array replacement test</p>
             </template>
+
+            <script type="text/boredom" data-component="array-replace-test">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-items", state.items?.join(",") ?? "none");
+                }
+              }
+            <\/script>
           `);
-            let arrayRenderCount = 0;
-            const arrayReplaceComponent = webComponent(() => {
-              return ({ self: self2, state: state2 }) => {
-                arrayRenderCount++;
-                self2.setAttribute("data-render-count", String(arrayRenderCount));
-                self2.setAttribute("data-items", state2.items?.join(",") ?? "none");
-              };
-            });
-            const state = await inflictBoreDOM({
+            const state = await startAuto({
               user: { name: "Alice" },
               data: {},
               items: ["old1", "old2"]
-            }, {
-              "array-replace-test": arrayReplaceComponent
             });
             const elem = container.querySelector("array-replace-test");
             await frame();
@@ -33004,21 +32177,22 @@ ${propsSlots || defaultSlot}
             <template data-component="dynamic-nested-test">
               <p>Dynamic nested test</p>
             </template>
+
+            <script type="text/boredom" data-component="dynamic-nested-test">
+              export default () => {
+                let renderCount = 0;
+                return ({ self, state }) => {
+                  renderCount++;
+                  self.setAttribute("data-render-count", String(renderCount));
+                  self.setAttribute("data-profile-bio", state.user?.profile?.bio ?? "none");
+                }
+              }
+            <\/script>
           `);
-            let dynamicRenderCount = 0;
-            const dynamicNestedComponent = webComponent(() => {
-              return ({ self: self2, state: state2 }) => {
-                dynamicRenderCount++;
-                self2.setAttribute("data-render-count", String(dynamicRenderCount));
-                self2.setAttribute("data-profile-bio", state2.user?.profile?.bio ?? "none");
-              };
-            });
-            const state = await inflictBoreDOM({
+            const state = await startAuto({
               user: { name: "Alice" },
               data: {},
               items: []
-            }, {
-              "dynamic-nested-test": dynamicNestedComponent
             });
             const elem = container.querySelector("dynamic-nested-test");
             expect(elem.getAttribute("data-profile-bio")).to.equal("none");
@@ -33038,18 +32212,19 @@ ${propsSlots || defaultSlot}
             <array-methods-component></array-methods-component>
 
             <template data-component="array-methods-component">
-              <button onclick="dispatch('push')">Push</button>
+              <button onclick="dispatch('push', { event: event })">Push</button>
             </template>
 
-            <script src="/array-methods-component.js"><\/script>
+            <script data-component="array-methods-component" src="/array-methods-component.js"><\/script>
           `);
             const state = { items: ["a", "b"] };
-            await inflictBoreDOM(state);
+            await startAuto(state);
             const elem = container.querySelector("array-methods-component");
             expect(elem.getAttribute("data-items")).to.equal("a,b");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
             const btn = container.querySelector("button");
             fireEvent.click(btn);
+            await frame();
             await frame();
             expect(elem.getAttribute("data-items")).to.equal("a,b,new item");
             expect(elem.getAttribute("data-render-count")).to.equal("2");
@@ -33059,17 +32234,18 @@ ${propsSlots || defaultSlot}
             <array-methods-component></array-methods-component>
 
             <template data-component="array-methods-component">
-              <button onclick="dispatch('pop')">Pop</button>
+              <button onclick="dispatch('pop', { event: event })">Pop</button>
             </template>
 
-            <script src="/array-methods-component.js"><\/script>
+            <script data-component="array-methods-component" src="/array-methods-component.js"><\/script>
           `);
             const state = { items: ["a", "b", "c"] };
-            await inflictBoreDOM(state);
+            await startAuto(state);
             const elem = container.querySelector("array-methods-component");
             expect(elem.getAttribute("data-items")).to.equal("a,b,c");
             const btn = container.querySelector("button");
             fireEvent.click(btn);
+            await frame();
             await frame();
             expect(elem.getAttribute("data-items")).to.equal("a,b");
           });
@@ -33078,17 +32254,18 @@ ${propsSlots || defaultSlot}
             <array-methods-component></array-methods-component>
 
             <template data-component="array-methods-component">
-              <button onclick="dispatch('splice')">Splice</button>
+              <button onclick="dispatch('splice', { event: event })">Splice</button>
             </template>
 
-            <script src="/array-methods-component.js"><\/script>
+            <script data-component="array-methods-component" src="/array-methods-component.js"><\/script>
           `);
             const state = { items: ["a", "b", "c"] };
-            await inflictBoreDOM(state);
+            await startAuto(state);
             const elem = container.querySelector("array-methods-component");
             expect(elem.getAttribute("data-items")).to.equal("a,b,c");
             const btn = container.querySelector("button");
             fireEvent.click(btn);
+            await frame();
             await frame();
             expect(elem.getAttribute("data-items")).to.equal("a,spliced,c");
           });
@@ -33100,10 +32277,10 @@ ${propsSlots || defaultSlot}
               <p>Array test</p>
             </template>
 
-            <script src="/array-methods-component.js"><\/script>
+            <script data-component="array-methods-component" src="/array-methods-component.js"><\/script>
           `);
-            const state = { items: ["a", "b", "c"] };
-            await inflictBoreDOM(state);
+            let state = { items: ["a", "b", "c"] };
+            state = await startAuto(state);
             const elem = container.querySelector("array-methods-component");
             expect(elem.getAttribute("data-items")).to.equal("a,b,c");
             expect(elem.getAttribute("data-render-count")).to.equal("1");
@@ -33127,9 +32304,9 @@ ${propsSlots || defaultSlot}
             </ul>
           </template>
 
-          <script src="/multi-ref-component.js"><\/script>
+          <script data-component="multi-ref-component" src="/multi-ref-component.js"><\/script>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const elem = container.querySelector("multi-ref-component");
           expect(elem.getAttribute("data-ref-count")).to.equal("3");
           const items = elem.querySelectorAll("li");
@@ -33147,9 +32324,9 @@ ${propsSlots || defaultSlot}
             </ul>
           </template>
 
-          <script src="/multi-ref-component.js"><\/script>
+          <script data-component="multi-ref-component" src="/multi-ref-component.js"><\/script>
         `);
-          await inflictBoreDOM();
+          await startAuto();
           const elem = container.querySelector("multi-ref-component");
           expect(elem.getAttribute("data-ref-count")).to.equal("1");
           const item = elem.querySelector("li");
@@ -33164,32 +32341,25 @@ ${propsSlots || defaultSlot}
           <template data-component="slot-idempotent-component">
             <p><slot name="content">Default</slot></p>
           </template>
-        `);
-          await inflictBoreDOM(void 0, {
-            "slot-idempotent-component": webComponent(() => {
+
+          <script type="text/boredom" data-component="slot-idempotent-component">
+            export default () => {
               let renderCount = 0;
-              return ({ slots, self: self2 }) => {
+              return ({ slots, self, state }) => {
                 renderCount++;
-                slots.content = `Render ${renderCount}`;
-                self2.setAttribute("data-render-count", String(renderCount));
-              };
-            })
-          });
+                slots.content = \`Render \${renderCount} trigger \${state?.trigger}\`;
+                self.setAttribute("data-render-count", String(renderCount));
+              }
+            }
+          <\/script>
+        `);
+          const state = await startAuto({ trigger: 0 });
           const elem = container.querySelector("slot-idempotent-component");
           expect(elem.getAttribute("data-render-count")).to.equal("1");
           let slotContent = elem.querySelector("[data-slot='content']");
-          expect(slotContent?.textContent).to.equal("Render 1");
-          const state = { trigger: 0 };
-          await inflictBoreDOM(state, {
-            "slot-idempotent-component": webComponent(() => {
-              let renderCount = 0;
-              return ({ slots, self: self2, state: state2 }) => {
-                renderCount++;
-                slots.content = `Render ${renderCount} trigger ${state2?.trigger}`;
-                self2.setAttribute("data-render-count", String(renderCount));
-              };
-            })
-          });
+          expect(slotContent?.textContent).to.equal("Render 1 trigger 0");
+          state.trigger = 1;
+          await frame();
           const slotElements = elem.querySelectorAll("[data-slot='content']");
           expect(slotElements.length).to.equal(1);
         });
@@ -33200,17 +32370,19 @@ ${propsSlots || defaultSlot}
           <template data-component="slot-element-component">
             <div><slot name="custom">Placeholder</slot></div>
           </template>
-        `);
-          await inflictBoreDOM(void 0, {
-            "slot-element-component": webComponent(() => {
+
+          <script type="text/boredom" data-component="slot-element-component">
+            export default () => {
               return ({ slots }) => {
                 const customElem = document.createElement("strong");
                 customElem.textContent = "Bold content";
                 customElem.classList.add("custom-class");
                 slots.custom = customElem;
-              };
-            })
-          });
+              }
+            }
+          <\/script>
+        `);
+          await startAuto();
           const elem = container.querySelector("slot-element-component");
           const strongElem = elem.querySelector("strong.custom-class");
           expect(strongElem).to.not.be.null;
@@ -33228,50 +32400,22 @@ ${propsSlots || defaultSlot}
           <template data-component="index-component">
             <span></span>
           </template>
+
+          <script type="text/boredom" data-component="index-component">
+            export default ({ detail }) => {
+              return ({ self }) => {
+                self.setAttribute("data-index", String(detail.index));
+                self.setAttribute("data-name", detail.name);
+              }
+            }
+          <\/script>
         `);
-          await inflictBoreDOM(void 0, {
-            "index-component": webComponent(({ detail }) => {
-              return ({ self: self2 }) => {
-                self2.setAttribute("data-index", String(detail.index));
-                self2.setAttribute("data-name", detail.name);
-              };
-            })
-          });
+          await startAuto();
           const components = container.querySelectorAll("index-component");
           expect(components[0].getAttribute("data-index")).to.equal("0");
           expect(components[1].getAttribute("data-index")).to.equal("1");
           expect(components[2].getAttribute("data-index")).to.equal("2");
           expect(components[0].getAttribute("data-name")).to.equal("index-component");
-        });
-        it("should pass custom data through detail when using makeComponent", async () => {
-          const container = await renderHTMLFrame(`
-          <parent-detail-component></parent-detail-component>
-
-          <template data-component="parent-detail-component">
-            <div data-ref="container"></div>
-          </template>
-
-          <template data-component="child-detail-component">
-            <span></span>
-          </template>
-        `);
-          await inflictBoreDOM(void 0, {
-            "parent-detail-component": webComponent(() => {
-              return ({ refs, makeComponent }) => {
-                const child2 = makeComponent("child-detail-component", {
-                  detail: { index: 42, name: "child-detail-component", data: { custom: "value" } }
-                });
-                refs.container.appendChild(child2);
-              };
-            }),
-            "child-detail-component": webComponent(({ detail }) => {
-              return ({ self: self2 }) => {
-                self2.setAttribute("data-custom", detail.data?.custom ?? "none");
-              };
-            })
-          });
-          const child = container.querySelector("child-detail-component");
-          expect(child.getAttribute("data-custom")).to.equal("value");
         });
       });
       describe("Edge cases and error handling", () => {
@@ -33282,18 +32426,20 @@ ${propsSlots || defaultSlot}
           <template data-component="undefined-state-component">
             <p data-ref="output">Waiting</p>
           </template>
-        `);
-          await inflictBoreDOM(void 0, {
-            "undefined-state-component": webComponent(() => {
+
+          <script type="text/boredom" data-component="undefined-state-component">
+            export default () => {
               return ({ state, refs }) => {
                 if (!state) {
                   refs.output.textContent = "No state";
                   return;
                 }
                 refs.output.textContent = "Has state";
-              };
-            })
-          });
+              }
+            }
+          <\/script>
+        `);
+          await startAuto();
           const output = container.querySelector("[data-ref='output']");
           expect(output.textContent).to.equal("No state");
         });
@@ -33307,20 +32453,22 @@ ${propsSlots || defaultSlot}
           <error-handler-component></error-handler-component>
 
           <template data-component="error-handler-component">
-            <button onclick="dispatch('throwError')">Throw</button>
+            <button data-dispatch="throwError">Throw</button>
             <p data-ref="status">OK</p>
           </template>
-        `);
-          await inflictBoreDOM(void 0, {
-            "error-handler-component": webComponent(({ on }) => {
+
+          <script type="text/boredom" data-component="error-handler-component">
+            export default ({ on }) => {
               on("throwError", () => {
                 throw new Error("Test error");
               });
               return ({ refs }) => {
                 refs.status.textContent = "Rendered";
               };
-            })
-          });
+            }
+          <\/script>
+        `);
+          await startAuto();
           const btn = container.querySelector("button");
           fireEvent.click(btn);
           console.error = originalError;
@@ -33338,24 +32486,27 @@ ${propsSlots || defaultSlot}
           <template data-component="same-value-component">
             <p>Same value test</p>
           </template>
-        `);
-          let renderCount = 0;
-          const state = await inflictBoreDOM({ value: "test" }, {
-            "same-value-component": webComponent(() => {
-              return ({ self: self2, state: state2 }) => {
+
+          <script type="text/boredom" data-component="same-value-component">
+            export default () => {
+              let renderCount = 0;
+              return ({ self, state }) => {
                 renderCount++;
-                self2.setAttribute("data-value", state2.value ?? "none");
-                self2.setAttribute("data-render-count", String(renderCount));
-              };
-            })
-          });
-          expect(renderCount).to.equal(1);
+                self.setAttribute("data-value", state.value ?? "none");
+                self.setAttribute("data-render-count", String(renderCount));
+              }
+            }
+          <\/script>
+        `);
+          const state = await startAuto({ value: "test" });
+          const elem = container.querySelector("same-value-component");
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
           state.value = "test";
           await frame();
-          expect(renderCount).to.equal(1);
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
           state.value = "different";
           await frame();
-          expect(renderCount).to.equal(2);
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
         });
       });
     });
@@ -33487,10 +32638,10 @@ ${propsSlots || defaultSlot}
       requestAnimationFrame((t) => resolve(t));
     });
   }
-  async function renderHTMLFrame2(html2) {
+  async function renderHTMLFrame2(html) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html2;
+    main.innerHTML = html;
     return new Promise((resolve) => {
       requestAnimationFrame(() => {
         resolve(main);
@@ -33547,6 +32698,7 @@ ${propsSlots || defaultSlot}
         const main = document.querySelector("main");
         if (!main) return;
         main.innerHTML = "";
+        resetAutoStart();
         setDebugConfig(true);
         clearWindowGlobals();
         clearGlobals();
@@ -33567,17 +32719,19 @@ ${propsSlots || defaultSlot}
           <template data-component="error-boundary-test1">
             <p>Error boundary test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ shouldError: true }, {
-            "error-boundary-test1": webComponent(() => {
+
+          <script type="text/boredom" data-component="error-boundary-test1">
+            export default () => {
               return ({ state }) => {
                 if (state?.shouldError) {
                   throw new Error("Intentional render error");
                 }
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ shouldError: true });
           capture.restore();
           const errorLogs = capture.errors.filter(
             (e) => e[0]?.message?.includes?.("Intentional render error") || typeof e[0] === "object" && e[0]?.message === "Intentional render error"
@@ -33594,13 +32748,15 @@ ${propsSlots || defaultSlot}
           <template data-component="error-init-test1">
             <p>Init error test</p>
           </template>
+
+          <script type="text/boredom" data-component="error-init-test1">
+            export default () => {
+              throw new Error("Intentional init error");
+            };
+          <\/script>
         `);
           const capture = captureConsole();
-          await inflictBoreDOM(void 0, {
-            "error-init-test1": webComponent(() => {
-              throw new Error("Intentional init error");
-            })
-          });
+          await startAuto();
           capture.restore();
           const elem = container.querySelector("error-init-test1");
           expect(elem).to.not.be.null;
@@ -33623,32 +32779,34 @@ ${propsSlots || defaultSlot}
           <template data-component="error-cascade-good2">
             <p>Good component 2</p>
           </template>
-        `);
-          const capture = captureConsole();
-          let goodRendered = false;
-          let good2Rendered = false;
-          await inflictBoreDOM(void 0, {
-            "error-cascade-good": webComponent(() => {
-              return ({ self: self2 }) => {
-                goodRendered = true;
-                self2.setAttribute("data-rendered", "true");
+
+          <script type="text/boredom" data-component="error-cascade-good">
+            export default () => {
+              return ({ self }) => {
+                self.setAttribute("data-rendered", "true");
               };
-            }),
-            "error-cascade-bad": webComponent(() => {
+            };
+          <\/script>
+
+          <script type="text/boredom" data-component="error-cascade-bad">
+            export default () => {
               return () => {
                 throw new Error("Bad component error");
               };
-            }),
-            "error-cascade-good2": webComponent(() => {
-              return ({ self: self2 }) => {
-                good2Rendered = true;
-                self2.setAttribute("data-rendered", "true");
+            };
+          <\/script>
+
+          <script type="text/boredom" data-component="error-cascade-good2">
+            export default () => {
+              return ({ self }) => {
+                self.setAttribute("data-rendered", "true");
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto();
           capture.restore();
-          expect(goodRendered).to.be.true;
-          expect(good2Rendered).to.be.true;
           const good = container.querySelector("error-cascade-good");
           const good2 = container.querySelector("error-cascade-good2");
           expect(good?.getAttribute("data-rendered")).to.equal("true");
@@ -33665,17 +32823,19 @@ ${propsSlots || defaultSlot}
             <span data-ref="myRef">Ref element</span>
             <slot name="mySlot">Slot content</slot>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ value: "test-state" }, {
-            "globals-test1": webComponent(() => {
+
+          <script type="text/boredom" data-component="globals-test1">
+            export default () => {
               return ({ state }) => {
                 if (state?.value) {
                   throw new Error("Trigger error for globals");
                 }
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ value: "test-state" });
           capture.restore();
           const w = window;
           expect(w.$state).to.not.be.undefined;
@@ -33694,17 +32854,20 @@ ${propsSlots || defaultSlot}
           <template data-component="globals-test2">
             <p>No globals test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ value: "test" }, {
-            "globals-test2": webComponent(() => {
+
+          <script type="text/boredom" data-component="globals-test2">
+            export default () => {
               return ({ state }) => {
                 if (state?.value) {
                   throw new Error("Error without globals");
                 }
               };
-            })
-          }, { debug: false });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          setDebugConfig(false);
+          await startAuto({ value: "test" });
           capture.restore();
           const w = window;
           expect(w.$state).to.be.undefined;
@@ -33721,17 +32884,20 @@ ${propsSlots || defaultSlot}
           <template data-component="globals-test3">
             <p>Granular globals test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ value: "test" }, {
-            "globals-test3": webComponent(() => {
+
+          <script type="text/boredom" data-component="globals-test3">
+            export default () => {
               return ({ state }) => {
                 if (state?.value) {
                   throw new Error("Error with granular config");
                 }
               };
-            })
-          }, { debug: { globals: false, console: true, errorBoundary: true } });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          setDebugConfig({ globals: false, console: true, errorBoundary: true });
+          await startAuto({ value: "test" });
           capture.restore();
           const w = window;
           expect(w.$state).to.be.undefined;
@@ -33747,17 +32913,19 @@ ${propsSlots || defaultSlot}
           <template data-component="console-test1">
             <p>Console test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ value: "test" }, {
-            "console-test1": webComponent(() => {
+
+          <script type="text/boredom" data-component="console-test1">
+            export default () => {
               return ({ state }) => {
                 if (state?.value) {
                   throw new Error("Console test error");
                 }
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ value: "test" });
           capture.restore();
           const headerLogs = capture.logs.filter(
             (l) => l[0]?.includes?.("boreDOM") || l[0]?.includes?.("Debug context")
@@ -33772,17 +32940,20 @@ ${propsSlots || defaultSlot}
           <template data-component="console-test2">
             <p>Minimal console test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ value: "test" }, {
-            "console-test2": webComponent(() => {
+
+          <script type="text/boredom" data-component="console-test2">
+            export default () => {
               return ({ state }) => {
                 if (state?.value) {
                   throw new Error("Minimal console error");
                 }
               };
-            })
-          }, { debug: false });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          setDebugConfig(false);
+          await startAuto({ value: "test" });
           capture.restore();
           const minimalLogs = capture.errors.filter(
             (e) => typeof e[0] === "string" && e[0].includes("[boreDOM]")
@@ -33802,17 +32973,19 @@ ${propsSlots || defaultSlot}
           <template data-component="visual-test1">
             <p>Visual indicator test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ shouldError: true }, {
-            "visual-test1": webComponent(() => {
+
+          <script type="text/boredom" data-component="visual-test1">
+            export default () => {
               return ({ state }) => {
                 if (state?.shouldError) {
                   throw new Error("Visual indicator error");
                 }
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ shouldError: true });
           capture.restore();
           const elem = container.querySelector("visual-test1");
           expect(elem?.getAttribute("data-boredom-error")).to.equal("true");
@@ -33825,18 +32998,20 @@ ${propsSlots || defaultSlot}
           <template data-component="visual-test2">
             <p>Visual clear test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          const state = await inflictBoreDOM({ shouldError: true }, {
-            "visual-test2": webComponent(() => {
-              return ({ state: state2, self: self2 }) => {
-                if (state2?.shouldError) {
+
+          <script type="text/boredom" data-component="visual-test2">
+            export default () => {
+              return ({ state, self }) => {
+                if (state?.shouldError) {
                   throw new Error("First render error");
                 }
-                self2.setAttribute("data-success", "true");
+                self.setAttribute("data-success", "true");
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          const state = await startAuto({ shouldError: true });
           const elem = container.querySelector("visual-test2");
           expect(elem?.getAttribute("data-boredom-error")).to.equal("true");
           state.shouldError = false;
@@ -33854,17 +33029,20 @@ ${propsSlots || defaultSlot}
           <template data-component="visual-test3">
             <p>No visual indicator test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ shouldError: true }, {
-            "visual-test3": webComponent(() => {
+
+          <script type="text/boredom" data-component="visual-test3">
+            export default () => {
               return ({ state }) => {
                 if (state?.shouldError) {
                   throw new Error("No visual indicator error");
                 }
               };
-            })
-          }, { debug: { visualIndicators: false } });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          setDebugConfig({ visualIndicators: false });
+          await startAuto({ shouldError: true });
           capture.restore();
           const elem = container.querySelector("visual-test3");
           expect(elem?.getAttribute("data-boredom-error")).to.be.null;
@@ -33879,17 +33057,19 @@ ${propsSlots || defaultSlot}
           <template data-component="history-test1">
             <p>Error history test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ shouldError: true }, {
-            "history-test1": webComponent(() => {
+
+          <script type="text/boredom" data-component="history-test1">
+            export default () => {
               return ({ state }) => {
                 if (state?.shouldError) {
                   throw new Error("History test error");
                 }
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ shouldError: true });
           capture.restore();
           expect(boreDOM.errors.size).to.equal(1);
           expect(boreDOM.errors.has("history-test1")).to.be.true;
@@ -33911,24 +33091,29 @@ ${propsSlots || defaultSlot}
           <template data-component="history-test2b">
             <p>Second error</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ shouldError: true }, {
-            "history-test2a": webComponent(() => {
+
+          <script type="text/boredom" data-component="history-test2a">
+            export default () => {
               return ({ state }) => {
                 if (state?.shouldError) {
                   throw new Error("First error");
                 }
               };
-            }),
-            "history-test2b": webComponent(() => {
+            };
+          <\/script>
+
+          <script type="text/boredom" data-component="history-test2b">
+            export default () => {
               return ({ state }) => {
                 if (state?.shouldError) {
                   throw new Error("Second error");
                 }
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ shouldError: true });
           capture.restore();
           expect(isDebugEnabled("errorHistory")).to.be.true;
           expect(boreDOM.errors.size).to.equal(2);
@@ -33942,17 +33127,20 @@ ${propsSlots || defaultSlot}
           <template data-component="history-test3">
             <p>No history test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ shouldError: true }, {
-            "history-test3": webComponent(() => {
+
+          <script type="text/boredom" data-component="history-test3">
+            export default () => {
               return ({ state }) => {
                 if (state?.shouldError) {
                   throw new Error("No history error");
                 }
               };
-            })
-          }, { debug: { errorHistory: false } });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          setDebugConfig({ errorHistory: false });
+          await startAuto({ shouldError: true });
           capture.restore();
           expect(boreDOM.errors.size).to.equal(0);
           clearWindowGlobals();
@@ -33964,17 +33152,19 @@ ${propsSlots || defaultSlot}
           <template data-component="history-test4">
             <p>Clear history test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          const state = await inflictBoreDOM({ shouldError: true }, {
-            "history-test4": webComponent(() => {
-              return ({ state: state2 }) => {
-                if (state2?.shouldError) {
+
+          <script type="text/boredom" data-component="history-test4">
+            export default () => {
+              return ({ state }) => {
+                if (state?.shouldError) {
                   throw new Error("Clear history error");
                 }
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          const state = await startAuto({ shouldError: true });
           expect(boreDOM.errors.has("history-test4")).to.be.true;
           state.shouldError = false;
           boreDOM.rerender("history-test4");
@@ -33992,26 +33182,28 @@ ${propsSlots || defaultSlot}
           <template data-component="api-rerender-test">
             <p>Rerender API test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          let renderCount = 0;
-          await inflictBoreDOM({ shouldError: true }, {
-            "api-rerender-test": webComponent(() => {
-              return ({ state, self: self2 }) => {
+
+          <script type="text/boredom" data-component="api-rerender-test">
+            export default () => {
+              let renderCount = 0;
+              return ({ state, self }) => {
                 renderCount++;
-                self2.setAttribute("data-render-count", String(renderCount));
+                self.setAttribute("data-render-count", String(renderCount));
                 if (state?.shouldError) {
                   throw new Error("Rerender test error");
                 }
               };
-            })
-          });
-          expect(renderCount).to.equal(1);
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ shouldError: true });
+          const elem = container.querySelector("api-rerender-test");
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
           boreDOM.rerender();
           await frame2();
           capture.restore();
-          expect(renderCount).to.equal(2);
-          const elem = container.querySelector("api-rerender-test");
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
           expect(elem?.getAttribute("data-render-count")).to.equal("2");
           clearWindowGlobals();
         });
@@ -34022,25 +33214,28 @@ ${propsSlots || defaultSlot}
           <template data-component="api-rerender-specific">
             <p>Specific rerender test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          let renderCount = 0;
-          await inflictBoreDOM({ shouldError: true }, {
-            "api-rerender-specific": webComponent(() => {
-              return ({ state, self: self2 }) => {
+
+          <script type="text/boredom" data-component="api-rerender-specific">
+            export default () => {
+              let renderCount = 0;
+              return ({ state, self }) => {
                 renderCount++;
-                self2.setAttribute("data-render-count", String(renderCount));
+                self.setAttribute("data-render-count", String(renderCount));
                 if (state?.shouldError) {
                   throw new Error("Specific rerender error");
                 }
               };
-            })
-          });
-          expect(renderCount).to.equal(1);
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ shouldError: true });
+          const elem = container.querySelector("api-rerender-specific");
+          expect(elem.getAttribute("data-render-count")).to.equal("1");
           boreDOM.rerender("api-rerender-specific");
           await frame2();
           capture.restore();
-          expect(renderCount).to.equal(2);
+          expect(elem.getAttribute("data-render-count")).to.equal("2");
           clearWindowGlobals();
         });
         it("boreDOM.clearError() should clear error state", async () => {
@@ -34050,17 +33245,19 @@ ${propsSlots || defaultSlot}
           <template data-component="api-clear-test">
             <p>Clear error test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ shouldError: true }, {
-            "api-clear-test": webComponent(() => {
+
+          <script type="text/boredom" data-component="api-clear-test">
+            export default () => {
               return ({ state }) => {
                 if (state?.shouldError) {
                   throw new Error("Clear error test");
                 }
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ shouldError: true });
           const elem = container.querySelector("api-clear-test");
           expect(elem?.getAttribute("data-boredom-error")).to.equal("true");
           expect(boreDOM.errors.has("api-clear-test")).to.be.true;
@@ -34076,17 +33273,19 @@ ${propsSlots || defaultSlot}
           <template data-component="api-export-test">
             <p>Export test</p>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ value: "export-test-value", nested: { data: 42 } }, {
-            "api-export-test": webComponent(() => {
+
+          <script type="text/boredom" data-component="api-export-test">
+            export default () => {
               return ({ state }) => {
                 if (state?.value) {
                   throw new Error("Export test error");
                 }
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ value: "export-test-value", nested: { data: 42 } });
           capture.restore();
           const exported = boreDOM.export("api-export-test");
           expect(exported).to.not.be.null;
@@ -34130,21 +33329,23 @@ ${propsSlots || defaultSlot}
           <template data-component="rerender-global-test">
             <p data-ref="output">Initial</p>
           </template>
-        `);
-          const capture = captureConsole();
-          let renderCount = 0;
-          await inflictBoreDOM({ shouldError: true, message: "before fix" }, {
-            "rerender-global-test": webComponent(() => {
-              return ({ state, refs, self: self2 }) => {
+
+          <script type="text/boredom" data-component="rerender-global-test">
+            export default () => {
+              let renderCount = 0;
+              return ({ state, refs, self }) => {
                 renderCount++;
-                self2.setAttribute("data-render-count", String(renderCount));
+                self.setAttribute("data-render-count", String(renderCount));
                 if (state?.shouldError) {
                   throw new Error("Rerender global test");
                 }
                 refs.output.textContent = state?.message || "none";
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ shouldError: true, message: "before fix" });
           const w = window;
           expect(w.$state).to.not.be.undefined;
           expect(w.$rerender).to.be.a("function");
@@ -34210,12 +33411,7 @@ ${propsSlots || defaultSlot}
             <p>Version log test</p>
           </template>
         `);
-          await inflictBoreDOM(void 0, {
-            "version-log-test": webComponent(() => {
-              return () => {
-              };
-            })
-          });
+          await startAuto();
           capture.restore();
           expect(boreDOM.version).to.be.a("string");
         });
@@ -34229,17 +33425,19 @@ ${propsSlots || defaultSlot}
             <span data-ref="myRef">Reference</span>
             <slot name="mySlot">Slot</slot>
           </template>
-        `);
-          const capture = captureConsole();
-          await inflictBoreDOM({ testValue: 123 }, {
-            "context-test": webComponent(() => {
+
+          <script type="text/boredom" data-component="context-test">
+            export default () => {
               return ({ state }) => {
                 if (state?.testValue) {
                   throw new Error("Context test error");
                 }
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          await startAuto({ testValue: 123 });
           capture.restore();
           const ctx = boreDOM.errors.get("context-test");
           expect(ctx).to.not.be.undefined;
@@ -34265,25 +33463,23 @@ ${propsSlots || defaultSlot}
           <template data-component="no-boundary-test">
             <p>No boundary test</p>
           </template>
+
+          <script type="text/boredom" data-component="no-boundary-test">
+            export default () => {
+              return ({ state }) => {
+                if (state?.shouldError) {
+                  throw new Error("No boundary error");
+                }
+              };
+            };
+          <\/script>
         `);
           const capture = captureConsole();
           let errorThrown = false;
-          try {
-            await inflictBoreDOM({ shouldError: true }, {
-              "no-boundary-test": webComponent(() => {
-                return ({ state }) => {
-                  if (state?.shouldError) {
-                    throw new Error("No boundary error");
-                  }
-                };
-              })
-            }, { debug: { errorBoundary: false } });
-          } catch (e) {
-            errorThrown = true;
-            expect(e.message).to.equal("No boundary error");
-          }
+          await startAuto({ shouldError: true });
           capture.restore();
-          expect(errorThrown).to.be.true;
+          const errors2 = capture.errors.flat().map(String);
+          expect(errors2.some((e) => e.includes("No boundary error"))).to.be.true;
         });
       });
       describe("Serialization Error Logging (code review fixes)", () => {
@@ -34294,17 +33490,18 @@ ${propsSlots || defaultSlot}
           <template data-component="export-serialize-warn-test">
             <p>Serialize test</p>
           </template>
-        `);
-          const circularState = { name: "circular" };
-          circularState.self = circularState;
-          const capture = captureConsole();
-          await inflictBoreDOM(circularState, {
-            "export-serialize-warn-test": webComponent(() => {
-              return ({ state }) => {
+
+          <script type="text/boredom" data-component="export-serialize-warn-test">
+            export default () => {
+              return () => {
                 throw new Error("Serialization test error");
               };
-            })
-          });
+            };
+          <\/script>
+        `);
+          const capture = captureConsole();
+          const state = await startAuto({ name: "circular" });
+          state.self = state;
           const exported = boreDOM.export("export-serialize-warn-test");
           capture.restore();
           expect(exported).to.not.be.null;
@@ -34320,1235 +33517,6 @@ ${propsSlots || defaultSlot}
     });
   }
 
-  // tests/console-api.test.ts
-  var import_mocha3 = __toESM(require_mocha());
-  async function frame3() {
-    return new Promise((resolve) => {
-      requestAnimationFrame((t) => resolve(t));
-    });
-  }
-  async function renderHTMLFrame3(html2) {
-    const main = document.querySelector("main");
-    if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html2;
-    return new Promise((resolve) => {
-      requestAnimationFrame(() => {
-        resolve(main);
-      });
-    });
-  }
-  function captureConsole2() {
-    const logs = [];
-    const errors2 = [];
-    const infos = [];
-    const warns = [];
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalInfo = console.info;
-    const originalWarn = console.warn;
-    console.log = (...args) => {
-      logs.push(args);
-    };
-    console.error = (...args) => {
-      errors2.push(args);
-    };
-    console.info = (...args) => {
-      infos.push(args);
-    };
-    console.warn = (...args) => {
-      warns.push(args);
-    };
-    return {
-      logs,
-      errors: errors2,
-      infos,
-      warns,
-      restore: () => {
-        console.log = originalLog;
-        console.error = originalError;
-        console.info = originalInfo;
-        console.warn = originalWarn;
-      }
-    };
-  }
-  function clearWindowGlobals2() {
-    const w = window;
-    delete w.$state;
-    delete w.$refs;
-    delete w.$slots;
-    delete w.$self;
-    delete w.$error;
-    delete w.$component;
-    delete w.$rerender;
-  }
-  function console_api_test_default() {
-    describe("Console API (Phase 2)", () => {
-      beforeEach(function() {
-        const main = document.querySelector("main");
-        if (!main) return;
-        main.innerHTML = "";
-        setDebugConfig(true);
-        clearWindowGlobals2();
-        clearGlobals();
-        const errorKeys2 = [...boreDOM.errors.keys()];
-        for (const tagName of errorKeys2) {
-          boreDOM.clearError(tagName);
-        }
-        boreDOM.clearError();
-      });
-      afterEach(function() {
-        clearWindowGlobals2();
-      });
-      describe("boreDOM.operate()", () => {
-        it("should return component context for a valid component", async () => {
-          const container = await renderHTMLFrame3(`
-          <operate-test1></operate-test1>
-
-          <template data-component="operate-test1">
-            <p data-ref="output">Output</p>
-            <slot name="content">Content</slot>
-          </template>
-        `);
-          await inflictBoreDOM({ value: "test-value" }, {
-            "operate-test1": webComponent(() => {
-              return ({ state, refs }) => {
-                if (refs.output instanceof HTMLElement && state) {
-                  refs.output.textContent = state.value;
-                }
-              };
-            })
-          });
-          const ctx = boreDOM.operate("operate-test1");
-          expect(ctx).to.not.be.undefined;
-          expect(ctx?.state).to.not.be.undefined;
-          expect((ctx?.state).value).to.equal("test-value");
-          expect(ctx?.refs).to.not.be.undefined;
-          expect(ctx?.slots).to.not.be.undefined;
-          expect(ctx?.self).to.be.an.instanceof(HTMLElement);
-          expect(ctx?.rerender).to.be.a("function");
-        });
-        it("should allow live state mutation via operate()", async () => {
-          const container = await renderHTMLFrame3(`
-          <operate-mutate-test></operate-mutate-test>
-
-          <template data-component="operate-mutate-test">
-            <p data-ref="output">Initial</p>
-          </template>
-        `);
-          await inflictBoreDOM({ count: 0 }, {
-            "operate-mutate-test": webComponent(() => {
-              return ({ state, refs }) => {
-                if (refs.output instanceof HTMLElement && state) {
-                  refs.output.textContent = `Count: ${state.count}`;
-                }
-              };
-            })
-          });
-          const output = container.querySelector("[data-ref='output']");
-          expect(output?.textContent).to.equal("Count: 0");
-          const ctx = boreDOM.operate("operate-mutate-test");
-          expect(ctx).to.not.be.undefined;
-          (ctx?.state).count = 42;
-          await frame3();
-          expect(output?.textContent).to.equal("Count: 42");
-        });
-        it("should support index parameter for multiple instances", async () => {
-          const container = await renderHTMLFrame3(`
-          <operate-multi-test></operate-multi-test>
-          <operate-multi-test></operate-multi-test>
-          <operate-multi-test></operate-multi-test>
-
-          <template data-component="operate-multi-test">
-            <p data-ref="output">Item</p>
-          </template>
-        `);
-          await inflictBoreDOM({ items: ["first", "second", "third"] }, {
-            "operate-multi-test": webComponent(() => {
-              return ({ state, refs, detail }) => {
-                if (refs.output instanceof HTMLElement && state) {
-                  refs.output.textContent = state.items[detail?.index ?? 0] || "none";
-                }
-              };
-            })
-          });
-          const ctx0 = boreDOM.operate("operate-multi-test", 0);
-          const ctx1 = boreDOM.operate("operate-multi-test", 1);
-          const ctx2 = boreDOM.operate("operate-multi-test", 2);
-          expect(ctx0).to.not.be.undefined;
-          expect(ctx1).to.not.be.undefined;
-          expect(ctx2).to.not.be.undefined;
-          expect(ctx0?.self).to.not.equal(ctx1?.self);
-          expect(ctx1?.self).to.not.equal(ctx2?.self);
-        });
-        it("should accept element reference directly", async () => {
-          const container = await renderHTMLFrame3(`
-          <operate-element-test></operate-element-test>
-
-          <template data-component="operate-element-test">
-            <p>Element test</p>
-          </template>
-        `);
-          await inflictBoreDOM({ value: "direct-element" }, {
-            "operate-element-test": webComponent(() => {
-              return () => {
-              };
-            })
-          });
-          const elem = container.querySelector("operate-element-test");
-          expect(elem).to.not.be.null;
-          const ctx = boreDOM.operate(elem);
-          expect(ctx).to.not.be.undefined;
-          expect(ctx?.self).to.equal(elem);
-          expect((ctx?.state).value).to.equal("direct-element");
-        });
-        it("should return undefined for non-existent element", async () => {
-          await renderHTMLFrame3(`<p>No component here</p>`);
-          await inflictBoreDOM();
-          const capture = captureConsole2();
-          const ctx = boreDOM.operate("non-existent-component");
-          capture.restore();
-          expect(ctx).to.be.undefined;
-          const warnLogs = capture.warns.filter(
-            (w) => w[0]?.includes?.("No element found")
-          );
-          expect(warnLogs.length).to.be.greaterThan(0);
-        });
-        it("should return undefined when api disabled", async () => {
-          const container = await renderHTMLFrame3(`
-          <operate-disabled-test></operate-disabled-test>
-
-          <template data-component="operate-disabled-test">
-            <p>Disabled test</p>
-          </template>
-        `);
-          await inflictBoreDOM({ value: "test" }, {
-            "operate-disabled-test": webComponent(() => {
-              return () => {
-              };
-            })
-          }, { debug: { api: false } });
-          const ctx = boreDOM.operate("operate-disabled-test");
-          expect(ctx).to.be.undefined;
-        });
-        it("rerender() from context should re-render the component", async () => {
-          const container = await renderHTMLFrame3(`
-          <operate-rerender-test></operate-rerender-test>
-
-          <template data-component="operate-rerender-test">
-            <p data-ref="output">Initial</p>
-          </template>
-        `);
-          let renderCount = 0;
-          await inflictBoreDOM({ value: "start" }, {
-            "operate-rerender-test": webComponent(() => {
-              return ({ state, refs, self: self2 }) => {
-                renderCount++;
-                self2.setAttribute("data-render-count", String(renderCount));
-                if (refs.output instanceof HTMLElement && state) {
-                  refs.output.textContent = state.value;
-                }
-              };
-            })
-          });
-          expect(renderCount).to.equal(1);
-          const ctx = boreDOM.operate("operate-rerender-test");
-          (ctx?.state).value = "updated";
-          ctx?.rerender();
-          await frame3();
-          expect(renderCount).to.be.at.least(2);
-          const output = container.querySelector("[data-ref='output']");
-          expect(output?.textContent).to.equal("updated");
-        });
-      });
-      describe("boreDOM.exportComponent()", () => {
-        it("should export component state and template", async () => {
-          const container = await renderHTMLFrame3(`
-          <export-test1></export-test1>
-
-          <template data-component="export-test1">
-            <p>Export template content</p>
-          </template>
-        `);
-          await inflictBoreDOM({ count: 42, name: "test" }, {
-            "export-test1": webComponent(() => {
-              return () => {
-              };
-            })
-          });
-          const exported = boreDOM.exportComponent("export-test1");
-          expect(exported).to.not.be.null;
-          expect(exported?.component).to.equal("export-test1");
-          expect(exported?.state).to.deep.include({ count: 42, name: "test" });
-          expect(exported?.template).to.include("Export template content");
-          expect(exported?.timestamp).to.be.a("string");
-        });
-        it("should return null for non-existent component", async () => {
-          await renderHTMLFrame3(`<p>No component</p>`);
-          await inflictBoreDOM();
-          const exported = boreDOM.exportComponent("non-existent");
-          expect(exported).to.be.null;
-        });
-        it("should handle circular references gracefully", async () => {
-          const container = await renderHTMLFrame3(`
-          <export-circular-test></export-circular-test>
-
-          <template data-component="export-circular-test">
-            <p>Circular test</p>
-          </template>
-        `);
-          const circularState = { name: "circular" };
-          circularState.self = circularState;
-          await inflictBoreDOM(circularState, {
-            "export-circular-test": webComponent(() => {
-              return () => {
-              };
-            })
-          });
-          const exported = boreDOM.exportComponent("export-circular-test");
-          expect(exported).to.not.be.null;
-          expect(exported?.component).to.equal("export-circular-test");
-          expect(typeof exported?.state).to.equal("string");
-          expect(exported?.state).to.include("circular");
-        });
-        it("should return null when api disabled", async () => {
-          const container = await renderHTMLFrame3(`
-          <export-disabled-test></export-disabled-test>
-
-          <template data-component="export-disabled-test">
-            <p>Disabled test</p>
-          </template>
-        `);
-          await inflictBoreDOM({ value: "test" }, {
-            "export-disabled-test": webComponent(() => {
-              return () => {
-              };
-            })
-          }, { debug: { api: false } });
-          const exported = boreDOM.exportComponent("export-disabled-test");
-          expect(exported).to.be.null;
-        });
-      });
-      describe("boreDOM.define()", () => {
-        it("should create a new component at runtime", async () => {
-          const container = await renderHTMLFrame3(`
-          <main id="define-container"></main>
-        `);
-          await inflictBoreDOM({ greeting: "Hello Runtime!" });
-          const capture = captureConsole2();
-          boreDOM.define(
-            "runtime-defined-comp",
-            `<p data-ref="msg">Loading...</p>`,
-            ({ on }) => {
-              return ({ state, refs }) => {
-                if (refs.msg instanceof HTMLElement && state) {
-                  refs.msg.textContent = state.greeting;
-                }
-              };
-            }
-          );
-          capture.restore();
-          const template = document.querySelector('template[data-component="runtime-defined-comp"]');
-          expect(template).to.not.be.null;
-          const successLogs = capture.logs.filter(
-            (l) => l.some((arg) => typeof arg === "string" && arg.includes("runtime-defined-comp"))
-          );
-          expect(successLogs.length).to.be.greaterThan(0);
-        });
-        it("should throw for invalid tag name (no hyphen)", async () => {
-          await renderHTMLFrame3(`<p>Test</p>`);
-          await inflictBoreDOM();
-          expect(() => {
-            boreDOM.define("invalidtag", "<p>Bad</p>", () => () => {
-            });
-          }).to.throw(/must contain a hyphen/);
-        });
-        it("should throw for duplicate tag name", async () => {
-          const container = await renderHTMLFrame3(`
-          <duplicate-tag-test></duplicate-tag-test>
-
-          <template data-component="duplicate-tag-test">
-            <p>Original</p>
-          </template>
-        `);
-          await inflictBoreDOM(void 0, {
-            "duplicate-tag-test": webComponent(() => () => {
-            })
-          });
-          expect(() => {
-            boreDOM.define("duplicate-tag-test", "<p>Duplicate</p>", () => () => {
-            });
-          }).to.throw(/already defined/);
-        });
-        it("should throw before inflictBoreDOM is called", () => {
-          expect(() => {
-            boreDOM.define("", "<p>Empty tag</p>", () => () => {
-            });
-          }).to.throw();
-        });
-        it("should warn when api disabled", async () => {
-          await renderHTMLFrame3(`<p>Test</p>`);
-          await inflictBoreDOM(void 0, void 0, { debug: { api: false } });
-          const capture = captureConsole2();
-          boreDOM.define("disabled-api-comp", "<p>Test</p>", () => () => {
-          });
-          capture.restore();
-          const warnLogs = capture.warns.filter(
-            (w) => w[0]?.includes?.("disabled") || w[0]?.includes?.("api")
-          );
-          expect(warnLogs.length).to.be.greaterThan(0);
-        });
-      });
-      describe("Console API integration", () => {
-        it("should work together: define, operate, export", async () => {
-          const container = await renderHTMLFrame3(`
-          <integration-container></integration-container>
-
-          <template data-component="integration-container">
-            <div id="inner"></div>
-          </template>
-        `);
-          await inflictBoreDOM({ counter: 100 }, {
-            "integration-container": webComponent(() => {
-              return () => {
-              };
-            })
-          });
-          boreDOM.define(
-            "integration-child",
-            `<span data-ref="val">0</span>`,
-            () => {
-              return ({ state, refs }) => {
-                if (refs.val instanceof HTMLElement && state) {
-                  refs.val.textContent = String(state.counter);
-                }
-              };
-            }
-          );
-          const parentCtx = boreDOM.operate("integration-container");
-          expect(parentCtx).to.not.be.undefined;
-          const exported = boreDOM.exportComponent("integration-container");
-          expect(exported).to.not.be.null;
-          expect(exported?.state).to.deep.include({ counter: 100 });
-        });
-        it("api option should control all console API features", async () => {
-          const container = await renderHTMLFrame3(`
-          <api-control-test></api-control-test>
-
-          <template data-component="api-control-test">
-            <p>API control test</p>
-          </template>
-        `);
-          setDebugConfig({ api: true });
-          expect(isDebugEnabled("api")).to.be.true;
-          await inflictBoreDOM({ value: "enabled" }, {
-            "api-control-test": webComponent(() => () => {
-            })
-          });
-          let ctx = boreDOM.operate("api-control-test");
-          expect(ctx).to.not.be.undefined;
-          setDebugConfig({ api: false });
-          expect(isDebugEnabled("api")).to.be.false;
-          ctx = boreDOM.operate("api-control-test");
-          expect(ctx).to.be.undefined;
-        });
-      });
-      describe("Debug configuration for api", () => {
-        it("setDebugConfig(true) should enable api", () => {
-          setDebugConfig(true);
-          expect(isDebugEnabled("api")).to.be.true;
-        });
-        it("setDebugConfig(false) should disable api", () => {
-          setDebugConfig(false);
-          expect(isDebugEnabled("api")).to.be.false;
-        });
-        it("setDebugConfig({ api: true }) should enable api specifically", () => {
-          setDebugConfig({ api: true, console: false });
-          expect(isDebugEnabled("api")).to.be.true;
-          expect(isDebugEnabled("console")).to.be.false;
-        });
-        it("setDebugConfig({ api: false }) should disable api specifically", () => {
-          setDebugConfig({ api: false, console: true });
-          expect(isDebugEnabled("api")).to.be.false;
-          expect(isDebugEnabled("console")).to.be.true;
-        });
-      });
-      describe("Error handling improvements (code review fixes)", () => {
-        it("define() should return true on success", async () => {
-          await renderHTMLFrame3(`<p>Test</p>`);
-          await inflictBoreDOM({ value: "test" });
-          const result = boreDOM.define(
-            "define-return-test",
-            "<p>Test</p>",
-            () => () => {
-            }
-          );
-          expect(result).to.equal(true);
-        });
-        it("define() should return false when api disabled", async () => {
-          await renderHTMLFrame3(`<p>Test</p>`);
-          await inflictBoreDOM(void 0, void 0, { debug: { api: false } });
-          const capture = captureConsole2();
-          const result = boreDOM.define(
-            "define-disabled-return",
-            "<p>Test</p>",
-            () => () => {
-            }
-          );
-          capture.restore();
-          expect(result).to.equal(false);
-          const warnLogs = capture.warns.filter(
-            (w) => w[0]?.includes?.("disabled") || w[0]?.includes?.("api")
-          );
-          expect(warnLogs.length).to.be.greaterThan(0);
-        });
-        it("operate() should warn when api disabled", async () => {
-          const container = await renderHTMLFrame3(`
-          <operate-warn-test></operate-warn-test>
-
-          <template data-component="operate-warn-test">
-            <p>Warn test</p>
-          </template>
-        `);
-          await inflictBoreDOM({ value: "test" }, {
-            "operate-warn-test": webComponent(() => () => {
-            })
-          }, { debug: { api: false } });
-          const capture = captureConsole2();
-          const ctx = boreDOM.operate("operate-warn-test");
-          capture.restore();
-          expect(ctx).to.be.undefined;
-          const warnLogs = capture.warns.filter(
-            (w) => w[0]?.includes?.("disabled") || w[0]?.includes?.("api")
-          );
-          expect(warnLogs.length).to.be.greaterThan(0);
-        });
-        it("exportComponent() should warn when api disabled", async () => {
-          const container = await renderHTMLFrame3(`
-          <export-warn-test></export-warn-test>
-
-          <template data-component="export-warn-test">
-            <p>Export warn test</p>
-          </template>
-        `);
-          await inflictBoreDOM({ value: "test" }, {
-            "export-warn-test": webComponent(() => () => {
-            })
-          }, { debug: { api: false } });
-          const capture = captureConsole2();
-          const exported = boreDOM.exportComponent("export-warn-test");
-          capture.restore();
-          expect(exported).to.be.null;
-          const warnLogs = capture.warns.filter(
-            (w) => w[0]?.includes?.("disabled") || w[0]?.includes?.("api")
-          );
-          expect(warnLogs.length).to.be.greaterThan(0);
-        });
-        it("exportComponent() should warn when serialization fails", async () => {
-          const container = await renderHTMLFrame3(`
-          <export-serialize-warn></export-serialize-warn>
-
-          <template data-component="export-serialize-warn">
-            <p>Serialize warn test</p>
-          </template>
-        `);
-          const circularState = { name: "circular" };
-          circularState.self = circularState;
-          await inflictBoreDOM(circularState, {
-            "export-serialize-warn": webComponent(() => () => {
-            })
-          });
-          const capture = captureConsole2();
-          const exported = boreDOM.exportComponent("export-serialize-warn");
-          capture.restore();
-          expect(exported).to.not.be.null;
-          const warnLogs = capture.warns.filter(
-            (w) => w[0]?.includes?.("serialize") || w[0]?.includes?.("Unable")
-          );
-          expect(warnLogs.length).to.be.greaterThan(0);
-        });
-        it("clearError() should warn when component not found", async () => {
-          await renderHTMLFrame3(`<p>Test</p>`);
-          await inflictBoreDOM();
-          const capture = captureConsole2();
-          boreDOM.clearError("non-existent-component");
-          capture.restore();
-          const warnLogs = capture.warns.filter(
-            (w) => w[0]?.includes?.("No error found") || w[0]?.includes?.("clearError")
-          );
-          expect(warnLogs.length).to.be.greaterThan(0);
-        });
-        it("clearError() should warn when no error to clear", async () => {
-          await renderHTMLFrame3(`<p>Test</p>`);
-          await inflictBoreDOM();
-          const errorKeys2 = [...boreDOM.errors.keys()];
-          for (const tagName of errorKeys2) {
-            boreDOM.errors.delete(tagName);
-          }
-          const capture = captureConsole2();
-          boreDOM.clearError();
-          capture.restore();
-          const warnLogs = capture.warns.filter(
-            (w) => w[0]?.includes?.("No error") || w[0]?.includes?.("clearError")
-          );
-          expect(warnLogs.length).to.be.greaterThan(0);
-        });
-      });
-    });
-  }
-
-  // tests/inside-out.test.ts
-  var import_mocha4 = __toESM(require_mocha());
-  async function renderHTMLFrame4(html2) {
-    const main = document.querySelector("main");
-    if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html2;
-    return new Promise((resolve) => {
-      requestAnimationFrame(() => {
-        resolve(main);
-      });
-    });
-  }
-  function captureConsole3() {
-    const logs = [];
-    const errors2 = [];
-    const infos = [];
-    const warns = [];
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalInfo = console.info;
-    const originalWarn = console.warn;
-    console.log = (...args) => {
-      logs.push(args);
-    };
-    console.error = (...args) => {
-      errors2.push(args);
-    };
-    console.info = (...args) => {
-      infos.push(args);
-    };
-    console.warn = (...args) => {
-      warns.push(args);
-    };
-    return {
-      logs,
-      errors: errors2,
-      infos,
-      warns,
-      restore: () => {
-        console.log = originalLog;
-        console.error = originalError;
-        console.info = originalInfo;
-        console.warn = originalWarn;
-      }
-    };
-  }
-  function clearWindowGlobals3() {
-    const w = window;
-    delete w.$state;
-    delete w.$refs;
-    delete w.$slots;
-    delete w.$self;
-    delete w.$error;
-    delete w.$component;
-    delete w.$rerender;
-    delete w.$missingName;
-    delete w.$missingArgs;
-    delete w.$missingComponent;
-    delete w.$defineMissing;
-  }
-  function inside_out_test_default() {
-    describe("Inside-Out Primitives (Phase 3)", () => {
-      beforeEach(function() {
-        const main = document.querySelector("main");
-        if (!main) return;
-        main.innerHTML = "";
-        setDebugConfig(true);
-        clearWindowGlobals3();
-        clearGlobals();
-        clearMissingGlobals();
-        for (const name of boreDOM.helpers.keys()) {
-          clearHelper(name);
-        }
-      });
-      afterEach(function() {
-        clearWindowGlobals3();
-        clearMissingGlobals();
-        stopObservingUndefinedElements();
-      });
-      describe("createRenderHelpers()", () => {
-        it("should return empty object when methodMissing is disabled", () => {
-          setDebugConfig({ methodMissing: false });
-          const helpers = createRenderHelpers(
-            "test-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          expect(Object.keys(helpers)).to.have.length(0);
-        });
-        it("should return a proxy when methodMissing is enabled", () => {
-          const helpers = createRenderHelpers(
-            "test-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          expect(typeof helpers).to.equal("object");
-        });
-        it("should intercept undefined function calls", () => {
-          const capture = captureConsole3();
-          const helpers = createRenderHelpers(
-            "test-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          const result = helpers.undefinedFunction("arg1", 42);
-          capture.restore();
-          expect(result).to.be.undefined;
-          const missingLog = capture.logs.find(
-            (log) => log.some((arg) => typeof arg === "string" && arg.includes("Missing function"))
-          );
-          expect(missingLog).to.not.be.undefined;
-        });
-        it("should expose $missingName global when undefined function called", () => {
-          const helpers = createRenderHelpers(
-            "test-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          helpers.myMissingFunc("test");
-          expect(window.$missingName).to.equal("myMissingFunc");
-        });
-        it("should expose $missingArgs global with function arguments", () => {
-          const helpers = createRenderHelpers(
-            "test-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          helpers.anotherMissing({ user: "test" }, 123);
-          expect(window.$missingArgs).to.deep.equal([{ user: "test" }, 123]);
-        });
-        it("should expose $missingComponent global", () => {
-          const helpers = createRenderHelpers(
-            "my-cool-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          helpers.someFn();
-          expect(window.$missingComponent).to.equal("my-cool-component");
-        });
-        it("should expose $defineMissing function for live definition", () => {
-          let rerenderCalled = false;
-          const helpers = createRenderHelpers(
-            "test-component",
-            document.createElement("div"),
-            () => {
-              rerenderCalled = true;
-            }
-          );
-          helpers.toDefine();
-          expect(typeof window.$defineMissing).to.equal("function");
-          window.$defineMissing((x) => x * 2);
-          expect(rerenderCalled).to.be.true;
-        });
-      });
-      describe("defineHelper()", () => {
-        it("should make helper available to all render functions", () => {
-          defineHelper("formatCurrency", (n) => `$${n.toFixed(2)}`);
-          const helpers = createRenderHelpers(
-            "test-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          const result = helpers.formatCurrency(19.99);
-          expect(result).to.equal("$19.99");
-        });
-        it("should be accessible via boreDOM.helpers", () => {
-          defineHelper("testHelper", () => "test");
-          expect(boreDOM.helpers.has("testHelper")).to.be.true;
-          expect(boreDOM.helpers.get("testHelper")?.()).to.equal("test");
-        });
-        it("should log success message", () => {
-          const capture = captureConsole3();
-          defineHelper("loggedHelper", () => {
-          });
-          capture.restore();
-          const successLog = capture.logs.find(
-            (log) => log.some((arg) => typeof arg === "string" && arg.includes("Defined helper"))
-          );
-          expect(successLog).to.not.be.undefined;
-        });
-      });
-      describe("clearHelper()", () => {
-        it("should remove a defined helper", () => {
-          defineHelper("toRemove", () => "original");
-          expect(boreDOM.helpers.has("toRemove")).to.be.true;
-          clearHelper("toRemove");
-          expect(boreDOM.helpers.has("toRemove")).to.be.false;
-        });
-        it("should make helper unavailable after clearing", () => {
-          defineHelper("tempHelper", () => "temp");
-          clearHelper("tempHelper");
-          const capture = captureConsole3();
-          const helpers = createRenderHelpers(
-            "test-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          helpers.tempHelper();
-          capture.restore();
-          expect(window.$missingName).to.equal("tempHelper");
-        });
-      });
-      describe("boreDOM.missingFunctions", () => {
-        it("should track missing function calls", () => {
-          const helpers = createRenderHelpers(
-            "tracking-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          helpers.trackedMissing("test");
-          expect(boreDOM.missingFunctions.has("trackedMissing")).to.be.true;
-          const calls = boreDOM.missingFunctions.get("trackedMissing");
-          expect(calls).to.have.length.greaterThan(0);
-          expect(calls?.[0].args).to.deep.equal(["test"]);
-        });
-        it("should track boreDOM.lastMissing", () => {
-          const helpers = createRenderHelpers(
-            "last-missing-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          helpers.lastMissingTest({ data: "value" });
-          expect(boreDOM.lastMissing).to.not.be.null;
-          expect(boreDOM.lastMissing?.name).to.equal("lastMissingTest");
-          expect(boreDOM.lastMissing?.component).to.equal("last-missing-component");
-        });
-      });
-      describe("inferTemplate()", () => {
-        it("should return null when templateInference is disabled", () => {
-          setDebugConfig({ templateInference: false });
-          const result = inferTemplate("test-component");
-          expect(result).to.be.null;
-        });
-        it("should return null when strict mode is enabled", () => {
-          setDebugConfig({ strict: true });
-          const result = inferTemplate("test-component");
-          expect(result).to.be.null;
-        });
-        it("should infer props from element attributes", () => {
-          const element = document.createElement("div");
-          element.setAttribute("user-id", "123");
-          element.setAttribute("show-avatar", "true");
-          const result = inferTemplate("test-component", element);
-          expect(result).to.not.be.null;
-          expect(result?.props).to.have.property("userId", 123);
-          expect(result?.props).to.have.property("showAvatar", true);
-        });
-        it("should convert kebab-case attributes to camelCase props", () => {
-          const element = document.createElement("div");
-          element.setAttribute("first-name", "John");
-          element.setAttribute("last-name", "Doe");
-          element.setAttribute("is-active", "true");
-          const result = inferTemplate("test-component", element);
-          expect(result?.props).to.have.property("firstName", "John");
-          expect(result?.props).to.have.property("lastName", "Doe");
-          expect(result?.props).to.have.property("isActive", true);
-        });
-        it("should parse numeric attributes as numbers", () => {
-          const element = document.createElement("div");
-          element.setAttribute("count", "42");
-          element.setAttribute("price", "19.99");
-          const result = inferTemplate("test-component", element);
-          expect(result?.props).to.have.property("count", 42);
-          expect(result?.props).to.have.property("price", 19.99);
-        });
-        it("should parse boolean attributes correctly", () => {
-          const element = document.createElement("div");
-          element.setAttribute("enabled", "true");
-          element.setAttribute("disabled", "false");
-          const result = inferTemplate("test-component", element);
-          expect(result?.props).to.have.property("enabled", true);
-          expect(result?.props).to.have.property("disabled", false);
-        });
-        it("should skip data-* attributes", () => {
-          const element = document.createElement("div");
-          element.setAttribute("data-id", "should-skip");
-          element.setAttribute("real-attr", "should-include");
-          const result = inferTemplate("test-component", element);
-          expect(result?.props).to.not.have.property("dataId");
-          expect(result?.props).to.not.have.property("id");
-          expect(result?.props).to.have.property("realAttr", "should-include");
-        });
-        it("should skip class, id, and style attributes", () => {
-          const element = document.createElement("div");
-          element.setAttribute("class", "my-class");
-          element.setAttribute("id", "my-id");
-          element.setAttribute("style", "color: red");
-          element.setAttribute("valid-attr", "value");
-          const result = inferTemplate("test-component", element);
-          expect(result?.props).to.not.have.property("class");
-          expect(result?.props).to.not.have.property("id");
-          expect(result?.props).to.not.have.property("style");
-          expect(result?.props).to.have.property("validAttr", "value");
-        });
-        it("should generate a template string", () => {
-          const element = document.createElement("div");
-          element.setAttribute("name", "Test");
-          const result = inferTemplate("my-component", element);
-          expect(result?.template).to.be.a("string");
-          expect(result?.template).to.include("my-component-skeleton");
-          expect(result?.template).to.include("data-inferred");
-        });
-        it("should infer slots from children with slot attribute", () => {
-          const element = document.createElement("div");
-          const child1 = document.createElement("span");
-          child1.setAttribute("slot", "header");
-          const child2 = document.createElement("div");
-          child2.setAttribute("slot", "content");
-          element.appendChild(child1);
-          element.appendChild(child2);
-          const result = inferTemplate("test-component", element);
-          expect(result?.slots).to.include("header");
-          expect(result?.slots).to.include("content");
-        });
-      });
-      describe("boreDOM.inferredTemplates", () => {
-        it("should be accessible via boreDOM API", () => {
-          expect(boreDOM.inferredTemplates).to.be.an.instanceof(Map);
-        });
-      });
-      describe("helpers in webComponent render", () => {
-        it("should provide helpers to render function", async () => {
-          await renderHTMLFrame4(`
-          <helpers-test1></helpers-test1>
-
-          <template data-component="helpers-test1">
-            <p data-ref="output">Output</p>
-          </template>
-        `);
-          let helpersReceived = false;
-          await inflictBoreDOM({ value: "test" }, {
-            "helpers-test1": webComponent(({ state }) => {
-              return ({ refs, helpers }) => {
-                helpersReceived = helpers !== void 0 && typeof helpers === "object";
-                if (refs.output instanceof HTMLElement && state) {
-                  refs.output.textContent = state.value;
-                }
-              };
-            })
-          });
-          expect(helpersReceived).to.be.true;
-        });
-        it("should allow using defined helpers in render", async () => {
-          defineHelper("greet", (name) => `Hello, ${name}!`);
-          const container = await renderHTMLFrame4(`
-          <helpers-test2></helpers-test2>
-
-          <template data-component="helpers-test2">
-            <p data-ref="output">Output</p>
-          </template>
-        `);
-          await inflictBoreDOM({ name: "World" }, {
-            "helpers-test2": webComponent(({ state }) => {
-              return ({ refs, helpers }) => {
-                if (refs.output instanceof HTMLElement && state) {
-                  refs.output.textContent = helpers.greet(state.name);
-                }
-              };
-            })
-          });
-          const output = container.querySelector('[data-ref="output"]');
-          expect(output?.textContent).to.equal("Hello, World!");
-        });
-        it("should log missing function when undefined helper called in render", async () => {
-          const capture = captureConsole3();
-          await renderHTMLFrame4(`
-          <helpers-test3></helpers-test3>
-
-          <template data-component="helpers-test3">
-            <p data-ref="output">Output</p>
-          </template>
-        `);
-          await inflictBoreDOM({ value: "test" }, {
-            "helpers-test3": webComponent(({ state }) => {
-              return ({ refs, helpers }) => {
-                const result = helpers.undefinedHelper(state?.value);
-                if (refs.output instanceof HTMLElement) {
-                  refs.output.textContent = result ?? "No result";
-                }
-              };
-            })
-          });
-          capture.restore();
-          const missingLog = capture.logs.find(
-            (log) => log.some((arg) => typeof arg === "string" && arg.includes("Missing function"))
-          );
-          expect(missingLog).to.not.be.undefined;
-          expect(window.$missingName).to.equal("undefinedHelper");
-        });
-      });
-      describe("Configuration", () => {
-        it("should respect methodMissing: false config", () => {
-          setDebugConfig({ methodMissing: false });
-          expect(isDebugEnabled("methodMissing")).to.be.false;
-          const helpers = createRenderHelpers(
-            "test-component",
-            document.createElement("div"),
-            () => {
-            }
-          );
-          expect(Object.keys(helpers)).to.have.length(0);
-        });
-        it("should respect templateInference: false config", () => {
-          setDebugConfig({ templateInference: false });
-          expect(isDebugEnabled("templateInference")).to.be.false;
-          const result = inferTemplate("test-component");
-          expect(result).to.be.null;
-        });
-        it("should respect strict: true config", () => {
-          setDebugConfig({ strict: true });
-          expect(isDebugEnabled("strict")).to.be.true;
-          const result = inferTemplate("test-component");
-          expect(result).to.be.null;
-        });
-        it("should have methodMissing, templateInference, strict in config", () => {
-          const config3 = boreDOM.config;
-          expect(config3).to.have.property("methodMissing");
-          expect(config3).to.have.property("templateInference");
-          expect(config3).to.have.property("strict");
-        });
-      });
-    });
-  }
-
-  // tests/llm.test.ts
-  var import_mocha5 = __toESM(require_mocha());
-  async function frame4() {
-    return new Promise((resolve) => {
-      requestAnimationFrame((t) => resolve(t));
-    });
-  }
-  async function renderHTMLFrame5(html2) {
-    const main = document.querySelector("main");
-    if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html2;
-    return new Promise((resolve) => {
-      requestAnimationFrame(() => {
-        resolve(main);
-      });
-    });
-  }
-  function llm_test_default() {
-    describe("LLM Integration API (Micro-Symbiotic)", () => {
-      beforeEach(function() {
-        const main = document.querySelector("main");
-        if (!main) return;
-        main.innerHTML = "";
-        setDebugConfig(true);
-        clearGlobals();
-      });
-      describe("boreDOM.llm.vision()", () => {
-        it("should capture semantic structure", async () => {
-          await renderHTMLFrame5(`
-          <div id="test-root">
-            <h1 class="title">Hello</h1>
-            <input type="text" value="World" id="inp">
-            <div hidden>Secret</div>
-            <span style="display: none">Hidden</span>
-            <button data-action="submit">Send</button>
-          </div>
-        `);
-          const root = document.getElementById("test-root");
-          expect(root).to.not.be.null;
-          const semantic = boreDOM.llm.vision(root);
-          expect(semantic).to.not.be.null;
-          expect(semantic?.tagName).to.equal("div");
-          expect(semantic?.attributes?.id).to.equal("test-root");
-          const children = semantic?.children || [];
-          expect(children).to.have.length(3);
-          const h1 = children[0];
-          expect(h1.tagName).to.equal("h1");
-          expect(h1.attributes?.class).to.equal("title");
-          expect(h1.text).to.equal("Hello");
-          const inp = children[1];
-          expect(inp.tagName).to.equal("input");
-          expect(inp.attributes?.value).to.equal("World");
-          const btn = children[2];
-          expect(btn.tagName).to.equal("button");
-          expect(btn.attributes["data-action"]).to.equal("submit");
-          expect(btn.text).to.equal("Send");
-        });
-      });
-      describe("boreDOM.llm.transact()", () => {
-        it("should replace state values and trigger reactivity", async () => {
-          await renderHTMLFrame5(`
-          <transact-test></transact-test>
-          <template data-component="transact-test">
-            <p data-ref="out"></p>
-          </template>
-        `);
-          const appState = await inflictBoreDOM({ count: 10 }, {
-            "transact-test": webComponent(() => ({ state, refs }) => {
-              if (refs.out) refs.out.textContent = String(state?.count);
-            })
-          });
-          const el = document.querySelector("transact-test p");
-          expect(el?.textContent).to.equal("10");
-          const result = boreDOM.llm.transact([
-            { op: "replace", path: "/count", value: 42 }
-          ]);
-          expect(result.success).to.be.true;
-          expect(appState?.count).to.equal(42);
-          await frame4();
-          await frame4();
-          expect(el?.textContent).to.equal("42");
-        });
-        it("should handle array operations", async () => {
-          await inflictBoreDOM({ items: ["a", "b"] });
-          boreDOM.llm.transact([
-            { op: "add", path: "/items/-", value: "c" }
-          ]);
-          const state = boreDOM.exportComponent("transact-test")?.state || window.boreDOM.lastError?.state || boreDOM._setDebugConfig ? boreDOM._testState : null;
-        });
-        it("should return error on invalid path", async () => {
-          await inflictBoreDOM({ foo: 1 });
-          const result = boreDOM.llm.transact([
-            { op: "replace", path: "/invalid/path", value: 2 }
-          ]);
-          expect(result.success).to.be.false;
-          expect(result.error).to.include("not found");
-        });
-      });
-      describe("boreDOM.llm.compact()", () => {
-        it("should return a compact summary of state and components", async () => {
-          await renderHTMLFrame5(`
-          <compact-test></compact-test>
-          <template data-component="compact-test">
-            <p data-ref="out"></p>
-          </template>
-        `);
-          await inflictBoreDOM(
-            { count: 1, items: ["a", "b"] },
-            {
-              "compact-test": webComponent(() => () => {
-              })
-            }
-          );
-          const compact = boreDOM.llm.compact();
-          expect(compact).to.not.be.null;
-          expect(compact?.framework?.name).to.equal("boreDOM");
-          expect(compact?.state?.paths).to.include("count");
-          expect(compact?.components?.some((c) => c.tag === "compact-test")).to.equal(true);
-        });
-      });
-    });
-  }
-
-  // tests/patch-concurrency.test.ts
-  function patch_concurrency_test_default() {
-    describe("Patch Concurrency & Atomicity", () => {
-      it("should pass 'test' operation when values match", () => {
-        const state = { count: 1, ver: 10 };
-        const patch = [
-          { op: "test", path: "/ver", value: 10 },
-          { op: "replace", path: "/count", value: 2 }
-        ];
-        const result = applyPatch(state, patch);
-        expect(result.success).to.be.true;
-        expect(state.count).to.equal(2);
-      });
-      it("should fail transaction when 'test' fails", () => {
-        const state = { count: 1, ver: 10 };
-        const patch = [
-          { op: "test", path: "/ver", value: 99 },
-          // Mismatch
-          { op: "replace", path: "/count", value: 2 }
-        ];
-        const result = applyPatch(state, patch);
-        expect(result.success).to.be.false;
-        expect(result.error).to.include("Test failed");
-        expect(state.count).to.equal(1);
-      });
-      it("should rollback previous changes if a later 'test' fails (Atomicity)", () => {
-        const state = { count: 1, ver: 10, list: [1, 2] };
-        const patch = [
-          { op: "replace", path: "/count", value: 50 },
-          // Applied first
-          { op: "add", path: "/list/-", value: 3 },
-          // Applied second
-          { op: "test", path: "/ver", value: 999 }
-          // Fails
-        ];
-        const result = applyPatch(state, patch);
-        expect(result.success).to.be.false;
-        expect(state.count).to.equal(1);
-        expect(state.list).to.deep.equal([1, 2]);
-      });
-      it("should handle nested object equality in test", () => {
-        const state = { config: { theme: "dark", admin: true } };
-        const patch = [
-          { op: "test", path: "/config", value: { theme: "dark", admin: true } },
-          { op: "replace", path: "/config/theme", value: "light" }
-        ];
-        const result = applyPatch(state, patch);
-        expect(result.success).to.be.true;
-        expect(state.config.theme).to.equal("light");
-      });
-      it("should fail test on deep object mismatch", () => {
-        const state = { config: { theme: "dark", admin: true } };
-        const patch = [
-          { op: "test", path: "/config", value: { theme: "dark", admin: false } },
-          { op: "replace", path: "/config/theme", value: "light" }
-        ];
-        const result = applyPatch(state, patch);
-        expect(result.success).to.be.false;
-        expect(state.config.theme).to.equal("dark");
-      });
-      it("should rollback array splice operations correctly", () => {
-        const state = { items: ["a", "b", "c"] };
-        const patch = [
-          { op: "remove", path: "/items/1" },
-          { op: "test", path: "/items/0", value: "z" }
-          // Fail
-        ];
-        const result = applyPatch(state, patch);
-        expect(result.success).to.be.false;
-        expect(state.items).to.deep.equal(["a", "b", "c"]);
-      });
-      it("should rollback array insert operations correctly", () => {
-        const state = { items: ["a", "c"] };
-        const patch = [
-          { op: "add", path: "/items/1", value: "b" },
-          { op: "test", path: "/items/0", value: "z" }
-          // Fail
-        ];
-        const result = applyPatch(state, patch);
-        expect(result.success).to.be.false;
-        expect(state.items).to.deep.equal(["a", "c"]);
-      });
-      it("should rollback object property addition", () => {
-        const state = { a: 1 };
-        const patch = [
-          { op: "add", path: "/b", value: 2 },
-          { op: "test", path: "/a", value: 99 }
-        ];
-        const result = applyPatch(state, patch);
-        expect(result.success).to.be.false;
-        expect(state.b).to.be.undefined;
-        expect("b" in state).to.be.false;
-      });
-    });
-  }
-
   // tests/inline-logic.test.ts
   function inlineLogicTests() {
     describe("Inline Logic Components", () => {
@@ -35556,40 +33524,38 @@ ${propsSlots || defaultSlot}
       beforeEach(() => {
         container = document.createElement("div");
         document.body.appendChild(container);
+        resetAutoStart();
       });
       afterEach(() => {
         document.body.removeChild(container);
       });
-      it("should load component logic from <script> inside <template>", async () => {
+      it("should load component logic from triplet scripts", async () => {
         const tagName = "inline-counter";
         const template = document.createElement("template");
         template.setAttribute("data-component", tagName);
         template.innerHTML = `
         <div class="count">Count: <slot name="value">0</slot></div>
-        <button onclick="dispatch('inc')">+</button>
-        
-        <script type="module">
-          // Standard boreDOM component definition
-          export default ({ on }) => {
-            on("inc", ({ state }) => {
-              state.count++;
-            });
-            
-            return ({ state, slots }) => {
-              slots.value = String(state.count);
-            };
-          };
-        <\/script>
+        <button data-dispatch="inc">+</button>
       `;
-        document.body.appendChild(template);
+        container.appendChild(template);
+        const script = document.createElement("script");
+        script.type = "text/boredom";
+        script.setAttribute("data-component", tagName);
+        script.textContent = `
+        export default ({ on }) => {
+          on("inc", ({ state }) => {
+            state.count++;
+          });
+
+          return ({ state, slots }) => {
+            slots.value = String(state.count);
+          };
+        };
+      `;
+        container.appendChild(script);
         const instance = document.createElement(tagName);
         container.appendChild(instance);
-        const state = await inflictBoreDOM(
-          { count: 10 },
-          // No explicit componentsLogic passed - it should find it in the template!
-          void 0,
-          { debug: false }
-        );
+        const state = await startAuto({ count: 10 });
         await new Promise((r) => setTimeout(r, 50));
         const countDisplay = instance.querySelector(".count");
         expect(countDisplay).to.not.be.null;
@@ -35607,25 +33573,41 @@ ${propsSlots || defaultSlot}
         t1.setAttribute("data-component", tag1);
         t1.innerHTML = `
         <span>One</span>
-        <script type="module">
-          export default () => ({ slots }) => { slots.default = "One rendered"; };
-        <\/script>
       `;
-        document.body.appendChild(t1);
+        container.appendChild(t1);
+        const s1 = document.createElement("script");
+        s1.type = "text/boredom";
+        s1.setAttribute("data-component", tag1);
+        s1.textContent = `
+        export default () => {
+          return ({ slots }) => {
+            slots.default = "One rendered";
+          };
+        };
+      `;
+        container.appendChild(s1);
         const t2 = document.createElement("template");
         t2.setAttribute("data-component", tag2);
         t2.innerHTML = `
         <span>Two</span>
-        <script type="module">
-          export default () => ({ slots }) => { slots.default = "Two rendered"; };
-        <\/script>
       `;
-        document.body.appendChild(t2);
+        container.appendChild(t2);
+        const s2 = document.createElement("script");
+        s2.type = "text/boredom";
+        s2.setAttribute("data-component", tag2);
+        s2.textContent = `
+        export default () => {
+          return ({ slots }) => {
+            slots.default = "Two rendered";
+          };
+        };
+      `;
+        container.appendChild(s2);
         const el1 = document.createElement(tag1);
         const el2 = document.createElement(tag2);
         container.appendChild(el1);
         container.appendChild(el2);
-        await inflictBoreDOM({}, void 0, { debug: false });
+        await startAuto({});
         await new Promise((r) => setTimeout(r, 50));
         expect(el1.textContent).to.contain("One");
         expect(el2.textContent).to.contain("Two");
@@ -35636,19 +33618,22 @@ ${propsSlots || defaultSlot}
         template.setAttribute("data-component", tagName);
         template.innerHTML = `
          <span>Result: <slot name="val"></slot></span>
-         <script type="module">
-           // This is NOT wrapped in webComponent(), but just the init function
-           export default ({ state }) => {
-              return ({ slots }) => {
-                slots.val = state.val;
-              }
-           }
-         <\/script>
        `;
-        document.body.appendChild(template);
+        container.appendChild(template);
+        const s3 = document.createElement("script");
+        s3.type = "text/boredom";
+        s3.setAttribute("data-component", tagName);
+        s3.textContent = `
+         export default ({ state }) => {
+            return ({ slots }) => {
+              slots.val = state.val;
+            }
+         }
+       `;
+        container.appendChild(s3);
         const el = document.createElement(tagName);
         container.appendChild(el);
-        await inflictBoreDOM({ val: "worked" });
+        await startAuto({ val: "worked" });
         await new Promise((r) => setTimeout(r, 50));
         expect(el.textContent).to.contain("Result: worked");
       });
@@ -35656,15 +33641,15 @@ ${propsSlots || defaultSlot}
   }
 
   // tests/dispatch-index.test.ts
-  async function frame5() {
+  async function frame3() {
     return new Promise((resolve) => {
       requestAnimationFrame((t) => resolve(t));
     });
   }
-  function renderHTML2(html2) {
+  function renderHTML2(html) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html2;
+    main.innerHTML = html;
     return main;
   }
   function dispatchIndexTests() {
@@ -35672,6 +33657,7 @@ ${propsSlots || defaultSlot}
       beforeEach(() => {
         const main = document.querySelector("main");
         if (main) main.innerHTML = "";
+        resetAutoStart();
       });
       it("should update state via direct ref onclick (Singular Approach)", async () => {
         renderHTML2(`
@@ -35679,21 +33665,21 @@ ${propsSlots || defaultSlot}
         <template data-component="ref-comp">
           <button data-ref="btn">Click</button>
           <span data-ref="out"></span>
-          <script type="module">
-            export default ({ refs, state }) => {
-              refs.btn.onclick = () => state.val = 'ok';
-              return ({ state, refs }) => {
-                refs.out.textContent = state.val;
-              };
-            }
-          <\/script>
         </template>
+        <script type="text/boredom" data-component="ref-comp">
+          export default ({ refs, state }) => {
+            refs.btn.onclick = () => state.val = 'ok';
+            return ({ state, refs }) => {
+              refs.out.textContent = state.val;
+            };
+          }
+        <\/script>
       `);
-        const state = await inflictBoreDOM({ val: "init" });
+        const state = await startAuto({ val: "init" });
         const btn = document.querySelector("button");
         if (!btn) throw new Error("Button not found");
         fireEvent.click(btn);
-        await frame5();
+        await frame3();
         const out = document.querySelector('[data-ref="out"]');
         expect(out?.textContent).to.equal("ok");
       });
@@ -35702,46 +33688,45 @@ ${propsSlots || defaultSlot}
         <list-comp></list-comp>
         <template data-component="list-comp">
           <div data-ref="container"></div>
-          <script type="module">
-            export default ({ on, state, makeComponent, refs }) => {
-              on('hit', ({ e }) => {
-                state.lastIndex = e.index;
-              });
-              return ({ state, refs }) => {
-                refs.container.innerHTML = '';
-                [0, 1, 2].forEach(() => {
-                  refs.container.appendChild(makeComponent('item-btn'));
-                });
-              };
-            }
-          <\/script>
         </template>
         <template data-component="item-btn">
-          <button onclick="dispatch('hit')">Hit</button>
+          <button data-dispatch="hit">Hit</button>
         </template>
+        <script type="text/boredom" data-component="list-comp">
+          export default ({ on, state, refs }) => {
+            on('hit', ({ e }) => {
+              state.lastIndex = e.index;
+            });
+            return () => {
+              refs.container.innerHTML = [0, 1, 2].map(i => 
+                \`<item-btn data-index="\${i}"></item-btn>\`
+              ).join('');
+            };
+          }
+        <\/script>
       `);
-        const state = await inflictBoreDOM({ lastIndex: -1 });
-        await frame5();
+        const state = await startAuto({ lastIndex: -1 });
+        await frame3();
         const buttons = document.querySelectorAll("button");
         expect(buttons.length).to.equal(3);
         fireEvent.click(buttons[1]);
-        await frame5();
+        await frame3();
         expect(state.lastIndex).to.equal(1);
       });
     });
   }
 
   // tests/bindings.test.ts
-  var import_mocha6 = __toESM(require_mocha());
-  async function frame6() {
+  var import_mocha3 = __toESM(require_mocha());
+  async function frame4() {
     return new Promise((resolve) => {
       requestAnimationFrame((t) => resolve(t));
     });
   }
-  async function renderHTMLFrame6(html2) {
+  async function renderHTMLFrame3(html) {
     const main = document.querySelector("main");
     if (!main) throw new Error("No <main> found!");
-    main.innerHTML = html2;
+    main.innerHTML = html;
     return new Promise((resolve) => {
       requestAnimationFrame(() => resolve(main));
     });
@@ -35751,10 +33736,11 @@ ${propsSlots || defaultSlot}
       beforeEach(() => {
         const main = document.querySelector("main");
         if (main) main.innerHTML = "";
+        resetAutoStart();
         setDebugConfig(true);
       });
       it("applies data-text, data-show, data-class, data-value, data-checked", async () => {
-        await renderHTMLFrame6(`
+        await renderHTMLFrame3(`
         <binding-test></binding-test>
         <template data-component="binding-test">
           <p data-ref="text" data-text="state.message"></p>
@@ -35764,19 +33750,13 @@ ${propsSlots || defaultSlot}
           <input type="checkbox" data-ref="check" data-checked="state.checked">
         </template>
       `);
-        const state = await inflictBoreDOM(
-          {
-            message: "Hello",
-            visible: true,
-            active: true,
-            input: "test",
-            checked: true
-          },
-          {
-            "binding-test": webComponent(() => () => {
-            })
-          }
-        );
+        const state = await startAuto({
+          message: "Hello",
+          visible: true,
+          active: true,
+          input: "test",
+          checked: true
+        });
         const text = document.querySelector("[data-ref='text']");
         const visible = document.querySelector("[data-ref='visible']");
         const toggle = document.querySelector("[data-ref='toggle']");
@@ -35792,8 +33772,8 @@ ${propsSlots || defaultSlot}
         state.active = false;
         state.input = "next";
         state.checked = false;
-        await frame6();
-        await frame6();
+        await frame4();
+        await frame4();
         expect(text.textContent).to.equal("World");
         expect(visible.hidden).to.equal(true);
         expect(toggle.classList.contains("active")).to.equal(false);
@@ -35801,7 +33781,7 @@ ${propsSlots || defaultSlot}
         expect(check.checked).to.equal(false);
       });
       it("renders lists with data-list and data-item templates", async () => {
-        await renderHTMLFrame6(`
+        await renderHTMLFrame3(`
         <list-test></list-test>
         <template data-component="list-test">
           <ul data-list="state.items">
@@ -35814,26 +33794,22 @@ ${propsSlots || defaultSlot}
           </ul>
         </template>
       `);
-        const state = await inflictBoreDOM(
-          { items: [{ label: "A" }, { label: "B" }] },
-          { "list-test": webComponent(() => () => {
-          }) }
-        );
-        await frame6();
-        await frame6();
+        const state = await startAuto({ items: [{ label: "A" }, { label: "B" }] });
+        await frame4();
+        await frame4();
         const items = document.querySelectorAll("list-test li");
         expect(items.length).to.equal(2);
         expect(items[0].textContent).to.include("A");
         expect(items[1].textContent).to.include("B");
         state.items.push({ label: "C" });
-        await frame6();
-        await frame6();
+        await frame4();
+        await frame4();
         const updated = document.querySelectorAll("list-test li");
         expect(updated.length).to.equal(3);
         expect(updated[2].textContent).to.include("C");
       });
       it("updates data-prop bindings and rerenders child components", async () => {
-        await renderHTMLFrame6(`
+        await renderHTMLFrame3(`
         <parent-comp></parent-comp>
         <template data-component="parent-comp">
           <child-comp data-prop-user-id="state.selectedId"></child-comp>
@@ -35841,71 +33817,61 @@ ${propsSlots || defaultSlot}
         <template data-component="child-comp">
           <span data-ref="out"></span>
         </template>
-      `);
-        const state = await inflictBoreDOM(
-          { selectedId: 1 },
-          {
-            "parent-comp": webComponent(() => () => {
-            }),
-            "child-comp": webComponent(() => ({ refs, detail }) => {
+        <script type="text/boredom" data-component="child-comp">
+          export default ({ detail }) => {
+            return ({ refs }) => {
               refs.out.textContent = String(detail?.data?.userId ?? "");
-            })
+            }
           }
-        );
+        <\/script>
+      `);
+        const state = await startAuto({ selectedId: 1 });
         const output = document.querySelector("child-comp span");
         expect(output.textContent).to.equal("1");
         state.selectedId = 2;
-        await frame6();
-        await frame6();
+        await frame4();
+        await frame4();
         expect(output.textContent).to.equal("2");
       });
-      it("supports data-dispatch and on- attributes for events", async () => {
-        await renderHTMLFrame6(`
+      it("supports data-dispatch for events", async () => {
+        await renderHTMLFrame3(`
         <event-test></event-test>
         <template data-component="event-test">
           <button data-dispatch="hit" data-ref="hit"></button>
-          <button on-click="tap" data-ref="tap"></button>
+          <button data-dispatch="tap" data-ref="tap"></button>
         </template>
-      `);
-        const state = await inflictBoreDOM(
-          { hits: 0, taps: 0 },
-          {
-            "event-test": webComponent(({ on }) => {
-              on("hit", ({ state: state2 }) => {
-                state2.hits += 1;
-              });
-              on("tap", ({ state: state2 }) => {
-                state2.taps += 1;
-              });
-              return () => {
-              };
-            })
+        <script type="text/boredom" data-component="event-test">
+          export default ({ on }) => {
+            on("hit", ({ state }) => {
+              state.hits += 1;
+            });
+            on("tap", ({ state }) => {
+              state.taps += 1;
+            });
+            return () => {};
           }
-        );
+        <\/script>
+      `);
+        const state = await startAuto({ hits: 0, taps: 0 });
         const hit = document.querySelector("[data-ref='hit']");
         const tap = document.querySelector("[data-ref='tap']");
         fireEvent.click(hit);
         fireEvent.click(tap);
-        await frame6();
-        await frame6();
+        await frame4();
+        await frame4();
         expect(state.hits).to.equal(1);
         expect(state.taps).to.equal(1);
       });
-      it("creates templates via component() helper", async () => {
-        const Helper = component2(
-          "component-helper",
-          `<p data-text="state.message"></p>`,
-          () => () => {
-          }
-        );
-        await renderHTMLFrame6(`<component-helper></component-helper>`);
-        await inflictBoreDOM(
-          { message: "Inline" },
-          { "component-helper": Helper },
-          { singleFile: true }
-        );
-        await frame6();
-        await frame6();
+      it("binds data-text in a minimal triplet", async () => {
+        await renderHTMLFrame3(`
+        <component-helper></component-helper>
+        <template data-component="component-helper">
+          <p data-text="state.message"></p>
+        </template>
+      `);
+        await startAuto({ message: "Inline" });
+        await frame4();
+        await frame4();
         const output = document.querySelector("component-helper p");
         expect(output.textContent).to.equal("Inline");
       });
@@ -35914,22 +33880,11 @@ ${propsSlots || defaultSlot}
 
   // tests/runner.ts
   mocha.setup("bdd");
-  mocha.globals([
-    "$missingName",
-    "$missingArgs",
-    "$missingComponent",
-    "$defineMissing"
-  ]);
   dom_test_default();
   debug_test_default();
-  console_api_test_default();
-  inside_out_test_default();
-  llm_test_default();
-  patch_concurrency_test_default();
   inlineLogicTests();
   dispatchIndexTests();
   bindings_test_default();
-  mocha.checkLeaks();
   var results = {
     stats: {},
     passes: [],

@@ -96,19 +96,19 @@
   <p>Everything stays in one HTML file and fits in LLM context.</p>
 
   <!-- STATE -->
-  <script>
-    const initialState = {
-      count: 0,
-      name: "World",
-      celsius: 0,
-      fahrenheit: 32,
-      newTask: "",
-      showEmpty: false,
-      showList: true,
-      taskStats: { total: 2, done: 1 },
-      tasks: [
-        { id: 1, title: "Ship single-file bundle", done: true },
-        { id: 2, title: "Add data-list bindings", done: false }
+  <script id="initial-state" type="application/json">
+    {
+      "count": 0,
+      "name": "World",
+      "celsius": 0,
+      "fahrenheit": 32,
+      "newTask": "",
+      "showEmpty": false,
+      "showList": true,
+      "taskStats": { "total": 2, "done": 1 },
+      "tasks": [
+        { "id": 1, "title": "Ship single-file bundle", "done": true },
+        { "id": 2, "title": "Add data-list bindings", "done": false }
       ]
     }
   </script>
@@ -196,9 +196,40 @@
   </template>
 
   <!-- LOGIC -->
-  <script type="module">
-    import { inflictBoreDOM, webComponent } from "./boreDOM.js"
+  <script type="text/boredom" data-component="my-counter">
+    export default ({ on }) => {
+      on("increment", ({ state }) => { state.count += 1 })
+      on("decrement", ({ state }) => { state.count -= 1 })
+      on("reset", ({ state }) => { state.count = 0 })
+      return () => {}
+    }
+  </script>
 
+  <script type="text/boredom" data-component="name-input">
+    export default ({ on }) => {
+      on("nameInput", ({ state, e }) => {
+        const target = e.event.target
+        if (target && "value" in target) {
+          state.name = target.value || "World"
+        }
+      })
+      return () => {}
+    }
+  </script>
+
+  <script type="text/boredom" data-component="temp-converter">
+    export default ({ on }) => {
+      on("celsiusInput", ({ state, e }) => {
+        const target = e.event.target
+        const next = target && "value" in target ? parseFloat(target.value) : 0
+        state.celsius = Number.isFinite(next) ? next : 0
+        state.fahrenheit = Math.round((state.celsius * 9 / 5 + 32) * 10) / 10
+      })
+      return () => {}
+    }
+  </script>
+
+  <script type="text/boredom" data-component="task-board">
     const updateTaskStats = (state) => {
       const total = state.tasks.length
       const done = state.tasks.filter((task) => task.done).length
@@ -207,62 +238,37 @@
       state.showEmpty = total === 0
     }
 
-    await inflictBoreDOM(initialState, {
-      "my-counter": webComponent(({ on }) => {
-        on("increment", ({ state }) => { state.count += 1 })
-        on("decrement", ({ state }) => { state.count -= 1 })
-        on("reset", ({ state }) => { state.count = 0 })
-        return () => {}
-      }),
-      "name-input": webComponent(({ on }) => {
-        on("nameInput", ({ state, e }) => {
-          const target = e.event.target
-          if (target && "value" in target) {
-            state.name = target.value || "World"
-          }
-        })
-        return () => {}
-      }),
-      "temp-converter": webComponent(({ on }) => {
-        on("celsiusInput", ({ state, e }) => {
-          const target = e.event.target
-          const next = target && "value" in target ? parseFloat(target.value) : 0
-          state.celsius = Number.isFinite(next) ? next : 0
-          state.fahrenheit = Math.round((state.celsius * 9 / 5 + 32) * 10) / 10
-        })
-        return () => {}
-      }),
-      "task-board": webComponent(({ on }) => {
-        on("taskInput", ({ state, e }) => {
-          const target = e.event.target
-          if (target && "value" in target) {
-            state.newTask = target.value
-          }
-        })
-        on("addTask", ({ state }) => {
-          const title = state.newTask.trim()
-          if (!title) return
-          state.tasks.unshift({ id: Date.now(), title, done: false })
-          state.newTask = ""
-          updateTaskStats(state)
-        })
-        on("toggleTask", ({ state, e }) => {
-          const id = Number(e.dispatcher.dataset.id)
-          const task = state.tasks.find((t) => t.id === id)
-          if (task) task.done = !task.done
-          updateTaskStats(state)
-        })
-        on("removeTask", ({ state, e }) => {
-          const id = Number(e.dispatcher.dataset.id)
-          const index = state.tasks.findIndex((t) => t.id === id)
-          if (index >= 0) state.tasks.splice(index, 1)
-          updateTaskStats(state)
-        })
-        return () => {}
-      }),
-    }, { singleFile: true })
+    export default ({ on }) => {
+      on("taskInput", ({ state, e }) => {
+        const target = e.event.target
+        if (target && "value" in target) {
+          state.newTask = target.value
+        }
+      })
+      on("addTask", ({ state }) => {
+        const title = state.newTask.trim()
+        if (!title) return
+        state.tasks.unshift({ id: Date.now(), title, done: false })
+        state.newTask = ""
+        updateTaskStats(state)
+      })
+      on("toggleTask", ({ state, e }) => {
+        const id = Number(e.dispatcher.dataset.id)
+        const task = state.tasks.find((t) => t.id === id)
+        if (task) task.done = !task.done
+        updateTaskStats(state)
+      })
+      on("removeTask", ({ state, e }) => {
+        const id = Number(e.dispatcher.dataset.id)
+        const index = state.tasks.findIndex((t) => t.id === id)
+        if (index >= 0) state.tasks.splice(index, 1)
+        updateTaskStats(state)
+      })
+      return () => {}
+    }
   </script>
 
   <!-- RUNTIME -->
+  <script type="module" src="../../dist/boreDOM.full.js" data-state="#initial-state"></script>
 </body>
 </html>

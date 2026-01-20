@@ -5,19 +5,16 @@
  * - Discover <template data-component> nodes and register custom elements
  * - Provide utilities to query and create elements
  * - Define the base custom element class (Bored) and the component factory
- * - Wire inline event attributes (data-dispatch, on-*) to custom event dispatchers
- * - Support dynamic import of per-component scripts
+ * - Wire inline event attributes (data-dispatch) to custom event dispatchers
+ * - Load triplet scripts/styles via data-component attributes
  */
 import type { LoadedFunction } from "./types";
 
-// Build-time flags
-declare const __LLM__: boolean;
-const isLLMBuild = typeof __LLM__ !== "undefined" && __LLM__;
+let componentInitializer: ((element: Bored) => void) | null = null;
 
-const parseCustomEventNames = (value: string) =>
-  value.split("'").filter((s) =>
-    s.length > 2 && !(s.includes("(") || s.includes(",") || s.includes(")"))
-  );
+export const setComponentInitializer = (fn: (element: Bored) => void) => {
+  componentInitializer = fn;
+};
 
 const parseDirectEventNames = (value: string) =>
   value
@@ -25,81 +22,126 @@ const parseDirectEventNames = (value: string) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-const parseEventNames = isLLMBuild
-  ? parseDirectEventNames
-  : (value: string) => {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) return [];
-    if (trimmed.includes("dispatch(") || trimmed.includes("'")) {
-      return parseCustomEventNames(value);
-    }
-    return parseDirectEventNames(value);
-  };
+const parseEventNames = parseDirectEventNames;
 
-/**
- * It dynamically imports all scripts that have a filename that matches the
- * provided name. This is intended to load the string of the `<template>` `data-component` attribute.
- *
- * @param names - The list of names to try to dynamically load. It appends .js to them.
- *
- * @returns A Map of the registered web-components tag names, and their corresponding
- * dynamically loaded .js file exported function (or null if there is no .js file).
- */
-export const dynamicImportScripts = async (names: string[]) => {
-  const result: Map<string, null | LoadedFunction> = new Map();
+const BOREDOM_SCRIPT_TYPES = new Set([
+  "text/boredom",
+  "application/boredom",
+]);
 
-  for (let i = 0; i < names.length; ++i) {
-    const scripts = Array.from(queryAll("script[src]"));
-    const matchingScript = scripts.find((script) => {
-      const src = script.getAttribute("src") ?? "";
-      const filename = src.split("/").pop() ?? "";
-      return filename === `${names[i]}.js`;
-    });
-    const scriptLocation = matchingScript?.getAttribute("src");
-    let f: null | LoadedFunction = null;
-    if (scriptLocation) {
+const pickModuleExport = (module: Record<string, any> | undefined | null) => {
+  if (!module) return null;
+  if ("default" in module && module.default) return module.default;
+  const keys = Object.keys(module);
+  return keys.length > 0 ? module[keys[0]] : null;
+};
+
+const importInlineModule = async (code: string) => {
+  const blob = new Blob([code], { type: "text/javascript" });
+  const url = URL.createObjectURL(blob);
+  try {
+    return await import(url);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
+
+const loadTripletScripts = async (
+  webComponentFactory?: (fn: any) => any,
+) => {
+  const scripts = Array.from(queryAll("script[data-component]"))
+    .filter((elem): elem is HTMLScriptElement =>
+      elem instanceof HTMLScriptElement
+    );
+  const result = new Map<string, LoadedFunction>();
+
+  for (const script of scripts) {
+    const name = script.dataset.component ?? "";
+    if (!name) continue;
+
+    let rawLogic: any = null;
+    const src = script.getAttribute("src");
+    const type = (script.getAttribute("type") || "").trim().toLowerCase();
+
+    if (src) {
       try {
-        const moduleUrl = new URL(scriptLocation, document.baseURI).href;
-        const exports = await import(moduleUrl);
-        for (const exported of Object.keys(exports)) {
-          f = exports[exported];
-          break;
-        }
-        result.set(names[i], f);
+        const moduleUrl = new URL(src, document.baseURI).href;
+        const module = await import(moduleUrl);
+        rawLogic = pickModuleExport(module);
       } catch (e) {
-        console.error(`Unable to import "${scriptLocation}"`, e);
+        console.error(`Unable to import "${src}"`, e);
       }
+    } else if (BOREDOM_SCRIPT_TYPES.has(type)) {
+      const code = script.textContent;
+      if (code && code.trim().length > 0) {
+        try {
+          const module = await importInlineModule(code);
+          rawLogic = pickModuleExport(module);
+        } catch (e) {
+          console.error(`Unable to load inline logic for "${name}"`, e);
+        }
+      }
+    }
+
+    if (rawLogic) {
+      const logic = webComponentFactory ? webComponentFactory(rawLogic) : rawLogic;
+      result.set(name, logic);
     }
   }
 
   return result;
 };
 
+const attachTripletStyles = (templates: HTMLElement[]) => {
+  const styles = Array.from(queryAll("style[data-component]"))
+    .filter((elem): elem is HTMLStyleElement =>
+      elem instanceof HTMLStyleElement
+    );
+  if (styles.length === 0) return;
+
+  const styleMap = new Map<string, HTMLStyleElement[]>();
+  styles.forEach((style) => {
+    const name = style.dataset.component ?? "";
+    if (!name) return;
+    const list = styleMap.get(name) ?? [];
+    list.push(style);
+    styleMap.set(name, list);
+  });
+
+  templates.forEach((template) => {
+    if (!isTemplate(template)) return;
+    const name = template.dataset.component ?? "";
+    if (!name) return;
+    const entries = styleMap.get(name);
+    if (!entries || entries.length === 0) return;
+    entries.forEach((style) => {
+      const clone = style.cloneNode(true);
+      template.content.prepend(clone);
+      style.remove();
+    });
+  });
+};
+
 /**
  * Scans the DOM for <template data-component> and registers a custom element
  * for each one.
- * 
- * NEW (Phase 4): Also looks for embedded <script> tags inside the template
- * and extracts/executes them as inline component logic.
  *
  * @param webComponentFactory - Optional function to wrap raw init functions (auto-wrapping)
  */
 export const registerTemplates = async (
   webComponentFactory?: (fn: any) => any,
-  options?: {
-    mirrorAttributes?: boolean;
-  },
 ): Promise<{
   names: string[];
   inlineLogic: Map<string, LoadedFunction>;
 }> => {
-  const shouldMirrorAttributes = !isLLMBuild &&
-    (options?.mirrorAttributes ?? true);
   const names: string[] = [];
   const inlineLogic = new Map<string, LoadedFunction>();
 
   const templates = Array.from(queryAll("template[data-component]"))
     .filter((elem): elem is HTMLElement => elem instanceof HTMLElement);
+
+  attachTripletStyles(templates);
+  const tripletLogic = await loadTripletScripts(webComponentFactory);
 
   for (const t of templates) {
     // 1. Extract Name & Attributes
@@ -109,7 +151,8 @@ export const registerTemplates = async (
     for (const attribute in t.dataset) {
       if (attribute === "component") {
         name = t.dataset[attribute] ?? "";
-      } else if (shouldMirrorAttributes) {
+      } else {
+        // Always mirror attributes in the unified build
         attributes.push([
           decamelize(attribute),
           t.dataset[attribute] ?? "",
@@ -121,52 +164,24 @@ export const registerTemplates = async (
       console.error(`Invalid <template> found: missing data-component`, t);
       continue;
     }
+    if (!name.includes("-")) {
+      console.error(`Invalid <template> found: "${name}" is not a custom element name`, t);
+      continue;
+    }
 
-    // 1. Check for Inline Script (Single File Support)
     if (isTemplate(t)) {
-      const script = t.content.querySelector("script");
-      if (script) {
-                const code = script.textContent;
-                if (code && code.trim().length > 0) {
-           try {
-             // Create a Blob URL for the inline module
-             const blob = new Blob([code], { type: "text/javascript" });
-             const url = URL.createObjectURL(blob);
-             
-             // Dynamic Import
-                          const module = await import(url);
-                          
-             // Cleanup
-             URL.revokeObjectURL(url);
-             
-             // Remove script from template so it doesn't get cloned into Shadow DOM
-             script.remove();
-
-             // Find export
-             let rawLogic: any = null;
-             if (module.default) {
-                                rawLogic = module.default;
-             } else {
-                const keys = Object.keys(module);
-                if (keys.length > 0) {
-                                    rawLogic = module[keys[0]];
-                }
-             }
-
-             if (rawLogic) {
-                              // Auto-wrap if factory provided
-               const logic = webComponentFactory ? webComponentFactory(rawLogic) : rawLogic;
-               inlineLogic.set(name, logic);
-             }
-           } catch (e) {
-                        }
-        }
-      }
+      t.content.querySelectorAll("script").forEach((script) => script.remove());
     }
 
     // 2. Register Custom Element
     component(name, { attributes });
     names.push(name);
+  }
+
+  if (tripletLogic.size > 0) {
+    for (const [tagName, logic] of tripletLogic) {
+      inlineLogic.set(tagName, logic);
+    }
   }
 
   return { names, inlineLogic };
@@ -182,7 +197,8 @@ export const createComponent = (
   const element = create(name);
   if (!isBored(element)) {
     const error = `The tag name "${name}" is not a BoreDOM  component.
-      \n"createComponent" only accepts tag-names with matching <template> tags that have a data-component attribute in them.`;
+      
+"createComponent" only accepts tag-names with matching <template> tags that have a data-component attribute in them.`;
 
     console.error(error);
     throw new Error(error);
@@ -249,7 +265,6 @@ export const handle = <T>(name: string, f: (detail: T) => void) => {
 export const isTemplate = (e: HTMLElement): e is HTMLTemplateElement =>
   e instanceof HTMLTemplateElement;
 const isObject = (t: any): t is object => typeof t === "object";
-const isFunction = (t: any): t is Function => typeof t === "function";
 export const isBored = (t: unknown): t is Bored =>
   isObject(t) && "isBored" in t && Boolean(t.isBored);
 /** Placeholder for future API to introspect event emissions */
@@ -273,23 +288,6 @@ const decamelize = (str: string): string => {
   return result;
 };
 
-type StartsWithOn = `on${string}`;
-type StartsWithQueriedOn = `queriedOn${string}`;
-const isStartsWithOn = (s: string): s is StartsWithOn => s.startsWith("on");
-const isStartsWithQueriedOn = (s: string): s is StartsWithQueriedOn =>
-  s.startsWith("queriedOn");
-/**
- * Normalizes prop names like onClick/queriedOnClick to native event names
- * ("click").
- */
-const getEventName = (s: StartsWithOn | StartsWithQueriedOn) => {
-  if (isStartsWithOn(s)) {
-    return s.slice(2).toLowerCase();
-  }
-
-  return s.slice(9).toLowerCase();
-};
-
 export abstract class Bored extends HTMLElement {
   abstract renderCallback: (elem: Bored) => void;
   // Use a map to store slots if needed, or simple property access
@@ -301,11 +299,6 @@ export abstract class Bored extends HTMLElement {
  * hooks, attribute mirroring, and event wiring.
  */
 export const component = <T>(tag: string, props: {
-  /** Shadow-root content for this component */
-  shadow?: string;
-  shadowrootmode?: ShadowRootMode;
-  /** Style for this component, placed in a <style> tag in the #shadowroot */
-  style?: string;
   connectedCallback?: (e: HTMLElement) => void;
   disconnectedCallback?: (e: HTMLElement) => void;
   adoptedCallback?: (e: HTMLElement) => void;
@@ -318,10 +311,6 @@ export const component = <T>(tag: string, props: {
     }) => void;
   };
   attributes?: [string, string][];
-  [key: StartsWithOn]: (<T extends Event>(e: T) => any) | undefined;
-  [key: StartsWithQueriedOn]:
-    | ({ [key: string]: <T extends Event>(e: T) => any }) 
-    | undefined;
 } = {}) => {
   // Don't register two components with the same custom tag:
   if (customElements.get(tag)) return;
@@ -329,10 +318,11 @@ export const component = <T>(tag: string, props: {
   const traverse = (
     root: HTMLElement,
     f: (elem: HTMLElement, i: number, all: HTMLElement[]) => void,
-    { traverseShadowRoot, query }: {
-      traverseShadowRoot?: boolean;
-      query?: string;
-    } = {},
+    { traverseShadowRoot, query }:
+      {
+        traverseShadowRoot?: boolean;
+        query?: string;
+      } = {},
   ) => {
     const nodes = Array.from(
       traverseShadowRoot
@@ -367,7 +357,7 @@ export const component = <T>(tag: string, props: {
     });
   };
 
-  const createDispatchersLLM = (host: HTMLElement) => {
+  const createDispatchers = (host: HTMLElement) => {
     traverse(host, (node) => {
       for (let i = 0; i < node.attributes.length; i++) {
         const attribute = node.attributes[i];
@@ -392,131 +382,21 @@ export const component = <T>(tag: string, props: {
     }, { traverseShadowRoot: true });
   };
 
-  const createDispatchersFull = (host: HTMLElement) => {
-    traverse(host, (node) => {
-      for (let i = 0; i < node.attributes.length; i++) {
-        const attribute = node.attributes[i];
-        const attributeName = attribute.name;
-
-        if (attributeName.startsWith("on-")) {
-          const eventName = attributeName.slice(3);
-          addDispatchers(
-            host,
-            node,
-            eventName,
-            parseEventNames(attribute.value),
-          );
-          node.removeAttribute(attributeName);
-          continue;
-        }
-
-        if (
-          attributeName === "data-dispatch" ||
-          attributeName.startsWith("data-dispatch-")
-        ) {
-          const eventName = attributeName === "data-dispatch"
-            ? "click"
-            : attributeName.slice("data-dispatch-".length);
-          addDispatchers(
-            host,
-            node,
-            eventName,
-            parseEventNames(attribute.value),
-          );
-          node.removeAttribute(attributeName);
-          continue;
-        }
-
-        if (isStartsWithOn(attributeName)) {
-          const eventNames = parseCustomEventNames(attribute.value);
-          if (eventNames.length > 0) {
-            addDispatchers(host, node, getEventName(attributeName), eventNames);
-          }
-
-          node.setAttribute(
-            `data-${attributeName}-dispatches`,
-            eventNames.join(),
-          );
-          node.removeAttribute(attributeName);
-        }
-      }
-    }, { traverseShadowRoot: true });
-  };
-
-  const createDispatchers = isLLMBuild
-    ? createDispatchersLLM
-    : createDispatchersFull;
-
-  const initInstanceLLM = (host: Bored) => {
+  const initInstance = (host: Bored) => {
     const template = query(`[data-component="${tag}"]`) as HTMLTemplateElement ??
       create("template");
-    host.appendChild(template.content.cloneNode(true));
-
-    if (props.attributes && Array.isArray(props.attributes)) {
-      props.attributes.forEach(([attr, value]) => host.setAttribute(attr, value));
-    }
-
-    createDispatchers(host);
-    host.isInitialized = true;
-  };
-
-  const initInstanceFull = (host: Bored) => {
-    const template = query(`[data-component="${tag}"]`) as HTMLTemplateElement ??
-      create("template");
+    
+    // Support declarative Shadow DOM (standard API)
+    // If the template itself has shadowrootmode, or if we want to support it
     const templateShadowRootMode = template.getAttribute("shadowrootmode") as
       | ShadowRootMode
       | null;
-    const useShadowRoot = props.style || props.shadow || templateShadowRootMode;
 
-    if (useShadowRoot) {
-      const shadowRootMode = props.shadowrootmode ?? templateShadowRootMode ??
-        "open" as const;
-      const shadowRoot = host.attachShadow({ mode: shadowRootMode });
-
-      if (props.style) {
-        const style = create("style");
-        style.textContent = props.style;
-        shadowRoot.appendChild(style);
-      }
-
-      if (props.shadow) {
-        const tmp = create("template") as HTMLTemplateElement;
-        tmp.innerHTML = props.shadow;
-        shadowRoot.appendChild(tmp.content.cloneNode(true));
-      } else if (templateShadowRootMode) {
-        shadowRoot.appendChild(template.content.cloneNode(true));
-      }
-    }
-
-    if (template && !templateShadowRootMode) {
+    if (templateShadowRootMode) {
+      const shadowRoot = host.attachShadow({ mode: templateShadowRootMode });
+      shadowRoot.appendChild(template.content.cloneNode(true));
+    } else {
       host.appendChild(template.content.cloneNode(true));
-    }
-
-    if (props.onSlotChange) {
-      traverse(host, (elem) => {
-        if (!(elem instanceof HTMLSlotElement)) return;
-        elem.addEventListener("slotchange", (e) => props.onSlotChange?.(e));
-      }, { traverseShadowRoot: true });
-    }
-
-    if (isFunction(props.onClick)) {
-      host.addEventListener("click", props.onClick);
-    }
-
-    for (const [key, value] of Object.entries(props)) {
-      if (isStartsWithOn(key)) {
-        if (!isFunction(value)) continue;
-        host.addEventListener(getEventName(key) as any, value);
-      } else if (isStartsWithQueriedOn(key)) {
-        const queries = value;
-        if (!isObject(queries)) continue;
-        const eventName = getEventName(key);
-        for (const [query, handler] of Object.entries(queries)) {
-          traverse(host, (node) => {
-            node.addEventListener(eventName, handler);
-          }, { traverseShadowRoot: true, query });
-        }
-      }
     }
 
     if (props.attributes && Array.isArray(props.attributes)) {
@@ -526,8 +406,6 @@ export const component = <T>(tag: string, props: {
     createDispatchers(host);
     host.isInitialized = true;
   };
-
-  const initInstance = isLLMBuild ? initInstanceLLM : initInstanceFull;
 
   customElements.define(
     tag,
@@ -556,6 +434,7 @@ export const component = <T>(tag: string, props: {
       renderCallback = (_: Bored) => {};
       connectedCallback() {
         if (!this.isInitialized) initInstance(this);
+        if (componentInitializer) componentInitializer(this);
         this.renderCallback(this);
         props.connectedCallback?.(this);
       }

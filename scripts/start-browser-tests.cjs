@@ -16,7 +16,7 @@ async function ensureTestBundle() {
 }
 
 async function ensureFrameworkBundle() {
-  const outFile = path.join("dist", "boreDOM.min.js");
+  const outFile = path.join("dist", "boredom.min.js");
   if (fs.existsSync(outFile)) return;
   await esbuild.build({
     entryPoints: ["src/index.ts"],

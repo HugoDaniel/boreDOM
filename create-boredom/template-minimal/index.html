@@ -7,9 +7,12 @@
   <title>boreDOM palette</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 
+  <script id="initial-state" type="application/json">
+    { "colors": ["#ff00ff", "#ffad00", "#3366EE"], "selected": 0 }
+  </script>
 
   <!-- The main entry point of the web app JS code -->
-  <script src="./main.js" type="module"></script>
+  <script src="./main.js" type="module" data-state="#initial-state"></script>
 </head>
 
 <body>

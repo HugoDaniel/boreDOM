@@ -1,6 +1,6 @@
 
 import { expect } from "chai";
-import { inflictBoreDOM, webComponent } from "../src/index";
+import { startAuto, resetAutoStart } from "./auto-start";
 
 export default function inlineLogicTests() {
   describe("Inline Logic Components", () => {
@@ -9,6 +9,7 @@ export default function inlineLogicTests() {
     beforeEach(() => {
       container = document.createElement("div");
       document.body.appendChild(container);
+      resetAutoStart();
     });
 
     afterEach(() => {
@@ -16,7 +17,7 @@ export default function inlineLogicTests() {
       // Clean up registered components if possible, or just ignore since browser tests refresh
     });
 
-    it("should load component logic from <script> inside <template>", async () => {
+    it("should load component logic from triplet scripts", async () => {
       // 1. Setup HTML
       const tagName = "inline-counter";
       
@@ -28,35 +29,33 @@ export default function inlineLogicTests() {
       // We construct the innerHTML carefully
       template.innerHTML = `
         <div class="count">Count: <slot name="value">0</slot></div>
-        <button onclick="dispatch('inc')">+</button>
-        
-        <script type="module">
-          // Standard boreDOM component definition
-          export default ({ on }) => {
-            on("inc", ({ state }) => {
-              state.count++;
-            });
-            
-            return ({ state, slots }) => {
-              slots.value = String(state.count);
-            };
-          };
-        </script>
+        <button data-dispatch="inc">+</button>
       `;
       
-      document.body.appendChild(template);
+      container.appendChild(template);
+
+      const script = document.createElement("script");
+      script.type = "text/boredom";
+      script.setAttribute("data-component", tagName);
+      script.textContent = `
+        export default ({ on }) => {
+          on("inc", ({ state }) => {
+            state.count++;
+          });
+
+          return ({ state, slots }) => {
+            slots.value = String(state.count);
+          };
+        };
+      `;
+      container.appendChild(script);
 
       // Create an instance of the component
       const instance = document.createElement(tagName);
       container.appendChild(instance);
 
       // 2. Initialize boreDOM
-      const state = await inflictBoreDOM(
-        { count: 10 },
-        // No explicit componentsLogic passed - it should find it in the template!
-        undefined, 
-        { debug: false }
-      );
+      const state = await startAuto({ count: 10 });
 
       // 3. Verify Initial Render
       // Give it a tick to render
@@ -84,28 +83,46 @@ export default function inlineLogicTests() {
       t1.setAttribute("data-component", tag1);
       t1.innerHTML = `
         <span>One</span>
-        <script type="module">
-          export default () => ({ slots }) => { slots.default = "One rendered"; };
-        </script>
       `;
-      document.body.appendChild(t1);
+      container.appendChild(t1);
+
+      const s1 = document.createElement("script");
+      s1.type = "text/boredom";
+      s1.setAttribute("data-component", tag1);
+      s1.textContent = `
+        export default () => {
+          return ({ slots }) => {
+            slots.default = "One rendered";
+          };
+        };
+      `;
+      container.appendChild(s1);
 
       const t2 = document.createElement("template");
       t2.setAttribute("data-component", tag2);
       t2.innerHTML = `
         <span>Two</span>
-        <script type="module">
-          export default () => ({ slots }) => { slots.default = "Two rendered"; };
-        </script>
       `;
-      document.body.appendChild(t2);
+      container.appendChild(t2);
+
+      const s2 = document.createElement("script");
+      s2.type = "text/boredom";
+      s2.setAttribute("data-component", tag2);
+      s2.textContent = `
+        export default () => {
+          return ({ slots }) => {
+            slots.default = "Two rendered";
+          };
+        };
+      `;
+      container.appendChild(s2);
 
       const el1 = document.createElement(tag1);
       const el2 = document.createElement(tag2);
       container.appendChild(el1);
       container.appendChild(el2);
 
-      await inflictBoreDOM({}, undefined, { debug: false });
+      await startAuto({});
       await new Promise(r => setTimeout(r, 50));
 
       expect(el1.textContent).to.contain("One");
@@ -118,21 +135,25 @@ export default function inlineLogicTests() {
        template.setAttribute("data-component", tagName);
        template.innerHTML = `
          <span>Result: <slot name="val"></slot></span>
-         <script type="module">
-           // This is NOT wrapped in webComponent(), but just the init function
-           export default ({ state }) => {
-              return ({ slots }) => {
-                slots.val = state.val;
-              }
-           }
-         </script>
        `;
-       document.body.appendChild(template);
+       container.appendChild(template);
+
+       const s3 = document.createElement("script");
+       s3.type = "text/boredom";
+       s3.setAttribute("data-component", tagName);
+       s3.textContent = `
+         export default ({ state }) => {
+            return ({ slots }) => {
+              slots.val = state.val;
+            }
+         }
+       `;
+       container.appendChild(s3);
        
        const el = document.createElement(tagName);
        container.appendChild(el);
        
-       await inflictBoreDOM({ val: "worked" });
+       await startAuto({ val: "worked" });
        await new Promise(r => setTimeout(r, 50));
        
        expect(el.textContent).to.contain("Result: worked");
