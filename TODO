@@ -1,7 +1,0 @@
-- [DONE] Allow objects to be replaced entirely in state and trigger the necessary updates
-- Change the shadowroot way of working, use `data-shadowroot=...` instead of the browser `shadowrootmode=open`
-- Allow slots to be fullfilled with children automatically through html
-- [DONE] Fix multi-hyphen component script matching bug (components with similar names like `my-component` and `my-component-extra` were loading wrong scripts due to substring matching) 
-- Meditate on the current ways to place children of components, just that.
-- Place a dispatch function on the rendering params.
-- Auto send the "mount" event?

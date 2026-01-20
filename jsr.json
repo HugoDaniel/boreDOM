@@ -1,6 +1,0 @@
-{
-  "name": "@hugodaniel/boredom",
-  "version": "0.25.1",
-  "license": "CC0",
-  "exports": "./src/index.ts"
-}
