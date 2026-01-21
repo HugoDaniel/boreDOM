@@ -17,3 +17,10 @@ wt1/
 
 # Local MCP config (created by boredom init or manually)
 .mcp.json
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

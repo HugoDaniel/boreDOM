@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>boreDOM TODO List</title>
+
+    <!-- STYLES -->
+    <style>
+      :root {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        color: #18202a;
+        background: #f7f4ef;
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+      }
+    </style>
+
+    <style type="boredom" data-component="todo-list">
+      .todo-shell {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 12px 30px rgba(16, 24, 40, 0.08);
+        display: grid;
+        gap: 1.5rem;
+      }
+      .todo-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .todo-input-row {
+        display: flex;
+        gap: 0.75rem;
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        font-size: 1rem;
+      }
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 0.75rem 1.5rem;
+        background: #1d4ed8;
+        color: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .todo-stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.9rem;
+        color: #52606d;
+      }
+      .todo-empty {
+        text-align: center;
+        color: #9ca3af;
+        font-style: italic;
+        padding: 2rem;
+      }
+    </style>
+
+    <style type="boredom" data-component="todo-list-item">
+      .todo-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease;
+      }
+      .todo-item:hover {
+        background: #f9fafb;
+      }
+      .todo-item.done {
+        background: #f0fdf4;
+        color: #4b5563;
+        text-decoration: line-through;
+      }
+      .todo-checkbox {
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 4px;
+        border: 1px solid #d1d5db;
+        cursor: pointer;
+      }
+      .todo-text {
+        flex: 1;
+      }
+      .todo-remove {
+        background: #fef2f2;
+        color: #dc2626;
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- STATE -->
+    <script id="initial-state" type="application/json">
+      {
+        "items": [{ "id": 1, "title": "Something to be done", "done": false }],
+        "showEmpty": false,
+        "showList": true,
+        "stats": { "total": 1, "done": 0 }
+      }
+    </script>
+
+    <todo-list></todo-list>
+
+    <!-- TEMPLATES -->
+    <template data-component="todo-list">
+      <div class="todo-shell">
+        <div class="todo-header">
+          <h2>To-Do List</h2>
+          <div class="todo-input-row">
+            <input
+              type="text"
+              placeholder="Add new task"
+              data-ref="taskInput"
+              data-value="local.newTask"
+              data-dispatch-input="taskInput"
+            />
+            <button data-dispatch="addTask">Add</button>
+          </div>
+        </div>
+
+        <div class="todo-stats">
+          <span>Total: <strong data-text="state.stats.total"></strong></span>
+          <span>Done: <strong data-text="state.stats.done"></strong></span>
+        </div>
+
+        <p class="todo-empty" data-show="state.showEmpty">
+          No tasks yet. Add one above!
+        </p>
+
+        <ul data-show="state.showList" data-list="state.items">
+          <template data-item>
+            <li class="todo-item" data-class="done:item.done">
+              <input
+                type="checkbox"
+                class="todo-checkbox"
+                data-checked="item.done"
+                data-dispatch="toggleTask"
+                data-prop-id="item.id"
+              />
+              <span class="todo-text" data-text="item.title"></span>
+              <button
+                class="todo-remove"
+                data-dispatch="removeTask"
+                data-prop-id="item.id"
+              >
+                Remove
+              </button>
+            </li>
+          </template>
+        </ul>
+      </div>
+    </template>
+
+    <!-- LOGIC -->
+    <script type="text/boredom" data-component="todo-list">
+      const updateStats = (state) => {
+        const total = state.items.length;
+        const done = state.items.filter((item) => item.done).length;
+        state.stats = { total, done };
+        state.showList = total > 0;
+        state.showEmpty = total === 0;
+      };
+
+      export default ({ on, local }) => {
+        local.newTask = "";
+
+        on("taskInput", ({ local, e }) => {
+          const target = e.event.target;
+          if (target && "value" in target) {
+            local.newTask = target.value;
+          }
+        });
+
+        on("addTask", ({ state, local, refs }) => {
+          const title = local.newTask.trim();
+          if (!title) return;
+          state.items.unshift({ id: Date.now(), title, done: false });
+          local.newTask = "";
+          updateStats(state);
+          refs.taskInput.focus();
+        });
+
+        on("toggleTask", ({ state, e }) => {
+          const id = Number(e.dispatcher.dataset.id);
+          const task = state.items.find((t) => t.id === id);
+          if (task) task.done = !task.done;
+          updateStats(state);
+        });
+
+        on("removeTask", ({ state, e }) => {
+          const id = Number(e.dispatcher.dataset.id);
+          const index = state.items.findIndex((t) => t.id === id);
+          if (index >= 0) state.items.splice(index, 1);
+          updateStats(state);
+        });
+
+        return () => {};
+      };
+    </script>
+
+    <!-- RUNTIME -->
+    <script src="./boreDOM.js" data-state="#initial-state"></script>
+  </body>
+</html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+    <title>boreDOM Painter</title>
+    <style>
+      :root {
+        --bg: #f3f4f6;
+        --surface: #ffffff;
+        --border: #e5e7eb;
+        --primary: #2563eb;
+        --text: #1f2937;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      header {
+        padding: 1rem;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        text-align: center;
+        font-weight: 700;
+      }
+    </style>
+
+    <!-- COMPONENT: Toolbar -->
+    <style data-component="drawing-toolbar">
+      .toolbar {
+        padding: 1rem;
+        background: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        gap: 1.5rem;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .group {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      .label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        font-weight: 600;
+        margin-right: 0.25rem;
+      }
+      
+      /* Color Swatches */
+      .color-btn {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: transform 0.1s;
+      }
+      .color-btn:hover { transform: scale(1.1); }
+      .color-btn.active { border-color: #000; box-shadow: 0 0 0 2px rgba(0,0,0,0.1); }
+
+      /* Size Buttons */
+      .size-btn {
+        width: 2rem;
+        height: 2rem;
+        border: 1px solid #e5e7eb;
+        background: white;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .size-btn.active { background: #eff6ff; border-color: #2563eb; color: #2563eb; }
+      .dot { background: currentColor; border-radius: 50%; }
+
+      /* Tool Buttons */
+      .tool-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #e5e7eb;
+        background: white;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .tool-btn:hover { background: #f9fafb; }
+      .tool-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+      .tool-btn.danger { color: #dc2626; border-color: #fca5a5; }
+      .tool-btn.danger:hover { background: #fef2f2; }
+    </style>
+
+    <!-- COMPONENT: Canvas -->
+    <style data-component="drawing-canvas">
+      .canvas-container {
+        flex: 1;
+        position: relative;
+        cursor: crosshair;
+        background: white;
+        margin: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        touch-action: none; /* Prevent scrolling while drawing */
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .drawing-status {
+        position: absolute;
+        bottom: 1rem;
+        right: 1rem;
+        background: rgba(37, 99, 235, 0.1);
+        color: #2563eb;
+        padding: 0.25rem 0.75rem;
+        border-radius: 99px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- STATE -->
+    <script id="initial-state" type="application/json">
+      {
+        "colors": ["#000000", "#ef4444", "#22c55e", "#3b82f6", "#eab308", "#a855f7"],
+        "sizes": [5, 10, 20],
+        "activeColor": "#000000",
+        "activeSize": 5,
+        "tool": "brush",
+        "clearSignal": 0
+      }
+    </script>
+
+    <header>boreDOM Painter</header>
+    <drawing-toolbar></drawing-toolbar>
+    <drawing-canvas></drawing-canvas>
+
+    <!-- TEMPLATES -->
+    
+    <template data-component="drawing-toolbar">
+      <div class="toolbar">
+        <!-- Colors -->
+        <div class="group">
+          <span class="label">Color</span>
+          <div data-list="state.colors">
+            <template data-item>
+              <button 
+                class="color-btn"
+                data-prop-bg="item"
+                data-class="active:state.activeColor === item"
+                data-dispatch="setColor"
+                data-prop-color="item"
+              ></button>
+            </template>
+          </div>
+        </div>
+
+        <!-- Sizes -->
+        <div class="group">
+          <span class="label">Size</span>
+          <div data-list="state.sizes">
+            <template data-item>
+              <button 
+                class="size-btn"
+                data-class="active:state.activeSize === item"
+                data-dispatch="setSize"
+                data-prop-size="item"
+              >
+                <div class="dot" data-prop-style="'width:' + item + 'px; height:' + item + 'px'"></div>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <!-- Tools -->
+        <div class="group">
+          <button 
+            class="tool-btn" 
+            data-class="active:state.tool === 'brush'"
+            data-dispatch="setBrush"
+          >Brush</button>
+          
+          <button 
+            class="tool-btn" 
+            data-class="active:state.tool === 'eraser'"
+            data-dispatch="setEraser"
+          >Eraser</button>
+
+          <button class="tool-btn danger" data-dispatch="clear">Clear</button>
+        </div>
+      </div>
+    </template>
+
+    <template data-component="drawing-canvas">
+      <div class="canvas-container" data-ref="container">
+        <canvas
+          data-ref="canvas"
+          data-dispatch-pointerdown="start"
+          data-dispatch-pointermove="draw"
+          data-dispatch-pointerup="stop"
+          data-dispatch-pointerout="stop"
+        ></canvas>
+        <div class="drawing-status" data-show="local.isDrawing">Drawing...</div>
+      </div>
+    </template>
+
+    <!-- LOGIC -->
+
+    <script type="text/boredom" data-component="drawing-toolbar">
+      export default ({ on, self }) => {
+        on("setColor", ({ state, e }) => {
+          state.activeColor = e.dispatcher.dataset.color;
+          state.tool = "brush"; // Switch back to brush if picking color
+        });
+
+        on("setSize", ({ state, e }) => {
+          state.activeSize = Number(e.dispatcher.dataset.size);
+        });
+
+        on("setBrush", ({ state }) => { state.tool = "brush"; });
+        on("setEraser", ({ state }) => { state.tool = "eraser"; });
+        
+        on("clear", ({ state }) => { 
+          state.clearSignal += 1; 
+        });
+
+        // Set background colors dynamically for swatches
+        return ({ state }) => {
+          self.querySelectorAll(".color-btn").forEach(btn => {
+            if (btn.dataset.bg) btn.style.backgroundColor = btn.dataset.bg;
+          });
+        };
+      };
+    </script>
+
+    <script type="text/boredom" data-component="drawing-canvas">
+      export default ({ on, refs, local }) => {
+        let ctx = null;
+        let lastClear = 0;
+        local.isDrawing = false;
+
+        // Initialize Canvas
+        const initCanvas = () => {
+          const { canvas, container } = refs;
+          
+          // High-DPI support
+          const dpr = window.devicePixelRatio || 1;
+          const rect = container.getBoundingClientRect();
+          
+          canvas.width = rect.width * dpr;
+          canvas.height = rect.height * dpr;
+          
+          ctx = canvas.getContext("2d");
+          ctx.scale(dpr, dpr);
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+        };
+
+        // Resize observer to handle window changes
+        setTimeout(initCanvas, 50); // Initial setup
+        
+        // Drawing Logic
+        const getPos = (e) => {
+          const { canvas } = refs;
+          const rect = canvas.getBoundingClientRect();
+          return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+          };
+        };
+
+        on("start", ({ state, e, local }) => {
+          if (!ctx) initCanvas();
+          local.isDrawing = true;
+          const { x, y } = getPos(e.event);
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+        });
+
+        on("draw", ({ state, e, local }) => {
+          if (!local.isDrawing || !ctx) return;
+          const { x, y } = getPos(e.event);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        });
+
+        on("stop", ({ local }) => {
+          if (!local.isDrawing) return;
+          local.isDrawing = false;
+          ctx.closePath();
+        });
+
+        // Reactive Updates (State -> Canvas Context)
+        return ({ state }) => {
+          if (!ctx) return;
+
+          // Clear Signal
+          if (state.clearSignal !== lastClear) {
+            const { canvas } = refs;
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // use raw dims
+            lastClear = state.clearSignal;
+          }
+
+          // Tool Settings
+          ctx.lineWidth = state.activeSize;
+          if (state.tool === "eraser") {
+            ctx.globalCompositeOperation = "destination-out";
+          } else {
+            ctx.globalCompositeOperation = "source-over";
+            ctx.strokeStyle = state.activeColor;
+          }
+        };
+      };
+    </script>
+
+    <!-- RUNTIME -->
+    <script src="./boreDOM.js" data-state="#initial-state"></script>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "name": "@mr_hugo/boredom",
+  "version": "0.26.1",
+  "description": "The LLM-First JavaScript Framework",
+  "main": "src/boreDOM.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:boredom": "playwright test e2e/boredom.spec.ts",
+    "test:headless": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HugoDaniel/boreDOM.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/HugoDaniel/boreDOM/issues"
+  },
+  "homepage": "https://github.com/HugoDaniel/boreDOM#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^25.0.9"
+  }
+}

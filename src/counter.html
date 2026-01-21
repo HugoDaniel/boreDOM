@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>boreDOM Counter</title>
+
+    <!-- STYLES -->
+    <style>
+      :root {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        color: #1f2933;
+        background: #f5f3ef;
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+      }
+    </style>
+
+    <style data-component="simple-counter">
+      .counter-shell {
+        max-width: 400px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 12px 30px rgba(31, 41, 51, 0.08);
+        display: grid;
+        gap: 1.5rem;
+      }
+      .counter-display {
+        font-size: 3rem;
+        font-weight: 700;
+        text-align: center;
+        color: #1d4ed8;
+      }
+      .counter-controls {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+      }
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 0.75rem 1.5rem;
+        background: #1d4ed8;
+        color: #fff;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 1rem;
+      }
+      button:active {
+        transform: scale(0.98);
+      }
+      button.secondary {
+        background: #e2e8f0;
+        color: #1d1b1a;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- STATE -->
+    <script id="initial-state" type="application/json">
+      {}
+    </script>
+
+    <simple-counter></simple-counter>
+
+    <!-- TEMPLATES -->
+    <template data-component="simple-counter">
+      <div class="counter-shell">
+        <h2>Simple Counter</h2>
+        <p class="counter-display" data-text="local.count">0</p>
+        <div class="counter-controls">
+          <button data-dispatch="decrement">-</button>
+          <button data-dispatch="increment">+</button>
+          <button data-dispatch="reset" class="secondary">Reset</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- LOGIC -->
+    <script type="text/boredom" data-component="simple-counter">
+      export default ({ on, local }) => {
+        local.count = 0;
+        on("increment", ({ local }) => { local.count += 1 });
+        on("decrement", ({ local }) => { local.count -= 1 });
+        on("reset", ({ local }) => { local.count = 0 });
+        return () => {};
+      };
+    </script>
+
+    <!-- RUNTIME -->
+    <script src="./boredom.js" data-state="#initial-state"></script>
+  </body>
+</html>
