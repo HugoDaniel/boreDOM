@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>boreDOM Debug Test</title>
+</head>
+<body>
+  <script id="initial-state" type="application/json">
+    { "count": 0, "status": "idle" }
+  </script>
+
+  <debug-component></debug-component>
+
+  <template data-component="debug-component">
+    <div>
+      <h1 data-text="'Count: ' + state.count"></h1>
+      <button id="btn-inc" data-dispatch="increment">Inc</button>
+      <button id="btn-err" data-dispatch="triggerError">Error</button>
+      <div id="nested">
+          <span id="deep-span">Deep</span>
+      </div>
+    </div>
+  </template>
+
+  <script type="text/boredom" data-component="debug-component">
+    export default ({ on }) => {
+      on("increment", ({ state }) => {
+        state.count++;
+        state.status = "incremented";
+      });
+
+      on("triggerError", () => {
+        throw new Error("Simulated Crash");
+      });
+    };
+  </script>
+
+  <script src="../src/boreDOM.js" data-state="#initial-state"></script>
+</body>
+</html>
