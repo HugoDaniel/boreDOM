@@ -1,65 +1,505 @@
-# boreDOM Framework Guidelines
+#!/usr/bin/env node
 
-This project utilizes the boreDOM framework, a single-file, zero-build JavaScript runtime.
+const fs = require("node:fs");
+const path = require("node:path");
+const readline = require("node:readline");
 
-## Philosophy
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
-- **Single File:** The entire application resides in `index.html`. Logic, UI, and CSS are collocated.
-- **Zero Build:** There is no bundler, no npm install, and no transpilation. Code runs directly in the browser.
-- **Declarative:** Use data attributes for bindings instead of imperative DOM manipulation.
+const question = (query) =>
+  new Promise((resolve) => rl.question(query, resolve));
 
-## Architecture
+async function main() {
+  const args = process.argv.slice(2);
+  const command = args[0];
 
-### The Component Triad
-Each component is defined by three tags sharing a `data-component` attribute:
-1. `<template>`: Defines the HTML structure.
-2. `<style>`: Defines scoped CSS.
-3. `<script type="text/boredom">`: Defines the ES Module logic.
+  if (command !== "init") {
+    console.log("Usage: npx boredom init [directory]");
+    process.exit(1);
+  }
 
-### State Management
-- **Local State (`local`):** Reactive state scoped to a specific component instance. Use this for UI state (inputs, toggles, counters).
-- **Global State (`state`):** Reactive state shared across the entire application. Use this for data that must be accessed by multiple distinct components.
+  let targetDir = args[1];
 
-### DOM Access
-- **Refs:** Use `data-ref="name"` in the template and access via `refs.name` in the script.
-- **Avoid QuerySelector:** Do not use `querySelector` inside components unless absolutely necessary.
+  if (!targetDir) {
+    targetDir =
+      (await question("Project directory (default: my-boredom-app): ")) ||
+      "my-boredom-app";
+  }
 
-## Code Style
+  const root = path.resolve(process.cwd(), targetDir);
+  const boreDomSrc = path.resolve(__dirname, "../src/boreDOM.js");
 
-### Component Definition
-Always initialize local state variables before usage.
+  if (fs.existsSync(root)) {
+    const overwrite = await question(
+      `Directory "${targetDir}" already exists. Overwrite? (y/N): `,
+    );
+    if (overwrite.toLowerCase() !== "y") {
+      console.log("Aborted.");
+      rl.close();
+      process.exit(0);
+    }
+  } else {
+    fs.mkdirSync(root, { recursive: true });
+  }
 
-```html
-<style data-component="example-component">
-  .active { color: blue; }
-</style>
+  const doInline =
+    (
+      await question("Inline boreDOM runtime into index.html? (y/N): ")
+    ).toLowerCase() === "y";
 
-<template data-component="example-component">
-  <div data-ref="container">
-    <span data-text="local.count"></span>
-    <button data-dispatch="increment">Increment</button>
-  </div>
-</template>
+  console.log(`\n🏗️  Scaffolding boreDOM project in ${root}...`);
 
-<script type="text/boredom" data-component="example-component">
-  export default ({ on, local, refs, state }) => {
-    local.count = 0;
+  // 1. Prepare Runtime
+  let scriptTag;
+  let runtimeContent = "";
+  if (doInline) {
+    console.log("📦 Inlining Runtime...");
+    runtimeContent = fs.readFileSync(boreDomSrc, "utf8");
+    scriptTag = `<script data-state="#initial-state">
+${runtimeContent}
+    </script>`;
+  } else {
+    console.log("📦 Copying Runtime...");
+    fs.copyFileSync(boreDomSrc, path.join(root, "boreDOM.js"));
+    scriptTag = `<script src="./boreDOM.js" data-state="#initial-state"></script>`;
+  }
 
-    on("increment", () => {
-      local.count++;
-      refs.container.classList.add("active");
-    });
-  };
-</script>
-```
+  // 2. Create index.html (The Single File App)
+  console.log("📄 Creating index.html...");
 
-### API Reference
+  const template = [
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "  <head>",
+    '    <meta charset="utf-8" />',
+    '    <meta name="viewport" content="width=device-width, initial-scale=1" />',
+    "    <title>boreDOM App</title>",
+    "    <style>",
+    "      :root {",
+    "        font-family: system-ui, sans-serif;",
+    "        max-width: 800px;",
+    "        margin: 0 auto;",
+    "        padding: 2rem;",
+    "        background: #f4f4f5;",
+    "        color: #1f2937;",
+    "      }",
+    "    </style>",
+    "",
+    "    <!-- COMPONENT STYLES -->",
+    '    <style data-component="hello-world">',
+    "      .card {",
+    "        background: white;",
+    "        padding: 2rem;",
+    "        border-radius: 12px;",
+    "        box-shadow: 0 4px 6px rgba(0,0,0,0.1);",
+    "        text-align: center;",
+    "      }",
+    "      button {",
+    "        background: #2563eb;",
+    "        color: white;",
+    "        border: none;",
+    "        padding: 0.5rem 1rem;",
+    "        border-radius: 6px;",
+    "        font-size: 1rem;",
+    "        cursor: pointer;",
+    "        margin-top: 1rem;",
+    "      }",
+    "      button:hover {",
+    "        background: #1d4ed8;",
+    "      }",
+    "    </style>",
+    "  </head>",
+    "",
+    "  <body>",
+    "    <!-- INITIAL STATE -->",
+    '    <script id="initial-state" type="application/json">',
+    "      {}",
+    "    </script>",
+    "",
+    "    <hello-world></hello-world>",
+    "",
+    "    <!-- COMPONENT TEMPLATE -->",
+    '    <template data-component="hello-world">',
+    '      <div class="card">',
+    "        <h1>Hello, boreDOM! 🥱</h1>",
+    "        <p>This is a single-file LLM-first application.</p>",
+    '        <p>Local Count: <strong data-text="local.count">0</strong></p>',
+    '        <button data-dispatch="increment">Increment</button>',
+    "      </div>",
+    "    </template>",
+    "",
+    "    <!-- COMPONENT LOGIC -->",
+    '    <script type="text/boredom" data-component="hello-world">',
+    "      export default ({ on, local }) => {",
+    "        // Initialize local state",
+    "        local.count = 0;",
+    "",
+    '        on("increment", () => {',
+    "          local.count++;",
+    "        }); ",
+    "      };",
+    "    </script>",
+    "",
+    "    <!-- boreDOM Runtime -->",
+    `    ${scriptTag}`,
+    "  </body>",
+    "</html>",
+  ].join("\n");
 
-| Directive | Usage | Description |
-|-----------|-------|-------------|
-| `data-text` | `data-text="local.count"` | Sets text content from expression. |
-| `data-show` | `data-show="local.isOpen"` | Toggles display: none. |
-| `data-value` | `data-value="local.input"` | Two-way binding for form inputs. |
-| `data-ref` | `data-ref="myElement"` | Exposes element as `refs.myElement`. |
-| `data-dispatch` | `data-dispatch="action"` | Triggers event handler registered with `on`. |
-| `data-list` | `data-list="state.items"` | Iterates array. Requires nested `<template data-item>`. |
+  fs.writeFileSync(path.join(root, "index.html"), template);
+
+  // 3. Create AGENTS.md (Context for LLMs)
+  console.log("🤖 Creating AGENTS.md...");
+
+  const q = String.fromCharCode(96);
+  const q3 = q + q + q;
+
+  const agentsGuide = [
+    "# boreDOM Framework Guidelines",
+    "",
+    "This project utilizes the boreDOM framework, a single-file, zero-build JavaScript runtime.",
+    doInline
+      ? `The current index.html includes the boreDOM framework inline in the script tag <script data-state="#initial-state">. Do not remove it and include it always. Keep it since this is the core of the app.`
+      : `The current index.html imports the boreDOM.js framework in a <script> tag, this file is available locally, do not remove it and include it always.`,
+    "",
+    "## Philosophy",
+    "",
+    "- **Single File:** The entire application resides in `index.html`. Logic, UI, and CSS are collocated.",
+    "- **Zero Build:** There is no bundler, no npm install, and no transpilation. Code runs directly in the browser.",
+    "- **Declarative:** Use data attributes for bindings instead of imperative DOM manipulation.",
+    "",
+    "## boreDOM code",
+    "",
+    `${JSON.stringify(runtimeContent)}`,
+    "",
+    "## Non-Negotiables",
+    "",
+    "1. **Single Source of Truth**: Logic, CSS, and HTML must remain in `index.html`. Do not suggest splitting files.",
+    "2. **No NPM**: Do not try to import packages. If a library is needed, use an ESM CDN url.",
+    "3. **Persistence**: Ensure the boreDOM script tag remains at the end of the body in `index.html`.",
+    "4. **Runtime Location**: The `boreDOM` runtime is already present in your folder.",
+    doInline
+      ? "    * **Inlined**: It may be inside a `<script>` tag in `index.html`."
+      : "    * **File**: It may be `./boreDOM.js`.",
+    "    * Do not import it from a URL (e.g. unpkg/esm.sh). Use what is there.",
+    "5. **Declarative over Imperative**:",
+    "    * No: `div.innerText = value`",
+    '    * Yes: `<div data-text="local.value">`',
+    "6. **Refs over QuerySelector**:",
+    '    * No: `self.querySelector(".input")`',
+    '    * Yes: `<input data-ref="input">` -> `refs.input`',
+    "",
+    "## Architecture",
+    "",
+    "### The Component Triad",
+    "Each component is defined by three tags sharing a `data-component` attribute:",
+    "1. `<template>`: Defines the HTML structure.",
+    "2. `<style>`: Defines scoped CSS.",
+    '3. `<script type="text/boredom">`: Defines the ES Module logic.',
+    "",
+    "### State Management",
+    "- **Local State (`local`):** Reactive state scoped to a specific component instance. Use this for UI state (inputs, toggles, counters).",
+    "- **Global State (`state`):** Reactive state shared across the entire application. Use this for data that must be accessed by multiple distinct components.",
+    "",
+    "### DOM Access",
+    '- **Refs:** Use `data-ref="name"` in the template and access via `refs.name` in the script.',
+    "- **Avoid QuerySelector:** Do not use `querySelector` inside components unless absolutely necessary.",
+    "",
+    "## Best Practices",
+    "",
+    "### 1. Component Granularity (KISS)",
+    'Avoid building monolithic "God Components". If a component has more than 50 lines of HTML or complex distinct logic sections, split it.',
+    "",
+    "**Bad:** `<my-app>` containing header, sidebar, grid, and footer logic.",
+    "**Good:** `<my-app>` composing `<app-header>`, `<app-sidebar>`, and `<app-grid>`.",
+    "",
+    "### 2. Reusability (DRY)",
+    "If you copy-paste the same HTML structure or styles twice, create a generic component.",
+    'Example: Instead of styling `<button class="btn primary">` everywhere, create a `<ui-button>` component that accepts a `variant` prop.',
+    "",
+    "### 3. Separation of Concerns",
+    "- **UI Components:** Focus on display and interaction (e.g., `<user-card>`). They should receive data via props.",
+    "- **Container Components:** Focus on data fetching and state management (e.g., `<user-list-container>`). They pass data down to UI components.",
+    "",
+    "## Code Style",
+    "",
+    "### Component Definition",
+    "Always initialize local state variables before usage.",
+    "",
+    q3 + "html",
+    '<style data-component="example-component">',
+    "  .active { color: blue; }",
+    "</style>",
+    "",
+    '<template data-component="example-component">',
+    '  <div data-ref="container">',
+    '    <span data-text="local.count"></span>',
+    '    <button data-dispatch="increment">Increment</button>',
+    "  </div>",
+    "</template>",
+    "",
+    '<script type="text/boredom" data-component="example-component">',
+    "  export default ({ on, local, refs, state }) => {",
+    "    local.count = 0;",
+    "",
+    '    on("increment", () => {',
+    "      local.count++;",
+    '      refs.container.classList.add("active");',
+    "    });",
+    "  };",
+    "</script>",
+    q3,
+    "",
+    "### API Reference",
+    "",
+    "| Directive | Usage | Description |",
+    "|-----------|-------|-------------|",
+    '| `data-text` | `data-text="local.count"` | Sets text content from expression. |',
+    '| `data-show` | `data-show="local.isOpen"` | Toggles display: none. |',
+    '| `data-value` | `data-value="local.input"` | Two-way binding for form inputs. |',
+    '| `data-ref` | `data-ref="myElement"` | Exposes element as `refs.myElement`. |',
+    '| `data-dispatch` | `data-dispatch="action"` | Triggers event handler registered with `on`. |',
+    '| `data-list` | `data-list="state.items"` | Iterates array. Requires nested `<template data-item>`. |',
+    "",
+    "## Reference Examples (Full Files)",
+    "",
+    "### 1. Simple Counter (Local State & Styling)",
+    "Demonstrates isolated component state and scoped CSS.",
+    "",
+    q3 + "html",
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '  <meta charset="utf-8">',
+    "  <title>Counter</title>",
+    "  ",
+    "  <!-- Scoped Styles -->",
+    '  <style data-component="simple-counter">',
+    "    button { color: blue; font-weight: bold; }",
+    "    span { font-size: 2rem; }",
+    "  </style>",
+    "</head>",
+    "<body>",
+    "  <!-- Initial State -->",
+    '  <script id="initial-state" type="application/json">{}</script>',
+    "",
+    "  <!-- Usage -->",
+    "  <simple-counter></simple-counter>",
+    "",
+    "  <!-- Template -->",
+    '  <template data-component="simple-counter">',
+    "    <div>",
+    '      <span data-text="local.count"></span>',
+    '      <button data-dispatch="inc">+</button>',
+    "    </div>",
+    "  </template>",
+    "",
+    "  <!-- Logic -->",
+    '  <script type="text/boredom" data-component="simple-counter">',
+    "    export default ({ on, local }) => {",
+    "      local.count = 0;",
+    '      on("inc", ({ local }) => { local.count++ });',
+    "    };",
+    "  </script>",
+    "",
+    "  <!-- boreDOM Runtime -->",
+    '  <script src="./boreDOM.js" data-state="#initial-state"></script>',
+    "</body>",
+    "</html>",
+    q3,
+    "",
+    "### 2. Todo List (Refs + Lists)",
+    "Demonstrates imperative DOM access (focus) and list rendering.",
+    "",
+    q3 + "html",
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '  <meta charset="utf-8">',
+    "  <title>Todo List</title>",
+    "</head>",
+    "<body>",
+    '  <script id="initial-state" type="application/json">',
+    '    { "todos": [] }',
+    "  </script>",
+    "",
+    "  <todo-list></todo-list>",
+    "",
+    '  <template data-component="todo-list">',
+    '    <input type="text" data-ref="input" data-value="local.text" data-dispatch-input="update">',
+    '    <button data-dispatch="add">Add</button>',
+    '    <ul data-list="state.todos">',
+    "      <template data-item>",
+    '        <li data-text="item.title"></li>',
+    "      </template>",
+    "    </ul>",
+    "  </template>",
+    "",
+    '  <script type="text/boredom" data-component="todo-list">',
+    "    export default ({ on, local, refs }) => {",
+    '      local.text = "";',
+    "      ",
+    '      on("update", ({ e, local }) => { ',
+    "        local.text = e.event.target.value;",
+    "      });",
+    "",
+    '      on("add", ({ state, local, refs }) => {',
+    "        if (!local.text) return;",
+    "        state.todos.push({ title: local.text });",
+    '        local.text = "";',
+    "        refs.input.focus(); // Imperative focus via Refs",
+    "      });",
+    "    };",
+    "  </script>",
+    "",
+    "  <!-- boreDOM Runtime -->",
+    '  <script src="./boreDOM.js" data-state="#initial-state"></script>',
+    "</body>",
+    "</html>",
+    q3,
+    "",
+    "### 3. Drawing Canvas (Imperative Integration)",
+    "Demonstrates mixing high-performance imperative code (Canvas) with reactive UI.",
+    "",
+    q3 + "html",
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '  <meta charset="utf-8">',
+    "  <title>Drawing</title>",
+    "</head>",
+    "<body>",
+    '  <script id="initial-state" type="application/json">{}</script>',
+    "",
+    "  <drawing-canvas></drawing-canvas>",
+    "",
+    '  <template data-component="drawing-canvas">',
+    '    <div data-ref="container" style="height: 300px; border: 1px solid #ccc;">',
+    '      <canvas data-ref="canvas", data-dispatch-pointerdown="start", data-dispatch-pointermove="draw", data-dispatch-pointerup="stop"></canvas>',
+    '      <div data-show="local.isDrawing">Painting...</div>',
+    "    </div>",
+    "  </template>",
+    "",
+    '  <script type="text/boredom" data-component="drawing-canvas">',
+    "    export default ({ on, refs, local }) => {",
+    "      let ctx = null;",
+    "      local.isDrawing = false;",
+    "",
+    "      const init = () => {",
+    "        const { canvas, container } = refs;",
+    "        canvas.width = container.clientWidth;",
+    "        canvas.height = container.clientHeight;",
+    '        ctx = canvas.getContext("2d");',
+    "      };",
+    "      setTimeout(init, 0);",
+    "",
+    '      on("start", ({ e, local }) => {',
+    "        if (!ctx) init();",
+    "        local.isDrawing = true;",
+    "        ctx.beginPath(); ",
+    "        ctx.moveTo(e.event.offsetX, e.event.offsetY);",
+    "      });",
+    '      on("draw", ({ e, local }) => {',
+    "        if (local.isDrawing) {",
+    "          ctx.lineTo(e.event.offsetX, e.event.offsetY);",
+    "          ctx.stroke();",
+    "        }",
+    "      });",
+    '      on("stop", ({ local }) => { local.isDrawing = false; });',
+    "    };",
+    "  </script>",
+    "",
+    "  <!-- boreDOM Runtime -->",
+    '  <script src="./boreDOM.js" data-state="#initial-state"></script>',
+    "</body>",
+    "</html>",
+    q3,
+    "",
+    "### 4. Tic-Tac-Toe (Props & Composition)",
+    "Demonstrates component-to-component communication via props.",
+    "",
+    q3 + "html",
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '  <meta charset="utf-8">',
+    "  <title>Tic Tac Toe</title>",
+    "</head>",
+    "<body>",
+    '  <script id="initial-state" type="application/json">',
+    '    { "board": [null, null, null], "turn": "X" }',
+    "  </script>",
+    "",
+    "  <game-board></game-board>",
+    "",
+    '  <template data-component="game-board">',
+    '    <div class="grid" data-ref="grid">',
+    "      <!-- Props are passed as attributes -->",
+    '      <game-button data-prop-index="0"></game-button>',
+    '      <game-button data-prop-index="1"></game-button>',
+    "      <!-- ... -->",
+    "    </div>",
+    "  </template>",
+    "",
+    '  <script type="text/boredom" data-component="game-board">',
+    "    export default ({ on, refs, state }) => {",
+    '      on("play", ({ state, e }) => {',
+    "        const index = Number(e.dispatcher.dataset.index);",
+    "        state.board[index] = state.turn;",
+    "      });",
+    "    };",
+    "  </script>",
+    "",
+    "  <!-- boreDOM Runtime -->",
+    '  <script src="./boreDOM.js" data-state="#initial-state"></script>',
+    "</body>",
+    "</html>",
+    q3,
+    "",
+    "### 5. Palette Test (Theme Piercing)",
+    "Demonstrates using CSS Variables to style Shadow DOM from the outside.",
+    "",
+    q3 + "html",
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '  <meta charset="utf-8">',
+    "  <title>Theme</title>",
+    "  <style>",
+    "    :root { --accent: blue; }",
+    "    body.dark { --accent: red; }",
+    "  </style>",
+    "",
+    '  <style data-component="themed-card">',
+    "    .card { background: var(--accent); color: white; }",
+    "  </style>",
+    "</head>",
+    "<body>",
+    '  <script id="initial-state" type="application/json">{}</script>',
+    "",
+    "  <themed-card></themed-card>",
+    "",
+    '  <template data-component="themed-card">',
+    '    <div class="card">I react to global theme variables</div>',
+    "  </template>",
+    "",
+    "  <!-- boreDOM Runtime -->",
+    '  <script src="./boreDOM.js" data-state="#initial-state"></script>',
+    "</body>",
+    "</html>",
+    q3,
+  ].join("\n");
+
+  fs.writeFileSync(path.join(root, "AGENTS.md"), agentsGuide);
+
+  console.log("\n✅ Done! To get started:");
+  console.log(`\n  cd ${targetDir}`);
+  console.log("  open index.html  (or serve it with any static server)\n");
+
+  rl.close();
+}
+
+main().catch(console.error);
