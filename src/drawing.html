@@ -294,6 +294,10 @@
         on("draw", ({ state, e, local }) => {
           if (!local.isDrawing || !ctx) return;
           const { x, y } = getPos(e.event);
+          
+          // Telemetry: Expose last point for Debugging/Agents
+          state.lastPoint = { x, y };
+
           ctx.lineTo(x, y);
           ctx.stroke();
         });
