@@ -52,6 +52,40 @@ const componentStyles = new Map();
 /** @type {Record<string, Promise<any>>} */
 const loadedScripts = {};
 
+// --- 1.5 DEVTOOLS & TELEMETRY ---
+
+const DevTools = {
+  log: (type, data) => {
+    console.log(`[BOREDOM:${type}]`, JSON.stringify(data));
+  },
+  
+  error: (component, error, context = {}) => {
+    console.error(`[BOREDOM:ERROR]`, JSON.stringify({
+      component,
+      message: error.message,
+      stack: error.stack,
+      context
+    }));
+  },
+
+  // Shadow-piercing query selector
+  query: (selector, root = document.body) => {
+    let result = root.querySelector(selector);
+    if (result) return result;
+    
+    // Depth-first search through Shadow DOMs
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.shadowRoot) {
+        result = DevTools.query(selector, node.shadowRoot);
+        if (result) return result;
+      }
+    }
+    return null;
+  }
+};
+
 // --- 2. REACTIVITY SYSTEM ---
 
 /**
@@ -59,22 +93,28 @@ const loadedScripts = {};
  * @template T
  * @param {T} target - The state object to observe.
  * @param {Function} callback - The function to call on mutation.
+ * @param {string} [path=''] - Path for debugging/logging.
  * @returns {T} - The reactive proxy.
  */
-const createReactiveState = (target, callback) => {
+const createReactiveState = (target, callback, path = 'root') => {
   if (typeof target !== 'object' || target === null) return target;
 
   return new Proxy(target, {
     set(obj, prop, value) {
+      const oldValue = obj[prop];
       obj[prop] = value;
+      
+      DevTools.log('STATE', { path: `${path}.${String(prop)}`, prev: oldValue, next: value });
+      
       callback();
       return true;
     },
     get(obj, prop) {
       // Lazy recursion for deep reactivity
-      return createReactiveState(obj[prop], callback);
+      return createReactiveState(obj[prop], callback, `${path}.${String(prop)}`);
     },
     deleteProperty(obj, prop) {
+      DevTools.log('STATE', { path: `${path}.${String(prop)}`, action: 'delete' });
       delete obj[prop];
       callback();
       return true;
@@ -276,17 +316,21 @@ class ReactiveComponent extends HTMLElement {
    * Merges global state, local state, and props (detail/slots) into the context.
    */
   _update() {
-    const context = {
-      state: globalState,
-      local: this.localState,
-      detail: this.slots,
-      refs: this.refs,
-    };
+    try {
+      const context = {
+        state: globalState,
+        local: this.localState,
+        detail: this.slots,
+        refs: this.refs,
+      };
 
-    processBindings(this.shadowRoot, context);
+      processBindings(this.shadowRoot, context);
 
-    if (this.renderEffect) {
-      this.renderEffect(context);
+      if (this.renderEffect) {
+        this.renderEffect(context);
+      }
+    } catch (err) {
+      DevTools.error(this.tagName.toLowerCase(), err, { source: '_update' });
     }
   }
 
@@ -344,14 +388,22 @@ class ReactiveComponent extends HTMLElement {
             },
           });
 
-          // Inject local state and refs into event handler context
-          eventHandlers[actionName]({
-            state: globalState,
-            local: this.localState,
-            refs: this.refs,
-            detail: this.slots,
-            e: { event: e, dispatcher: proxyDispatcher },
-          });
+          // Telemetry
+          DevTools.log('ACTION', { component: this.tagName.toLowerCase(), action: actionName });
+
+          try {
+            // Inject local state and refs into event handler context
+            eventHandlers[actionName]({
+              state: globalState,
+              local: this.localState,
+              refs: this.refs,
+              detail: this.slots,
+              e: { event: e, dispatcher: proxyDispatcher },
+            });
+          } catch (err) {
+             DevTools.error(this.tagName.toLowerCase(), err, { action: actionName });
+          }
+          
           e.stopPropagation();
         }
       }
@@ -390,7 +442,7 @@ class ReactiveComponent extends HTMLElement {
           }
         }
       } catch (err) {
-        console.error(`[boreDOM] Error executing script for ${componentName}:`, err);
+        DevTools.error(componentName, err, { source: 'script_load' });
       }
     }
   }
@@ -439,8 +491,9 @@ const init = () => {
   const stateElement = document.querySelector(stateSelector);
   const initialState = stateElement ? JSON.parse(stateElement.textContent) : {};
   
-  // Export globalState to window for debugging if needed, but keep const for internal use
-  window.globalState = createReactiveState(initialState, scheduleGlobalUpdate);
+  // Export globalState to window for debugging
+  // We use 'globalState' variable (defined below) as the reactive proxy
+  window.globalState = createReactiveState(initialState, scheduleGlobalUpdate, 'global');
   // @ts-ignore
   globalState = window.globalState; 
 
@@ -460,6 +513,35 @@ const init = () => {
       ResourceProcessors[tagName](node, name);
     }
   });
+
+  // 3. Expose DevTools API
+  // @ts-ignore
+  window.__BOREDOM__ = {
+    getState: () => JSON.parse(JSON.stringify(globalState)),
+    getComponents: (tagName) => {
+       // @ts-ignore
+       return Array.from(document.querySelectorAll(tagName)).map(el => ({
+         local: el.localState,
+         refs: el.refs,
+         slots: el.slots
+       }));
+    },
+    inspect: (el) => {
+        // @ts-ignore
+        return { local: el.localState, refs: el.refs, slots: el.slots, state: globalState };
+    },
+    query: DevTools.query,
+    reset: () => {
+      // Soft reset to initial state
+      const newState = JSON.parse(stateElement.textContent);
+      Object.keys(globalState).forEach(key => delete globalState[key]);
+      Object.assign(globalState, newState);
+      DevTools.log('SYSTEM', { message: 'App Reset' });
+    }
+  };
+  
+  // @ts-ignore
+  window.__RESET_APP__ = window.__BOREDOM__.reset;
 };
 
 // Variable declaration for internal usage
