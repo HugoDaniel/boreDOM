@@ -81,8 +81,9 @@
             if (window.__BOREDOM_RUNTIME && typeof window.__BOREDOM_RUNTIME.registerScriptModule === 'function') {
                 window.__BOREDOM_RUNTIME.registerScriptModule(name, modulePromise, { appId: APP_ID });
             } else {
-                window.loadedScripts = window.loadedScripts || {};
-                window.loadedScripts[name] = modulePromise;
+                window.__BOREDOM_PENDING_SCRIPTS__ = window.__BOREDOM_PENDING_SCRIPTS__ || {};
+                window.__BOREDOM_PENDING_SCRIPTS__[APP_ID] = window.__BOREDOM_PENDING_SCRIPTS__[APP_ID] || {};
+                window.__BOREDOM_PENDING_SCRIPTS__[APP_ID][name] = modulePromise;
             }
             
             // 2. Load Runtime AFTER component setup

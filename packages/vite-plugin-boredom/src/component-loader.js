@@ -4,6 +4,7 @@
  */
 
 const DEFAULT_APP_ID = 'default';
+const LEGACY_PENDING_SCRIPT_MODULES_KEY = '__BOREDOM_PENDING_SCRIPTS__';
 
 const appStores = new Map();
 
@@ -71,14 +72,32 @@ function queuePendingComponent(name, appId) {
   }
 }
 
+function queuePendingScriptModule(name, modulePromise, appId) {
+  const normalizedAppId = normalizeAppId(appId);
+  if (!window[LEGACY_PENDING_SCRIPT_MODULES_KEY] || typeof window[LEGACY_PENDING_SCRIPT_MODULES_KEY] !== 'object') {
+    window[LEGACY_PENDING_SCRIPT_MODULES_KEY] = {};
+  }
+
+  const pendingScripts = window[LEGACY_PENDING_SCRIPT_MODULES_KEY];
+  if (!pendingScripts[normalizedAppId] || typeof pendingScripts[normalizedAppId] !== 'object') {
+    pendingScripts[normalizedAppId] = {};
+  }
+  pendingScripts[normalizedAppId][name] = modulePromise;
+
+  // Preserve legacy default-app behavior for backward compatibility.
+  if (normalizedAppId === DEFAULT_APP_ID) {
+    if (!window.loadedScripts) window.loadedScripts = {};
+    window.loadedScripts[name] = modulePromise;
+  }
+}
+
 function registerRuntimeScriptModule(name, modulePromise, appId) {
   if (window.__BOREDOM_RUNTIME && typeof window.__BOREDOM_RUNTIME.registerScriptModule === 'function') {
     window.__BOREDOM_RUNTIME.registerScriptModule(name, modulePromise, { appId });
     return;
   }
 
-  if (!window.loadedScripts) window.loadedScripts = {};
-  window.loadedScripts[name] = modulePromise;
+  queuePendingScriptModule(name, modulePromise, appId);
 }
 
 function ensureComponentDefinition(name, appId) {

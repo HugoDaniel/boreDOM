@@ -62,6 +62,7 @@
   const appRegistry = new Map();
   const pendingScriptModules = new Map();
   const fnCache = new Map();
+  const LEGACY_PENDING_SCRIPT_MODULES_KEY = "__BOREDOM_PENDING_SCRIPTS__";
 
   const normalizeAppId = (value) => {
     if (typeof value !== "string") return DEFAULT_APP_ID;
@@ -73,6 +74,12 @@
     if (typeof value !== "string") return null;
     const trimmed = value.trim();
     return trimmed || null;
+  };
+
+  const getLegacyPendingScriptModules = () => {
+    const store = window[LEGACY_PENDING_SCRIPT_MODULES_KEY];
+    if (!store || typeof store !== "object") return null;
+    return store;
   };
 
   const isNodeWithinRoot = (node, root) => {
@@ -847,6 +854,12 @@
   };
 
   const applyPendingScriptModules = (app) => {
+    const legacyPending = getLegacyPendingScriptModules();
+    if (legacyPending && legacyPending[app.appId] && typeof legacyPending[app.appId] === "object") {
+      Object.assign(app.loadedScripts, legacyPending[app.appId]);
+      delete legacyPending[app.appId];
+    }
+
     if (app.appId === DEFAULT_APP_ID && window.loadedScripts) {
       Object.assign(app.loadedScripts, window.loadedScripts);
       window.loadedScripts = app.loadedScripts;
