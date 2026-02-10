@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Layer Tree Test</title>
+  <meta charset="utf-8">
+</head>
+<body>
+  <main id="layer-tree-app">
+    <script id="initial-state" type="application/json">
+      {
+        "treeData": [
+          { "id": "1", "label": "Header", "children": [
+              { "id": "1-1", "label": "Logo" },
+              { "id": "1-2", "label": "Nav", "children": [
+                  { "id": "1-2-1", "label": "Home" },
+                  { "id": "1-2-2", "label": "About" }
+              ]}
+          ]},
+          { "id": "2", "label": "Hero Section", "isVisible": false },
+          { "id": "3", "label": "Footer", "isLocked": true },
+          { "id": "4", "label": "Background", "children": [
+              { "id": "4-1", "label": "Image" },
+              { "id": "4-2", "label": "Overlay" }
+          ]}
+        ]
+      }
+    </script>
+
+    <h2>UI Layer Tree Demo</h2>
+    <p>Use Double-click to rename. Drag and drop (basic) enabled.</p>
+    
+    <div style="width: 300px; height: 400px; border: 1px solid #ccc;">
+      <ui-layer-tree></ui-layer-tree>
+    </div>
+
+    <div id="debug-log" style="margin-top: 20px; font-family: monospace; font-size: 12px; height: 100px; overflow: auto; border: 1px solid #eee; padding: 5px;">
+      Logs...
+    </div>
+  </main>
+
+  <!-- Manual Loader for the ES Module Component -->
+  <script>
+    (async () => {
+        const APP_ID = 'layer-tree-demo';
+        const APP_ROOT_SELECTOR = '#layer-tree-app';
+        const appRoot = document.querySelector(APP_ROOT_SELECTOR) || document.body;
+        console.log('[Demo] Loader started');
+        // 1. Load the Component Module
+        try {
+            const LayerTree = await import('./components/ui/LayerTree.js');
+            console.log('[Demo] Module imported', LayerTree);
+            
+            // Simulate Loader
+            const { metadata, style, template, logic } = LayerTree;
+            const name = metadata.name;
+
+            // Style
+            const styleEl = document.createElement('style');
+            styleEl.setAttribute('data-component', name);
+            styleEl.setAttribute('data-app', APP_ID);
+            styleEl.textContent = style;
+            document.head.appendChild(styleEl);
+
+            // Template
+            const templateEl = document.createElement('template');
+            templateEl.setAttribute('data-component', name);
+            templateEl.setAttribute('data-app', APP_ID);
+            templateEl.innerHTML = template;
+            appRoot.appendChild(templateEl);
+            console.log('[Demo] Template injected');
+
+            // Logic
+            const logicSource = logic.toString();
+            const blob = new Blob([`export default ${logicSource}`], { type: 'text/javascript' });
+            const url = URL.createObjectURL(blob);
+            const modulePromise = import(url).then((module) => {
+                URL.revokeObjectURL(url);
+                return module;
+            });
+
+            if (window.__BOREDOM_RUNTIME && typeof window.__BOREDOM_RUNTIME.registerScriptModule === 'function') {
+                window.__BOREDOM_RUNTIME.registerScriptModule(name, modulePromise, { appId: APP_ID });
+            } else {
+                window.loadedScripts = window.loadedScripts || {};
+                window.loadedScripts[name] = modulePromise;
+            }
+            
+            // 2. Load Runtime AFTER component setup
+            const runtime = document.createElement('script');
+            runtime.src = './boreDOM.js';
+            runtime.dataset.app = APP_ID;
+            runtime.dataset.root = APP_ROOT_SELECTOR;
+            runtime.dataset.state = '#initial-state';
+            
+            runtime.onload = async () => {
+                console.log('[Demo] Runtime loaded');
+                await customElements.whenDefined('ui-layer-tree');
+                console.log('[Demo] Component defined');
+                
+                // Initialize Data
+                setTimeout(() => {
+                    const tree = document.querySelector('ui-layer-tree');
+                    if (tree && tree.localState) {
+                        const state = JSON.parse(document.getElementById('initial-state').textContent);
+                        tree.localState.treeData = state.treeData;
+                        tree.localState.expandedIds = ['1', '1-2'];
+                        log('Initialized Tree Data');
+                    } else {
+                        log('Error: Tree component not ready');
+                    }
+                }, 50);
+            };
+
+            document.body.appendChild(runtime);
+            console.log('[Demo] Runtime script injected');
+        } catch (e) {
+            console.error('[Demo] Loader error:', e);
+        }
+    })();
+  </script>
+
+  <!-- Runtime script tag removed, injected above -->
+  
+  <!-- Controller / Test Harness -->
+  <script>
+    const log = (msg) => {
+      const el = document.getElementById('debug-log');
+      const line = document.createElement('div');
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      el.prepend(line);
+      console.log(`[Log] ${msg}`);
+    };
+
+    // Listen for component events bubbling up
+    document.addEventListener('ui-layer-tree:select', (e) => {
+        log(`Select: ${JSON.stringify(e.detail.selectedIds)}`);
+    });
+
+    document.addEventListener('ui-layer-tree:update', (e) => {
+        log(`Update: ${JSON.stringify(e.detail)}`);
+        // In a real app, we would update the state.treeData here
+        // For this demo, we can try to hack it locally if we want the UI to reflect changes immediately without a real reducer
+        // But the component state 'expanded' is local, so it updates.
+        // Visibility/Lock is data-driven, so it won't toggle in the UI unless we update the source treeData.
+        
+        const tree = document.querySelector('ui-layer-tree');
+        if (tree && tree.localState) {
+            // Very naive deep update for demo purposes
+            const updateNode = (nodes) => {
+                for (let node of nodes) {
+                    if (node.id === e.detail.id) {
+                        if (e.detail.visible === 'toggle') {
+                            if ('isVisible' in node) {
+                                node.isVisible = node.isVisible === false ? true : false;
+                            } else if ('visible' in node) {
+                                node.visible = node.visible === false ? true : false;
+                            } else if ('hidden' in node) {
+                                node.hidden = node.hidden === true ? false : true;
+                            } else {
+                                node.isVisible = false;
+                            }
+                        }
+                        if (e.detail.locked === 'toggle') {
+                            if ('isLocked' in node) {
+                                node.isLocked = node.isLocked === true ? false : true;
+                            } else if ('locked' in node) {
+                                node.locked = node.locked === true ? false : true;
+                            } else {
+                                node.isLocked = true;
+                            }
+                        }
+                    }
+                    if (node.children) updateNode(node.children);
+                }
+            };
+            // Clone to trigger update
+            const newData = JSON.parse(JSON.stringify(tree.localState.treeData));
+            updateNode(newData);
+            tree.localState.treeData = newData;
+        }
+    });
+
+    document.addEventListener('ui-layer-tree:rename', (e) => {
+        log(`Rename: ${e.detail.id} -> ${e.detail.label}`);
+        const tree = document.querySelector('ui-layer-tree');
+        if (tree && tree.localState) {
+            const updateNode = (nodes) => {
+                for (let node of nodes) {
+                    if (node.id === e.detail.id) node.label = e.detail.label;
+                    if (node.children) updateNode(node.children);
+                }
+            };
+            const newData = JSON.parse(JSON.stringify(tree.localState.treeData));
+            updateNode(newData);
+            tree.localState.treeData = newData;
+        }
+    });
+  </script>
+</body>
+</html>

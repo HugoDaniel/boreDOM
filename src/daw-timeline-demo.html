@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DAW Timeline Demo</title>
+  <meta charset="utf-8">
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      font-family: system-ui, sans-serif;
+    }
+    h2 {
+      color: #e0e0e0;
+      padding: 12px 16px 0;
+      margin: 0;
+      font-size: 16px;
+    }
+    .info {
+      color: #888;
+      padding: 4px 16px 8px;
+      font-size: 12px;
+    }
+    .daw-container {
+      margin: 0 16px 16px;
+      border: 1px solid #2a2a40;
+      border-radius: 6px;
+      overflow: hidden;
+      height: 700px;
+    }
+    #debug-log {
+      margin: 0 16px 16px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      height: 80px;
+      overflow: auto;
+      border: 1px solid #2a2a40;
+      border-radius: 4px;
+      padding: 6px;
+      background: #0a0a18;
+      color: #a5b4fc;
+    }
+  </style>
+</head>
+<body>
+  <main id="daw-app">
+    <script id="initial-state" type="application/json">
+      {}
+    </script>
+
+    <h2>DAW Animation Timeline Demo</h2>
+    <p class="info">Dual-mode timeline: green pattern blocks (bar4 loops) and blue region blocks (progress ramps). Select from the palette, click a cell to place. Click a filled cell to inspect. Double-click to clear. Export generates WGSL for both paradigms.</p>
+
+    <div class="daw-container">
+      <daw-timeline></daw-timeline>
+    </div>
+
+    <div id="debug-log">Logs...</div>
+  </main>
+
+  <!-- Manual Loader for the ES Module Component -->
+  <script>
+    (async () => {
+      const APP_ID = 'daw-demo';
+      const APP_ROOT_SELECTOR = '#daw-app';
+      const appRoot = document.querySelector(APP_ROOT_SELECTOR) || document.body;
+      console.log('[Demo] Loader started');
+      try {
+        const DawTimeline = await import('./components/ui/DawTimeline.js');
+        console.log('[Demo] Module imported', DawTimeline);
+
+        const { metadata, style, template, logic } = DawTimeline;
+        const name = metadata.name;
+
+        // Style
+        const styleEl = document.createElement('style');
+        styleEl.setAttribute('data-component', name);
+        styleEl.setAttribute('data-app', APP_ID);
+        styleEl.textContent = style;
+        document.head.appendChild(styleEl);
+
+        // Template
+        const templateEl = document.createElement('template');
+        templateEl.setAttribute('data-component', name);
+        templateEl.setAttribute('data-app', APP_ID);
+        templateEl.innerHTML = template;
+        appRoot.appendChild(templateEl);
+        console.log('[Demo] Template injected');
+
+        // Logic
+        const logicSource = logic.toString();
+        const blob = new Blob([`export default ${logicSource}`], { type: 'text/javascript' });
+        const url = URL.createObjectURL(blob);
+
+        const modulePromise = import(url).then((module) => {
+          URL.revokeObjectURL(url);
+          return module;
+        });
+
+        if (window.__BOREDOM_RUNTIME && typeof window.__BOREDOM_RUNTIME.registerScriptModule === 'function') {
+          window.__BOREDOM_RUNTIME.registerScriptModule(name, modulePromise, { appId: APP_ID });
+        } else {
+          window.loadedScripts = window.loadedScripts || {};
+          window.loadedScripts[name] = modulePromise;
+        }
+
+        // Load Runtime AFTER component setup
+        const runtime = document.createElement('script');
+        runtime.src = './boreDOM.js';
+        runtime.dataset.app = APP_ID;
+        runtime.dataset.root = APP_ROOT_SELECTOR;
+        runtime.dataset.state = '#initial-state';
+
+        runtime.onload = async () => {
+          console.log('[Demo] Runtime loaded');
+          await customElements.whenDefined('daw-timeline');
+          console.log('[Demo] Component defined');
+
+          setTimeout(() => {
+            const daw = document.querySelector('daw-timeline');
+            if (daw && daw.localState) {
+              initDemoData(daw.localState);
+              log('Initialized DAW Timeline data');
+            } else {
+              log('Error: DAW component not ready');
+            }
+          }, 50);
+        };
+
+        document.body.appendChild(runtime);
+        console.log('[Demo] Runtime script injected');
+      } catch (e) {
+        console.error('[Demo] Loader error:', e);
+      }
+    })();
+
+    // ── Demo Data (derived from inercia2025 WGSL patterns) ──
+    function initDemoData(localState) {
+      // Patterns represent reusable bar4() argument sets (green blocks)
+      localState.patterns = [
+        {
+          id: 'flicker',
+          name: 'Flicker',
+          color: '#f59e0b',
+          beats: [
+            { value: 1.0, easing: 4, p1: 0.0, p2: 0.0 },
+            { value: 0.0, easing: 4, p1: 0.0, p2: 0.0 },
+            { value: 1.0, easing: 4, p1: 0.0, p2: 0.0 },
+            { value: 0.0, easing: 4, p1: 0.0, p2: 0.0 }
+          ]
+        },
+        {
+          id: 'pat-fade-in',
+          name: 'Fade In',
+          color: '#22c55e',
+          beats: [
+            { value: 0.0, easing: 0, p1: 0.0, p2: 0.0 },
+            { value: 0.33, easing: 2, p1: 0.5, p2: 0.0 },
+            { value: 0.66, easing: 2, p1: 0.5, p2: 0.0 },
+            { value: 1.0, easing: 2, p1: 1.0, p2: 0.0 }
+          ]
+        },
+        {
+          id: 'pulse',
+          name: 'Pulse',
+          color: '#ef4444',
+          beats: [
+            { value: 0.0, easing: 3, p1: 0.5, p2: 0.2 },
+            { value: 1.0, easing: 3, p1: 0.5, p2: 0.2 },
+            { value: 0.0, easing: 3, p1: 0.5, p2: 0.2 },
+            { value: 1.0, easing: 3, p1: 0.5, p2: 0.2 }
+          ]
+        },
+        {
+          id: 'steady',
+          name: 'Steady',
+          color: '#6b7280',
+          beats: [
+            { value: 0.5, easing: 0, p1: 0.0, p2: 0.0 },
+            { value: 0.5, easing: 0, p1: 0.0, p2: 0.0 },
+            { value: 0.5, easing: 0, p1: 0.0, p2: 0.0 },
+            { value: 0.5, easing: 0, p1: 0.0, p2: 0.0 }
+          ]
+        },
+        {
+          id: 'sweep',
+          name: 'Sweep',
+          color: '#8b5cf6',
+          beats: [
+            { value: 0.0, easing: 5, p1: 0.8, p2: 0.3 },
+            { value: 0.25, easing: 5, p1: 0.6, p2: 0.5 },
+            { value: 0.75, easing: 5, p1: 0.4, p2: 0.7 },
+            { value: 1.0, easing: 5, p1: 0.2, p2: 1.0 }
+          ]
+        },
+        {
+          id: 'bounce',
+          name: 'Bounce',
+          color: '#10b981',
+          beats: [
+            { value: 1.0, easing: 1, p1: 0.8, p2: 0.0 },
+            { value: 0.2, easing: 2, p1: 0.6, p2: 0.0 },
+            { value: 0.8, easing: 1, p1: 0.4, p2: 0.0 },
+            { value: 0.0, easing: 2, p1: 0.2, p2: 0.0 }
+          ]
+        }
+      ];
+
+      // Regions represent progress-based transitions (blue blocks)
+      localState.regions = [
+        { id: 'cam-fade', name: 'Cam Fade', color: '#3b82f6', startValue: 0.0, endValue: 0.2, easing: 'smoothstep' },
+        { id: 'cam-zoom', name: 'Cam Zoom', color: '#2563eb', startValue: 0.2, endValue: 1.0, easing: 'smoothstep' },
+        { id: 'train-ramp', name: 'Train Ramp', color: '#1d4ed8', startValue: 0.0, endValue: 1.0, easing: 'smoothstep' },
+        { id: 'reg-fade-in', name: 'Fade In', color: '#60a5fa', startValue: 0.0, endValue: 1.0, easing: 'sine' },
+        { id: 'reg-fade-out', name: 'Fade Out', color: '#93c5fd', startValue: 1.0, endValue: 0.0, easing: 'sine' },
+        { id: 'kf-a', name: 'KF A', color: '#818cf8', startValue: 0.0, endValue: 0.33, easing: 'sine' },
+        { id: 'kf-b', name: 'KF B', color: '#a78bfa', startValue: 0.33, endValue: 0.66, easing: 'sine' },
+        { id: 'kf-c', name: 'KF C', color: '#c4b5fd', startValue: 0.66, endValue: 1.0, easing: 'sine' }
+      ];
+
+      // Tracks: mix of pattern and region types
+      localState.tracks = [
+        {
+          id: 'neon',
+          name: 'Neon Intensity',
+          type: 'pattern',
+          phaseCount: 16,
+          beatMultiplier: 4,
+          placements: [
+            { phases: [0, 4, 8, 12], patternId: 'flicker' },
+            { phases: [1, 5, 9, 13], patternId: 'pat-fade-in' },
+            { phases: [2, 6, 10, 14], patternId: 'pulse' },
+            { phases: 'default', patternId: 'steady' }
+          ]
+        },
+        {
+          id: 'eyelid',
+          name: 'Eyelid',
+          type: 'pattern',
+          phaseCount: 16,
+          beatMultiplier: 4,
+          placements: [
+            { phases: [0, 8], patternId: 'sweep' },
+            { phases: [3, 7, 11, 15], patternId: 'bounce' },
+            { phases: 'default', patternId: 'steady' }
+          ]
+        },
+        {
+          id: 'camera',
+          name: 'Camera',
+          type: 'region',
+          phaseCount: 16,
+          beatMultiplier: 4,
+          regions: [
+            { regionId: 'cam-fade', startPhase: 1, endPhase: 3 },
+            { regionId: 'cam-zoom', startPhase: 5, endPhase: 7 }
+          ]
+        },
+        {
+          id: 'train',
+          name: 'Train Movement',
+          type: 'region',
+          phaseCount: 16,
+          beatMultiplier: 4,
+          regions: [
+            { regionId: 'train-ramp', startPhase: 9, endPhase: 14 }
+          ]
+        },
+        {
+          id: 'bridge_vis',
+          name: 'Bridge Visibility',
+          type: 'region',
+          phaseCount: 16,
+          beatMultiplier: 4,
+          regions: [
+            { regionId: 'reg-fade-in', startPhase: 3, endPhase: 4 },
+            { regionId: 'reg-fade-out', startPhase: 14, endPhase: 15 }
+          ]
+        },
+        {
+          id: 'tangram',
+          name: 'Tangram Movement',
+          type: 'region',
+          phaseCount: 16,
+          beatMultiplier: 4,
+          regions: [
+            { regionId: 'kf-a', startPhase: 6, endPhase: 7 },
+            { regionId: 'kf-b', startPhase: 8, endPhase: 9 },
+            { regionId: 'kf-c', startPhase: 11, endPhase: 12 }
+          ]
+        }
+      ];
+    }
+  </script>
+
+  <!-- Controller / Event Listener -->
+  <script>
+    const log = (msg) => {
+      const el = document.getElementById('debug-log');
+      const line = document.createElement('div');
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      el.prepend(line);
+      console.log(`[Log] ${msg}`);
+    };
+
+    document.addEventListener('daw-timeline:place', (e) => {
+      log(`Place: track=${e.detail.trackId} phase=${e.detail.phase} pattern=${e.detail.patternId}`);
+    });
+
+    document.addEventListener('daw-timeline:clear', (e) => {
+      log(`Clear: track=${e.detail.trackId} phase=${e.detail.phase}`);
+    });
+
+    document.addEventListener('daw-timeline:edit', (e) => {
+      log(`Edit: pattern=${e.detail.patternId} beats=${JSON.stringify(e.detail.beats)}`);
+    });
+
+    document.addEventListener('daw-timeline:export', (e) => {
+      log(`Export: ${e.detail.wgsl.length} chars of WGSL generated`);
+    });
+
+    document.addEventListener('daw-timeline:select', (e) => {
+      log(`Select: cell=${e.detail.cellId} track=${e.detail.trackId} phase=${e.detail.phase}`);
+    });
+
+    document.addEventListener('daw-timeline:place-region', (e) => {
+      log(`Place Region: track=${e.detail.trackId} region=${e.detail.regionId} phases=${e.detail.startPhase}-${e.detail.endPhase}`);
+    });
+
+    document.addEventListener('daw-timeline:clear-region', (e) => {
+      log(`Clear Region: track=${e.detail.trackId} region=${e.detail.regionId}`);
+    });
+
+    document.addEventListener('daw-timeline:edit-region', (e) => {
+      log(`Edit Region: region=${e.detail.regionId} start=${e.detail.startValue} end=${e.detail.endValue} easing=${e.detail.easing}`);
+    });
+  </script>
+</body>
+</html>

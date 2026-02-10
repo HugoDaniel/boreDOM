@@ -103,9 +103,14 @@ export const logic = ({ on, local }) => {
 // main.js
 import { loadComponent } from '@mr_hugo/vite-plugin-boredom/component-loader';
 
+const appConfig = {
+  appId: 'my-app',
+  root: '#app-root'
+};
+
 async function initApp() {
   const { Button } = await import('./components/ui/Button.js');
-  await loadComponent(Button);
+  await loadComponent(Button, appConfig);
 }
 
 initApp();
@@ -121,14 +126,21 @@ initApp();
   <title>My App</title>
 </head>
 <body>
+  <main id="app-root">
   <script id="initial-state" type="application/json">
     { "user": { "name": "John" } }
   </script>
 
   <ui-button></ui-button>
+  </main>
 
   <script type="module" src="./main.js"></script>
-  <script src="./boreDOM.js" data-state="#initial-state"></script>
+  <script
+    src="./boreDOM.js"
+    data-app="my-app"
+    data-root="#app-root"
+    data-state="#initial-state"
+  ></script>
 </body>
 </html>
 ```

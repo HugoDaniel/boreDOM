@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Multi-File boreDOM Example</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+    }
+    body {
+      margin: 0;
+      padding: 2rem;
+    }
+    .demo-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .demo-section {
+      margin-bottom: 2rem;
+    }
+    .demo-section h2 {
+      margin-top: 0;
+    }
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .layer-tree-shell {
+      width: 100%;
+      max-width: 420px;
+      height: 280px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #f8fafc;
+    }
+    .layer-tree-log {
+      margin-top: 0.75rem;
+      height: 84px;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.5rem;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+  <main id="multi-file-app">
+    <script id="initial-state" type="application/json">
+      {
+        "user": { "name": "Developer" },
+        "demo": { "modalOpen": false }
+      }
+    </script>
+
+    <div class="demo-container">
+    <h1>Multi-File boreDOM Demo</h1>
+    
+    <div class="demo-section">
+      <h2>Button Components</h2>
+      <div class="button-group">
+        <ui-button variant="primary" size="small" label="Small Primary"></ui-button>
+        <ui-button variant="secondary" size="medium" label="Medium Secondary"></ui-button>
+        <ui-button variant="outline" size="large" label="Large Outline"></ui-button>
+        <ui-button disabled="true" label="Disabled"></ui-button>
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>Counter Component</h2>
+      <p style="margin-bottom: 1rem; color: #64748b;">The Counter depends on ui-button, testing dependency resolution:</p>
+      <ui-counter initial="5"></ui-counter>
+    </div>
+
+    <div class="demo-section">
+      <h2>Modal Component</h2>
+      <ui-button variant="primary" label="Open Modal" data-dispatch="openModal"></ui-button>
+      
+      <ui-modal title="Demo Modal" data-ref="demoModal">
+        <p>This modal was built using multi-file components that get bundled into a single HTML file!</p>
+        <p>The modal depends on the button component, and the build system handles the dependency order automatically.</p>
+      </ui-modal>
+    </div>
+
+    <div class="demo-section">
+      <h2>Layer Tree Component</h2>
+      <p style="margin-bottom: 1rem; color: #64748b;">Reusable tree rendered from flat-list derivation (single `data-list`).</p>
+      <div class="layer-tree-shell">
+        <ui-layer-tree></ui-layer-tree>
+      </div>
+      <div id="layer-tree-log" class="layer-tree-log">Layer tree events...</div>
+    </div>
+    </div>
+
+    <demo-app></demo-app>
+
+    <template data-component="demo-app" data-app="multi-file-demo">
+      <div style="display: none;"></div>
+    </template>
+
+    <script type="text/boredom" data-component="demo-app" data-app="multi-file-demo">
+    export default ({ on, refs, state }) => {
+      on('openModal', () => {
+        if (refs.demoModal) {
+          refs.demoModal.localState.open = true;
+        }
+      });
+
+      // Listen for modal events
+      document.addEventListener('ui-modal:close', (e) => {
+        console.log('Modal closed:', e.detail.reason);
+      });
+
+      document.addEventListener('ui-modal:confirm', (e) => {
+        console.log('Modal confirmed:', e.detail);
+        alert('Modal confirmed!');
+      });
+
+      document.addEventListener('ui-button:click', (e) => {
+        console.log('Button clicked:', e.detail);
+      });
+    };
+    </script>
+
+    <script>
+    const demoTreeData = [
+      {
+        id: '1',
+        label: 'Header',
+        children: [
+          { id: '1-1', label: 'Logo' },
+          {
+            id: '1-2',
+            label: 'Nav',
+            children: [
+              { id: '1-2-1', label: 'Home' },
+              { id: '1-2-2', label: 'Pricing' }
+            ]
+          }
+        ]
+      },
+      { id: '2', label: 'Hero', isVisible: false },
+      { id: '3', label: 'Footer', isLocked: true }
+    ];
+
+    const clone = (value) => JSON.parse(JSON.stringify(value));
+
+    const logLayerTree = (message) => {
+      const root = document.getElementById('layer-tree-log');
+      if (!root) return;
+      const line = document.createElement('div');
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      root.prepend(line);
+    };
+
+    const visitTree = (nodes, id, updater) => {
+      for (const node of nodes) {
+        if (node.id === id) {
+          updater(node);
+          return true;
+        }
+        if (Array.isArray(node.children) && visitTree(node.children, id, updater)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await customElements.whenDefined('ui-layer-tree');
+      const tree = document.querySelector('ui-layer-tree');
+      if (!tree || !tree.localState) return;
+      tree.localState.data = clone(demoTreeData);
+      tree.localState.expandedIds = ['1', '1-2'];
+      logLayerTree('Initialized tree data');
+    });
+
+    document.addEventListener('ui-layer-tree:select', (e) => {
+      logLayerTree(`select ${JSON.stringify(e.detail.selectedIds)}`);
+    });
+
+    document.addEventListener('ui-layer-tree:update', (e) => {
+      const tree = document.querySelector('ui-layer-tree');
+      if (!tree || !tree.localState || !Array.isArray(tree.localState.data)) return;
+      const nextData = clone(tree.localState.data);
+      visitTree(nextData, e.detail.id, (node) => {
+        if (e.detail.visible === 'toggle') {
+          if ('isVisible' in node) {
+            node.isVisible = node.isVisible === false ? true : false;
+          } else if ('visible' in node) {
+            node.visible = node.visible === false ? true : false;
+          } else if ('hidden' in node) {
+            node.hidden = node.hidden === true ? false : true;
+          } else {
+            node.isVisible = false;
+          }
+        }
+        if (e.detail.locked === 'toggle') {
+          if ('isLocked' in node) {
+            node.isLocked = node.isLocked === true ? false : true;
+          } else if ('locked' in node) {
+            node.locked = node.locked === true ? false : true;
+          } else {
+            node.isLocked = true;
+          }
+        }
+      });
+      tree.localState.data = nextData;
+      logLayerTree(`update ${JSON.stringify(e.detail)}`);
+    });
+
+    document.addEventListener('ui-layer-tree:rename', (e) => {
+      const tree = document.querySelector('ui-layer-tree');
+      if (!tree || !tree.localState || !Array.isArray(tree.localState.data)) return;
+      const nextData = clone(tree.localState.data);
+      visitTree(nextData, e.detail.id, (node) => {
+        node.label = e.detail.label;
+      });
+      tree.localState.data = nextData;
+      logLayerTree(`rename ${e.detail.id} -> ${e.detail.label}`);
+    });
+    </script>
+  </main>
+
+  <script
+    src="../../src/boreDOM.js"
+    data-app="multi-file-demo"
+    data-root="#multi-file-app"
+    data-state="#initial-state"
+  ></script>
+</body>
+</html>

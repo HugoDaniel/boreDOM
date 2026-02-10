@@ -3,31 +3,120 @@
  * Dynamically loads boreDOM component modules during development
  */
 
-const loadedComponents = new Map();
-const componentDependencies = new Map();
-const componentPaths = new Map(); // Registry for component name -> module mapping
+const DEFAULT_APP_ID = 'default';
 
-function queuePendingComponent(name) {
-  window.__pendingComponents = window.__pendingComponents || [];
-  if (!window.__pendingComponents.includes(name)) {
-    window.__pendingComponents.push(name);
+const appStores = new Map();
+
+function getStore(appId) {
+  const normalizedAppId = normalizeAppId(appId);
+  if (!appStores.has(normalizedAppId)) {
+    appStores.set(normalizedAppId, {
+      loadedComponents: new Map(),
+      componentDependencies: new Map(),
+      componentPaths: new Map(),
+    });
   }
+
+  return appStores.get(normalizedAppId);
+}
+
+function normalizeAppId(appId) {
+  if (typeof appId !== 'string') return DEFAULT_APP_ID;
+  const trimmed = appId.trim();
+  return trimmed || DEFAULT_APP_ID;
+}
+
+function normalizeOptions(options) {
+  if (!options || typeof options !== 'object') {
+    return { appId: DEFAULT_APP_ID, root: document.body };
+  }
+
+  const appId = normalizeAppId(options.appId);
+  const root = resolveRoot(options.root);
+  return { appId, root };
+}
+
+function resolveRoot(root) {
+  if (!root) return document.body;
+  if (root === document || root === document.body || root === document.documentElement) {
+    return root;
+  }
+  if (typeof root === 'string') {
+    return document.querySelector(root) || document.body;
+  }
+  if (root && typeof root === 'object' && root.nodeType) {
+    return root;
+  }
+  return document.body;
+}
+
+function queuePendingComponent(name, appId) {
+  window.__pendingComponents = window.__pendingComponents || [];
+  const entry = appId === DEFAULT_APP_ID
+    ? name
+    : { name, appId };
+
+  const exists = window.__pendingComponents.some((item) => {
+    if (typeof item === 'string') {
+      return item === entry;
+    }
+    if (typeof item === 'object' && item) {
+      return item.name === entry.name && item.appId === entry.appId;
+    }
+    return false;
+  });
+
+  if (!exists) {
+    window.__pendingComponents.push(entry);
+  }
+}
+
+function registerRuntimeScriptModule(name, modulePromise, appId) {
+  if (window.__BOREDOM_RUNTIME && typeof window.__BOREDOM_RUNTIME.registerScriptModule === 'function') {
+    window.__BOREDOM_RUNTIME.registerScriptModule(name, modulePromise, { appId });
+    return;
+  }
+
+  if (!window.loadedScripts) window.loadedScripts = {};
+  window.loadedScripts[name] = modulePromise;
+}
+
+function ensureComponentDefinition(name, appId) {
+  if (customElements.get(name)) return;
+
+  if (window.__BOREDOM_RUNTIME && typeof window.__BOREDOM_RUNTIME.defineReactiveElement === 'function') {
+    window.__BOREDOM_RUNTIME.defineReactiveElement(name);
+    return;
+  }
+
+  if (window.ReactiveComponent) {
+    customElements.define(name, class extends window.ReactiveComponent { });
+    return;
+  }
+
+  queuePendingComponent(name, appId);
 }
 
 /**
  * Register a component path mapping
  * @param {string} name - Component name (e.g., 'ui-button')
  * @param {Promise<any>} modulePromise - Dynamic import promise
+ * @param {object} options - Optional options ({ appId })
  */
-export function registerComponentPath(name, modulePromise) {
-  componentPaths.set(name, modulePromise);
+export function registerComponentPath(name, modulePromise, options = {}) {
+  const { appId } = normalizeOptions(options);
+  const store = getStore(appId);
+  store.componentPaths.set(name, modulePromise);
 }
 
 /**
  * Load a component module and all its dependencies
  * @param {object} componentModule - The component module with metadata, style, template, logic
+ * @param {object} options - Optional options ({ appId, root })
  */
-export async function loadComponent(componentModule) {
+export async function loadComponent(componentModule, options = {}) {
+  const { appId, root } = normalizeOptions(options);
+  const store = getStore(appId);
   const { metadata, style, template, logic } = componentModule;
 
   if (!metadata || !metadata.name) {
@@ -38,17 +127,17 @@ export async function loadComponent(componentModule) {
   const { name, dependencies = [] } = metadata;
 
   // Prevent duplicate loading
-  if (loadedComponents.has(name)) return;
+  if (store.loadedComponents.has(name)) return;
 
   // Load dependencies first
   for (const depName of dependencies) {
-    if (!loadedComponents.has(depName)) {
+    if (!store.loadedComponents.has(depName)) {
       // Check if we have a registered path for this dependency
-      const depModulePromise = componentPaths.get(depName);
+      const depModulePromise = store.componentPaths.get(depName);
       if (depModulePromise) {
         try {
           const depModule = await depModulePromise;
-          await loadComponent(depModule.default || depModule);
+          await loadComponent(depModule.default || depModule, { appId, root });
         } catch (error) {
           console.warn(`[boredom] Failed to load dependency ${depName}:`, error);
         }
@@ -58,107 +147,120 @@ export async function loadComponent(componentModule) {
     }
   }
 
-  // Inject style with dependency ordering
+  // Inject style with app scoping
   const styleEl = document.createElement('style');
   styleEl.setAttribute('data-component', name);
+  styleEl.setAttribute('data-app', appId);
   styleEl.textContent = style;
   document.head.appendChild(styleEl);
 
-  // Create and register template
+  // Create and register template (prefer app root, fallback to body)
   const templateEl = document.createElement('template');
   templateEl.setAttribute('data-component', name);
+  templateEl.setAttribute('data-app', appId);
   templateEl.innerHTML = template;
-  document.body.appendChild(templateEl);
+  (root && typeof root.appendChild === 'function' ? root : document.body).appendChild(templateEl);
 
-  // Register component logic using boreDOM's mechanism
+  // Register component logic using boreDOM runtime mechanism
   const logicSource = typeof logic === 'function' ? logic.toString() : logic;
   const logicBlob = new Blob([`export default ${logicSource}`], {
     type: 'text/javascript'
   });
   const logicUrl = URL.createObjectURL(logicBlob);
-
-  // Use boreDOM's existing script loading mechanism
-  if (!window.loadedScripts) window.loadedScripts = {};
-  window.loadedScripts[name] = import(logicUrl).then(m => {
+  const modulePromise = import(logicUrl).then(m => {
     URL.revokeObjectURL(logicUrl);
     return m;
   });
 
-  // Define custom element if not exists
-  if (!customElements.get(name)) {
-    // Wait for ReactiveComponent to be available (boreDOM must be loaded)
-    if (window.ReactiveComponent) {
-      customElements.define(name, class extends window.ReactiveComponent { });
-    } else {
-      // Queue registration for when boreDOM loads
-      queuePendingComponent(name);
-    }
-  }
+  registerRuntimeScriptModule(name, modulePromise, appId);
+  ensureComponentDefinition(name, appId);
 
-  loadedComponents.set(name, componentModule);
-  componentDependencies.set(name, dependencies);
+  store.loadedComponents.set(name, componentModule);
+  store.componentDependencies.set(name, dependencies);
 }
 
 /**
  * Get all loaded components
+ * @param {object} options - Optional options ({ appId })
  * @returns {Array} Array of [name, module] pairs
  */
-export function getLoadedComponents() {
-  return Array.from(loadedComponents.entries());
+export function getLoadedComponents(options = {}) {
+  const { appId } = normalizeOptions(options);
+  return Array.from(getStore(appId).loadedComponents.entries());
 }
 
 /**
  * Get the dependency graph
+ * @param {object} options - Optional options ({ appId })
  * @returns {Array} Array of [name, dependencies] pairs
  */
-export function getDependencyGraph() {
-  return Array.from(componentDependencies.entries());
+export function getDependencyGraph(options = {}) {
+  const { appId } = normalizeOptions(options);
+  return Array.from(getStore(appId).componentDependencies.entries());
 }
 
 /**
  * Check if a component is loaded
  * @param {string} name - Component name
+ * @param {object} options - Optional options ({ appId })
  * @returns {boolean}
  */
-export function isComponentLoaded(name) {
-  return loadedComponents.has(name);
+export function isComponentLoaded(name, options = {}) {
+  const { appId } = normalizeOptions(options);
+  return getStore(appId).loadedComponents.has(name);
 }
 
 /**
  * Hot reload a component (for HMR support)
  * @param {string} name - Component name
  * @param {object} newModule - New component module
+ * @param {object} options - Optional options ({ appId, root })
  */
-export async function reloadComponent(name, newModule) {
-  if (!loadedComponents.has(name)) {
-    return loadComponent(newModule);
+export async function reloadComponent(name, newModule, options = {}) {
+  const { appId, root } = normalizeOptions(options);
+  const store = getStore(appId);
+
+  if (!store.loadedComponents.has(name)) {
+    return loadComponent(newModule, { appId, root });
   }
 
   // Remove existing style
-  document.querySelectorAll(`style[data-component="${name}"]`).forEach(el => el.remove());
+  document.querySelectorAll(`style[data-component="${name}"][data-app="${appId}"]`).forEach(el => el.remove());
 
   // Remove existing template
-  document.querySelectorAll(`template[data-component="${name}"]`).forEach(el => el.remove());
+  document.querySelectorAll(`template[data-component="${name}"][data-app="${appId}"]`).forEach(el => el.remove());
 
   // Clear from caches
-  loadedComponents.delete(name);
-  if (window.loadedScripts) {
-    delete window.loadedScripts[name];
-  }
+  store.loadedComponents.delete(name);
+  store.componentDependencies.delete(name);
 
   // Reload
-  return loadComponent(newModule);
+  return loadComponent(newModule, { appId, root });
 }
 
 /**
- * Clear all loaded components (useful for testing)
+ * Clear loaded components
+ * @param {object} options - Optional options ({ appId })
  */
-export function clearAllComponents() {
-  loadedComponents.forEach((_, name) => {
-    document.querySelectorAll(`style[data-component="${name}"]`).forEach(el => el.remove());
-    document.querySelectorAll(`template[data-component="${name}"]`).forEach(el => el.remove());
+export function clearAllComponents(options = {}) {
+  const normalized = normalizeOptions(options);
+
+  if (!options || typeof options !== 'object' || options.appId === undefined) {
+    appStores.forEach((_store, appId) => {
+      clearAllComponents({ appId });
+    });
+    return;
+  }
+
+  const { appId } = normalized;
+  const store = getStore(appId);
+
+  store.loadedComponents.forEach((_, name) => {
+    document.querySelectorAll(`style[data-component="${name}"][data-app="${appId}"]`).forEach(el => el.remove());
+    document.querySelectorAll(`template[data-component="${name}"][data-app="${appId}"]`).forEach(el => el.remove());
   });
-  loadedComponents.clear();
-  componentDependencies.clear();
-  componentPaths.clear();
+
+  store.loadedComponents.clear();
+  store.componentDependencies.clear();
+  store.componentPaths.clear();
 }
