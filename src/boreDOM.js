@@ -662,6 +662,25 @@ class ReactiveComponent extends HTMLElement {
   }
 }
 
+const defineReactiveElement = (name) => {
+  if (!name || customElements.get(name)) return;
+  const BaseReactiveComponent = window.ReactiveComponent || ReactiveComponent;
+  customElements.define(name, class extends BaseReactiveComponent {});
+};
+
+const flushPendingComponentQueue = () => {
+  if (!Array.isArray(window.__pendingComponents)) return;
+
+  const pending = Array.from(new Set(window.__pendingComponents));
+  window.__pendingComponents = [];
+
+  pending.forEach((name) => {
+    if (typeof name === "string" && name.trim()) {
+      defineReactiveElement(name);
+    }
+  });
+};
+
 const applyComponentStyle = (name, cssText) => {
   if (!cssText || !cssText.trim()) return;
   const style = document.createElement("style");
@@ -688,9 +707,7 @@ const ResourceProcessors = {
   TEMPLATE: (node, name) => {
     if (!name) return;
     componentTemplates.set(name, node);
-    if (!customElements.get(name)) {
-      customElements.define(name, class extends ReactiveComponent {});
-    }
+    defineReactiveElement(name);
     node.remove();
   },
 };
@@ -735,7 +752,9 @@ const init = () => {
   const stateSelector = currentScript.dataset.state;
   const stateElement = initGlobalState(stateSelector);
 
+  window.ReactiveComponent = ReactiveComponent;
   registerComponents(collectComponentNodes());
+  flushPendingComponentQueue();
   exposeDevTools(stateElement);
 };
 

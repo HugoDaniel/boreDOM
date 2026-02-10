@@ -1,0 +1,58 @@
+{
+  "name": "@mr_hugo/vite-plugin-boredom",
+  "version": "1.0.0",
+  "description": "Vite plugin for multi-file boreDOM development with single-file deployment",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./component-loader": {
+      "import": "./src/component-loader.js",
+      "require": "./src/component-loader.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "src/component-loader.js",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "vite",
+    "plugin",
+    "boredom",
+    "single-file",
+    "web-components",
+    "llm"
+  ],
+  "author": "",
+  "license": "ISC",
+  "peerDependencies": {
+    "vite": "^5.0.0 || ^6.0.0"
+  },
+  "dependencies": {
+    "acorn": "^8.14.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "@types/node": "^20.0.0",
+    "vite": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HugoDaniel/boreDOM.git",
+    "directory": "packages/vite-plugin-boredom"
+  }
+}
