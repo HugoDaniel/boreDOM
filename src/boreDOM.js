@@ -1,551 +1,744 @@
 /**
- * @file boreDOM.js
- * @description A minimalist, reactivity-driven JavaScript framework optimized for LLM readability and generation.
- * @version 2.0.0
+ * boreDOM Lite runtime (v3.0.0)
  */
-
-// --- 1. CONSTANTS & CONFIGURATION ---
 
 const CONSTANTS = {
   Attributes: {
-    COMPONENT: 'data-component',
-    STATE: 'data-state',
-    LIST: 'data-list',
-    ITEM_TEMPLATE: 'data-item',
-    TEXT: 'data-text',
-    SHOW: 'data-show',
-    VALUE: 'data-value',
-    CHECKED: 'data-checked',
-    CLASS: 'data-class',
-    REF: 'data-ref',
-    DISPATCH: 'data-dispatch',
-    INPUT: 'data-input',
-    CHANGE: 'data-change',
-    PROP_PREFIX: 'data-prop-',
+    COMPONENT: "data-component",
+    STATE: "data-state",
+    LIST: "data-list",
+    ITEM_TEMPLATE: "data-item",
+    LIST_KEY: "data-list-key",
+    LIST_ONCE: "data-list-once",
+    LIST_STATIC: "data-list-static",
+    TEXT: "data-text",
+    SHOW: "data-show",
+    VALUE: "data-value",
+    CHECKED: "data-checked",
+    CLASS: "data-class",
+    REF: "data-ref",
+    DISPATCH: "data-dispatch",
+    ARG_PREFIX: "data-arg-",
+    ATTR_PREFIX: "data-attr-",
   },
-  // Supported events - names will be dynamically mapped to data-dispatch attributes
   Events: [
-    'click',
-    'input',
-    'change',
-    'pointerdown',
-    'pointermove',
-    'pointerup',
-    'pointerout',
-    'keydown',
-    'keyup',
-    'focus',
-    'blur',
+    "click",
+    "dblclick",
+    "input",
+    "change",
+    "dragstart",
+    "dragover",
+    "drop",
+    "dragend",
+    "pointerdown",
+    "pointermove",
+    "pointerup",
+    "pointerout",
+    "keydown",
+    "keyup",
+    "focus",
+    "blur",
   ],
 };
 
-// Global Registries
-/** @type {Set<ShadowRoot>} */
-const activeShadowRoots = new Set();
+const activeComponents = new Set();
+const componentTemplates = new Map();
+const loadedScripts = window.loadedScripts || (window.loadedScripts = {});
 
-/** @type {Record<string, Function>} */
-const eventHandlers = {};
+const pendingUpdates = new Set();
+let updatesScheduled = false;
 
-/** @type {Map<string, CSSStyleSheet[]>} */
-const componentStyles = new Map();
-
-/** @type {Record<string, Promise<any>>} */
-const loadedScripts = {};
-
-// --- 1.5 DEVTOOLS & TELEMETRY ---
-
-const DevTools = {
-  log: (type, data) => {
-    console.log(`[BOREDOM:${type}]`, JSON.stringify(data));
-  },
-  
-  error: (component, error, context = {}) => {
-    console.error(`[BOREDOM:ERROR]`, JSON.stringify({
-      component,
-      message: error.message,
-      stack: error.stack,
-      context
-    }));
-  },
-
-  // Shadow-piercing query selector
-  query: (selector, root = document.body) => {
-    let result = root.querySelector(selector);
-    if (result) return result;
-    
-    // Depth-first search through Shadow DOMs
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-    let node;
-    while ((node = walker.nextNode())) {
-      if (node.shadowRoot) {
-        result = DevTools.query(selector, node.shadowRoot);
-        if (result) return result;
-      }
-    }
-    return null;
+const scheduleComponentUpdate = (component) => {
+  if (!component) return;
+  pendingUpdates.add(component);
+  if (!updatesScheduled) {
+    updatesScheduled = true;
+    queueMicrotask(flushUpdates);
   }
 };
 
-// --- 2. REACTIVITY SYSTEM ---
+const flushUpdates = () => {
+  updatesScheduled = false;
+  const queue = Array.from(pendingUpdates);
+  pendingUpdates.clear();
+  queue.forEach((component) => {
+    if (!component || component.isConnected === false) return;
+    component._update();
+  });
+};
 
-/**
- * Creates a reactive proxy for state management.
- * @template T
- * @param {T} target - The state object to observe.
- * @param {Function} callback - The function to call on mutation.
- * @param {string} [path=''] - Path for debugging/logging.
- * @returns {T} - The reactive proxy.
- */
-const createReactiveState = (target, callback, path = 'root') => {
-  if (typeof target !== 'object' || target === null) return target;
+const createReactiveState = (target, callback, cache = new WeakMap()) => {
+  if (typeof target !== "object" || target === null) return target;
+  if (cache.has(target)) return cache.get(target);
 
-  return new Proxy(target, {
+  const proxy = new Proxy(target, {
     set(obj, prop, value) {
       const oldValue = obj[prop];
+      if (Object.is(oldValue, value)) return true;
       obj[prop] = value;
-      
-      DevTools.log('STATE', { path: `${path}.${String(prop)}`, prev: oldValue, next: value });
-      
       callback();
       return true;
     },
     get(obj, prop) {
-      // Lazy recursion for deep reactivity
-      return createReactiveState(obj[prop], callback, `${path}.${String(prop)}`);
+      return createReactiveState(obj[prop], callback, cache);
     },
     deleteProperty(obj, prop) {
-      DevTools.log('STATE', { path: `${path}.${String(prop)}`, action: 'delete' });
+      const hadKey = Object.prototype.hasOwnProperty.call(obj, prop);
+      if (!hadKey) return true;
       delete obj[prop];
       callback();
       return true;
     },
   });
+
+  cache.set(target, proxy);
+  return proxy;
 };
 
-/**
- * Triggers a DOM update across all active components.
- */
+const initGlobalState = (stateSelector) => {
+  const stateElement = document.querySelector(stateSelector);
+  const initialState = stateElement ? JSON.parse(stateElement.textContent) : {};
+  window.globalState = createReactiveState(initialState, scheduleGlobalUpdate);
+  // @ts-ignore
+  globalState = window.globalState;
+  return stateElement;
+};
+
 const scheduleGlobalUpdate = () => {
-  activeShadowRoots.forEach((root) => {
-    // @ts-ignore - 'host' property exists on ShadowRoot
-    root.host._update();
-  });
+  activeComponents.forEach((component) => scheduleComponentUpdate(component));
 };
 
-// --- 3. EXPRESSION EVALUATION ---
+const fnCache = new Map();
 
-/**
- * Evaluates a string expression within a specific scope.
- * @param {string} expr - The JavaScript expression to evaluate.
- * @param {Object} scope - The variables available to the expression.
- * @returns {any} - The result of the evaluation.
- */
 const evaluate = (expr, scope) => {
   try {
     const keys = Object.keys(scope);
     const values = Object.values(scope);
-    // Function constructor allows evaluation without 'eval()' and strict scoping
-    return new Function(...keys, `return ${expr}`)(...values);
+    const cacheKey = `${expr}|${keys.join(",")}`;
+    let fn = fnCache.get(cacheKey);
+    if (!fn) {
+      fn = new Function(...keys, `return ${expr}`);
+      fnCache.set(cacheKey, fn);
+    }
+    return fn(...values);
   } catch (e) {
-    // Fail silently to prevent UI crashes during intermediate states
     return undefined;
   }
 };
 
-// --- 4. DOM DIRECTIVES & BINDINGS ---
+const createComponentContext = (component) => ({
+  state: globalState,
+  local: component.localState,
+  refs: component.refs,
+});
 
-/**
- * Directives map dataset keys (camelCase of data-attributes) to DOM manipulations.
- * Receives: element, raw expression string, and current context.
- */
+const withItemContext = (context, item, index) => ({
+  ...context,
+  item,
+  index,
+});
+
+const withEventContext = (context, event, dispatcher, args) => ({
+  ...context,
+  e: { event, dispatcher, args },
+});
+
+const createInitContext = (component) => ({
+  on: (name, fn) => registerAction(component.eventHandlers, name, fn),
+  onMount: (fn) => registerHook(component.mountHooks, fn),
+  onUpdate: (fn) => registerHook(component.updateHooks, fn),
+  onCleanup: (fn) => registerHook(component.cleanupHooks, fn),
+  self: component,
+  ...createComponentContext(component),
+});
+
+const getDispatchAttribute = (eventName) =>
+  eventName === "click"
+    ? "dispatch"
+    : `dispatch${eventName[0].toUpperCase()}${eventName.slice(1)}`;
+
+const shouldUseCapture = (eventName) => ["focus", "blur"].includes(eventName);
+
+const getElementsInRoot = (root) => {
+  const elements = root.querySelectorAll
+    ? Array.from(root.querySelectorAll("*"))
+    : [];
+  if (root && root.nodeType === Node.ELEMENT_NODE) {
+    elements.unshift(root);
+  }
+  return elements;
+};
+
+const registerHook = (hooks, fn) => {
+  hooks.push(fn);
+  return () => {
+    const index = hooks.indexOf(fn);
+    if (index >= 0) hooks.splice(index, 1);
+  };
+};
+
+const registerAction = (handlersMap, name, fn) => {
+  if (!handlersMap.has(name)) {
+    handlersMap.set(name, []);
+  }
+  const handlers = handlersMap.get(name);
+  handlers.push(fn);
+  return () => {
+    const index = handlers.indexOf(fn);
+    if (index >= 0) handlers.splice(index, 1);
+  };
+};
+
+const runHooks = (component, hooks, context, source) => {
+  hooks.forEach((hook) => {
+    try {
+      hook(context);
+    } catch (err) {
+      console.error(
+        `[BOREDOM:ERROR]`,
+        JSON.stringify({
+          component: component.tagName.toLowerCase(),
+          message: err.message,
+          stack: err.stack,
+          context: { source },
+        }),
+      );
+    }
+  });
+};
+
+const isComponentHost = (el) => !!(el && el.__boreHost);
+
+const findHost = (el) => {
+  let cur = el;
+  while (cur) {
+    if (isComponentHost(cur)) return cur;
+    cur = cur.parentElement;
+  }
+  return null;
+};
+
+const isElementInComponentScope = (el, component) => {
+  const host = findHost(el);
+  return !host || host === component;
+};
+
+const hasListContext = (el) =>
+  !!el && Object.prototype.hasOwnProperty.call(el, "__boreItem");
+
+const findListContext = (el, component) => {
+  let cur = el;
+  while (cur && cur !== component) {
+    if (hasListContext(cur)) {
+      return { item: cur.__boreItem, index: cur.__boreIndex };
+    }
+    if (isComponentHost(cur) && cur !== component) return null;
+    cur = cur.parentElement;
+  }
+  if (cur && hasListContext(cur)) {
+    return { item: cur.__boreItem, index: cur.__boreIndex };
+  }
+  return null;
+};
+
+const isElementInListItem = (el, component) => !!findListContext(el, component);
+
+const toCamel = (value) =>
+  value.replace(/-([a-z0-9])/g, (_, ch) => ch.toUpperCase());
+
+const collectArgs = (dispatcher, context) => {
+  const args = {};
+  if (!dispatcher || !dispatcher.attributes) return args;
+  Array.from(dispatcher.attributes).forEach((attr) => {
+    if (attr.name.startsWith(CONSTANTS.Attributes.ARG_PREFIX)) {
+      const rawName = attr.name.slice(CONSTANTS.Attributes.ARG_PREFIX.length);
+      const key = toCamel(rawName);
+      args[key] = evaluate(attr.value, context);
+    }
+  });
+  return args;
+};
+
+const findDispatcher = (component, event, actionType) => {
+  const path = event.composedPath ? event.composedPath() : [];
+  if (path.length) {
+    for (const node of path) {
+      if (!node || !(node instanceof Element)) continue;
+      if (node === component) {
+        if (node.dataset && node.dataset[actionType]) return node;
+        return null;
+      }
+      if (isComponentHost(node) && node !== component) return null;
+      if (node.dataset && node.dataset[actionType]) return node;
+    }
+    return null;
+  }
+
+  let cur = event.target;
+  while (cur && cur !== component) {
+    if (isComponentHost(cur) && cur !== component) return null;
+    if (cur.dataset && cur.dataset[actionType]) return cur;
+    cur = cur.parentElement;
+  }
+  if (cur === component && cur.dataset && cur.dataset[actionType]) return cur;
+  return null;
+};
+
+const runActionHandlers = (component, actionName, dispatcher, event) => {
+  const handlers = component.eventHandlers.get(actionName);
+  if (!handlers || !handlers.length) return;
+
+  const baseContext = component._createContext();
+  const listContext = findListContext(dispatcher, component);
+  const context = listContext
+    ? withItemContext(baseContext, listContext.item, listContext.index)
+    : baseContext;
+  const args = collectArgs(dispatcher, context);
+  const eventContext = withEventContext(
+    { ...context, self: component },
+    event,
+    dispatcher,
+    args,
+  );
+
+  handlers.forEach((handler) => {
+    try {
+      handler(eventContext);
+    } catch (err) {
+      console.error(
+        `[BOREDOM:ERROR]`,
+        JSON.stringify({
+          component: component.tagName.toLowerCase(),
+          message: err.message,
+          stack: err.stack,
+          context: { action: actionName },
+        }),
+      );
+    }
+  });
+};
+
+const dispatchComponentEvent = (component, event, actionType) => {
+  const dispatcher = findDispatcher(component, event, actionType);
+  if (!dispatcher) return;
+  const actionName = dispatcher.dataset[actionType];
+  if (!actionName) return;
+  runActionHandlers(component, actionName, dispatcher, event);
+};
+
 const Directives = {
   text: (el, raw, ctx) => {
     const val = evaluate(raw, ctx);
-    el.textContent = val !== undefined && val !== null ? val : '';
+    el.textContent = val !== undefined && val !== null ? val : "";
   },
   show: (el, raw, ctx) => {
-    el.style.display = evaluate(raw, ctx) ? '' : 'none';
+    el.style.display = evaluate(raw, ctx) ? "" : "none";
   },
   value: (el, raw, ctx) => {
-    if ('value' in el) el.value = evaluate(raw, ctx) || '';
+    if ("value" in el) el.value = evaluate(raw, ctx) ?? "";
   },
   checked: (el, raw, ctx) => {
-    if ('checked' in el) el.checked = !!evaluate(raw, ctx);
+    if ("checked" in el) el.checked = !!evaluate(raw, ctx);
   },
   class: (el, raw, ctx) => {
-    // Format: "className:condition"
-    const parts = raw.split(':');
-    if (parts.length === 2) {
-      const [cls, conditionExpr] = parts;
-      el.classList.toggle(cls, !!evaluate(conditionExpr, ctx));
-    }
+    const pairs = raw
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    pairs.forEach((pair) => {
+      const idx = pair.indexOf(":");
+      if (idx === -1) return;
+      const cls = pair.slice(0, idx).trim();
+      const expr = pair.slice(idx + 1).trim();
+      if (!cls || !expr) return;
+      el.classList.toggle(cls, !!evaluate(expr, ctx));
+    });
   },
   ref: (el, raw, ctx) => {
-    // data-ref="myInput" -> ctx.refs.myInput = el
-    if (ctx.refs) {
-      ctx.refs[raw] = el;
+    if (ctx.refs) ctx.refs[raw] = el;
+  },
+};
+
+const applyAttrBindings = (el, ctx) => {
+  if (!el || !el.attributes) return;
+  Array.from(el.attributes).forEach((attr) => {
+    if (!attr.name.startsWith(CONSTANTS.Attributes.ATTR_PREFIX)) return;
+    const rawName = attr.name.slice(CONSTANTS.Attributes.ATTR_PREFIX.length);
+    if (!rawName) return;
+    const val = evaluate(attr.value, ctx);
+    if (val === false || val === null || val === undefined) {
+      el.removeAttribute(rawName);
+    } else {
+      el.setAttribute(rawName, String(val));
     }
-  }
+  });
 };
 
-/**
- * Determines if an element is owned by the current ShadowRoot or a nested list.
- * @param {Element} el
- * @param {ShadowRoot} root
- * @returns {boolean}
- */
-const isElementInScope = (el, root) => {
-  let cur = el.parentElement;
-  while (cur && cur !== root) {
-    if (cur.dataset && cur.dataset.list) return false;
-    cur = cur.parentElement;
-  }
-  return true;
+const hasSingleTemplateRoot = (template) => {
+  const nodes = Array.from(template.content.childNodes);
+  const elementNodes = nodes.filter(
+    (node) => node.nodeType === Node.ELEMENT_NODE,
+  );
+  const nonEmptyText = nodes.filter(
+    (node) =>
+      node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== "",
+  );
+  return elementNodes.length === 1 && nonEmptyText.length === 0;
 };
 
-/**
- * Processes 'data-list' attributes for rendering lists.
- * @param {ShadowRoot|Element} root
- * @param {Object} context
- */
-const processListBindings = (root, context) => {
+const markListItemRoots = (fragment, item, index) => {
+  const roots = Array.from(fragment.childNodes).filter(
+    (node) => node.nodeType === Node.ELEMENT_NODE,
+  );
+  roots.forEach((node) => {
+    node.__boreItem = item;
+    node.__boreIndex = index;
+  });
+  return roots;
+};
+
+const updateListItemContext = (node, item, index) => {
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
+  node.__boreItem = item;
+  node.__boreIndex = index;
+};
+
+const renderListNaive = (listEl, template, items, context, component) => {
+  Array.from(listEl.children).forEach((child) => {
+    if (child !== template) child.remove();
+  });
+
+  items.forEach((item, index) => {
+    const fragment = template.content.cloneNode(true);
+    markListItemRoots(fragment, item, index);
+    processAttributeBindings(
+      fragment,
+      withItemContext(context, item, index),
+      component,
+      {
+        includeListItems: true,
+      },
+    );
+    listEl.appendChild(fragment);
+  });
+};
+
+const renderListKeyed = (
+  listEl,
+  template,
+  items,
+  context,
+  keyExpr,
+  component,
+) => {
+  const meta =
+    listEl.__boreList ||
+    (listEl.__boreList = { rendered: false, keyMap: new Map() });
+  const keyMap = meta.keyMap || new Map();
+  const nextKeys = new Set();
+  const nodesInOrder = [];
+
+  items.forEach((item, index) => {
+    const key = evaluate(keyExpr, withItemContext(context, item, index));
+    const resolvedKey = key !== undefined && key !== null ? key : index;
+    nextKeys.add(resolvedKey);
+
+    let node = keyMap.get(resolvedKey);
+    if (!node) {
+      const fragment = template.content.cloneNode(true);
+      const roots = markListItemRoots(fragment, item, index);
+      processAttributeBindings(
+        fragment,
+        withItemContext(context, item, index),
+        component,
+        {
+          includeListItems: true,
+        },
+      );
+      node = roots[0] || fragment.firstElementChild;
+      if (!node) return;
+      listEl.appendChild(fragment);
+    } else {
+      updateListItemContext(node, item, index);
+      processAttributeBindings(
+        node,
+        withItemContext(context, item, index),
+        component,
+        {
+          includeListItems: true,
+        },
+      );
+    }
+
+    keyMap.set(resolvedKey, node);
+    nodesInOrder.push(node);
+  });
+
+  keyMap.forEach((node, key) => {
+    if (!nextKeys.has(key)) {
+      if (node && node.parentNode === listEl) node.remove();
+      keyMap.delete(key);
+    }
+  });
+
+  // Reorder with minimal DOM moves to preserve focus/caret on active inputs.
+  let nextSibling = template.nextSibling;
+  nodesInOrder.forEach((node) => {
+    if (!node || node.parentNode !== listEl) return;
+    if (node === nextSibling) {
+      nextSibling = nextSibling ? nextSibling.nextSibling : null;
+      return;
+    }
+    listEl.insertBefore(node, nextSibling);
+  });
+
+  meta.keyMap = keyMap;
+};
+
+const processListBindings = (root, context, component) => {
   const lists = root.querySelectorAll(`[${CONSTANTS.Attributes.LIST}]`);
-  
+
   lists.forEach((listEl) => {
-    if (!isElementInScope(listEl, root)) return;
+    if (!isElementInComponentScope(listEl, component)) return;
+    if (isElementInListItem(listEl, component)) return;
 
     const itemsExpr = listEl.getAttribute(CONSTANTS.Attributes.LIST);
-    const items = evaluate(itemsExpr, context) || [];
-    const template = listEl.querySelector(`template[${CONSTANTS.Attributes.ITEM_TEMPLATE}]`);
+    const items = Array.isArray(evaluate(itemsExpr, context))
+      ? evaluate(itemsExpr, context)
+      : [];
+    const template = listEl.querySelector(
+      `template[${CONSTANTS.Attributes.ITEM_TEMPLATE}]`,
+    );
+    const listOnce =
+      listEl.hasAttribute(CONSTANTS.Attributes.LIST_ONCE) ||
+      listEl.hasAttribute(CONSTANTS.Attributes.LIST_STATIC);
+    const keyExpr = listEl.getAttribute(CONSTANTS.Attributes.LIST_KEY);
 
     if (!template) return;
 
-    // Clean non-template children (naive re-render)
-    Array.from(listEl.children).forEach((child) => {
-      if (child !== template) child.remove();
-    });
+    const meta =
+      listEl.__boreList ||
+      (listEl.__boreList = { rendered: false, keyMap: new Map() });
+    if (listOnce && meta.rendered) return;
 
-    items.forEach((item, index) => {
-      // @ts-ignore
-      const clone = template.content.cloneNode(true);
-      // Create child context
-      processBindings(clone, { ...context, item, index });
-      listEl.appendChild(clone);
-    });
+    if (keyExpr && hasSingleTemplateRoot(template)) {
+      renderListKeyed(listEl, template, items, context, keyExpr, component);
+    } else {
+      renderListNaive(listEl, template, items, context, component);
+      meta.keyMap = new Map();
+    }
+
+    meta.rendered = true;
   });
 };
 
-/**
- * Applies all Directives to elements within the root using generic loop.
- * @param {ShadowRoot|Element} root
- * @param {Object} context
- */
-const processAttributeBindings = (root, context) => {
-  const elements = root.querySelectorAll ? root.querySelectorAll('*') : [];
+const processAttributeBindings = (root, context, component, options = {}) => {
+  const elements = getElementsInRoot(root);
+  const includeListItems = options.includeListItems === true;
 
   elements.forEach((el) => {
-    if (!isElementInScope(el, root)) return;
+    if (!isElementInComponentScope(el, component)) return;
+    if (!includeListItems && isElementInListItem(el, component)) return;
+
+    applyAttrBindings(el, context);
 
     Object.keys(el.dataset).forEach((key) => {
       const rawValue = el.dataset[key];
-
-      // 1. Standard Directives (data-text, data-show, etc.)
       if (Directives[key]) {
         Directives[key](el, rawValue, context);
-      }
-      
-      // 2. Dynamic Props (data-prop-*)
-      // Maps data-prop-user-id (dataset.propUserId) -> dataset.userId
-      else if (key.startsWith('prop') && key.length > 4) {
-        // 'propUserId' -> 'UserId' -> 'userId'
-        const propName = key.slice(4)[0].toLowerCase() + key.slice(5);
-        const val = evaluate(rawValue, context);
-        if (val !== undefined) {
-          el.dataset[propName] = val;
-        }
       }
     });
   });
 };
 
-/**
- * Binding Strategies Registry.
- * Defines the order and type of bindings to apply.
- */
-const BindingStrategies = [
-  processListBindings,      // Structural bindings first (modifies DOM tree)
-  processAttributeBindings, // Attribute bindings second (modifies properties)
-];
-
-const processBindings = (root, context) => {
-  BindingStrategies.forEach(strategy => strategy(root, context));
+const processBindings = (root, context, component) => {
+  processListBindings(root, context, component);
+  processAttributeBindings(root, context, component);
 };
 
-// --- 5. COMPONENT SYSTEM ---
-
-/**
- * The base class for all boreDOM components.
- * Encapsulates Shadow DOM creation, style application, and event delegation.
- */
 class ReactiveComponent extends HTMLElement {
-  constructor(templateContent, styles) {
+  constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
-    this.shadowRoot.appendChild(templateContent.cloneNode(true));
-    this.shadowRoot.adoptedStyleSheets = styles;
-    
-    // Instance-level state and refs
-    this.localState = createReactiveState({}, () => this._update());
+    this.__boreHost = true;
+
+    this.localState = createReactiveState({}, () =>
+      scheduleComponentUpdate(this),
+    );
     this.refs = {};
-
-    // Initialize Slots Proxy
-    this.slots = new Proxy({}, {
-      set: (target, prop, value) => {
-        target[prop] = value;
-        this._update();
-        return true;
-      },
-    });
-
-    this._setupPropMirroring();
-    this._overrideQuerySelector();
+    this.eventHandlers = new Map();
+    this.mountHooks = [];
+    this.updateHooks = [];
+    this.cleanupHooks = [];
+    this._initialized = false;
+    this._eventDelegationReady = false;
+    this._hydrated = false;
   }
 
-  /**
-   * Internal update method.
-   * Merges global state, local state, and props (detail/slots) into the context.
-   */
   _update() {
     try {
-      const context = {
-        state: globalState,
-        local: this.localState,
-        detail: this.slots,
-        refs: this.refs,
-      };
-
-      processBindings(this.shadowRoot, context);
-
-      if (this.renderEffect) {
-        this.renderEffect(context);
-      }
+      const context = this._createContext();
+      processBindings(this, context, this);
+      runHooks(this, this.updateHooks, context, "update_hook");
     } catch (err) {
-      DevTools.error(this.tagName.toLowerCase(), err, { source: '_update' });
+      console.error(
+        `[BOREDOM:ERROR]`,
+        JSON.stringify({
+          component: this.tagName.toLowerCase(),
+          message: err.message,
+          stack: err.stack,
+          context: { source: "_update" },
+        }),
+      );
     }
   }
 
-  /**
-   * Mirrors data-prop-* attributes to standard data-* attributes
-   * for easier CSS targeting.
-   */
-  _setupPropMirroring() {
-    for (const attr of this.attributes) {
-      if (attr.name.startsWith(CONSTANTS.Attributes.PROP_PREFIX)) {
-        const newName = attr.name.replace(CONSTANTS.Attributes.PROP_PREFIX, 'data-');
-        if (!this.hasAttribute(newName)) {
-          this.setAttribute(newName, attr.value);
-        }
-      }
-    }
-  }
-
-  /**
-   * Convenience method to default querySelector to shadowRoot.
-   */
-  _overrideQuerySelector() {
-    const originalQuerySelector = this.querySelector.bind(this);
-    this.querySelector = (selector) => {
-      return originalQuerySelector(selector) || this.shadowRoot.querySelector(selector);
-    };
-  }
-
-  async connectedCallback() {
-    activeShadowRoots.add(this.shadowRoot);
-    this._setupEventDelegation();
-    await this._loadScriptLogic();
-    // Initial render
-    this._update();
-  }
-
-  disconnectedCallback() {
-    activeShadowRoots.delete(this.shadowRoot);
+  _createContext() {
+    return createComponentContext(this);
   }
 
   _setupEventDelegation() {
-    const handleEvent = (e, actionType) => {
-      // Find the closest element with the dispatch attribute
-      const dispatcher = e.composedPath().find((el) => el.dataset && el.dataset[actionType]);
+    if (this._eventDelegationReady) return;
+    this._eventDelegationReady = true;
 
-      if (dispatcher) {
-        const actionName = dispatcher.dataset[actionType];
-        if (eventHandlers[actionName]) {
-          // Proxy the dispatcher to merge component dataset with element dataset
-          const proxyDispatcher = new Proxy(dispatcher, {
-            get: (target, prop) => {
-              if (prop === 'dataset') return { ...dispatcher.dataset, ...this.dataset };
-              const val = target[prop];
-              return typeof val === 'function' ? val.bind(target) : val;
-            },
-          });
-
-          // Telemetry
-          DevTools.log('ACTION', { component: this.tagName.toLowerCase(), action: actionName });
-
-          try {
-            // Inject local state and refs into event handler context
-            eventHandlers[actionName]({
-              state: globalState,
-              local: this.localState,
-              refs: this.refs,
-              detail: this.slots,
-              e: { event: e, dispatcher: proxyDispatcher },
-            });
-          } catch (err) {
-             DevTools.error(this.tagName.toLowerCase(), err, { action: actionName });
-          }
-          
-          e.stopPropagation();
-        }
-      }
-    };
-
-    // Register all supported event listeners with dynamic attribute mapping
     CONSTANTS.Events.forEach((event) => {
-      // Rule: click -> dispatch, others -> dispatchName
-      const actionType = event === 'click' 
-        ? 'dispatch' 
-        : `dispatch${event[0].toUpperCase()}${event.slice(1)}`;
-
-      const useCapture = ['focus', 'blur'].includes(event);
-      this.shadowRoot.addEventListener(event, (e) => handleEvent(e, actionType), { capture: useCapture });
+      const actionType = getDispatchAttribute(event);
+      const useCapture = shouldUseCapture(event);
+      this.addEventListener(
+        event,
+        (e) => dispatchComponentEvent(this, e, actionType),
+        { capture: useCapture },
+      );
     });
   }
 
+  _hydrateTemplate() {
+    if (this._hydrated) return;
+    this._hydrated = true;
+    const name = this.tagName.toLowerCase();
+    const template = componentTemplates.get(name);
+    if (!template) return;
+    this.innerHTML = "";
+    this.appendChild(template.content.cloneNode(true));
+  }
+
+  async connectedCallback() {
+    activeComponents.add(this);
+    this._hydrateTemplate();
+    this._setupEventDelegation();
+    await this._loadScriptLogic();
+    this._update();
+    runHooks(this, this.mountHooks, this._createContext(), "mount_hook");
+  }
+
+  disconnectedCallback() {
+    activeComponents.delete(this);
+    const hooks = [...this.cleanupHooks].reverse();
+    runHooks(this, hooks, this._createContext(), "cleanup_hook");
+  }
+
   async _loadScriptLogic() {
+    if (this._initialized) return;
     const componentName = this.tagName.toLowerCase();
     if (loadedScripts[componentName]) {
       try {
         const module = await loadedScripts[componentName];
         if (module && module.default) {
           const initFn = module.default;
-          // Inject 'on', 'self', and context into initialization
-          const renderFn = initFn({
-            on: (name, fn) => { eventHandlers[name] = fn; },
-            self: this.shadowRoot,
-            state: globalState,
-            local: this.localState,
-            refs: this.refs,
-          });
-
-          if (typeof renderFn === 'function') {
-            this.renderEffect = renderFn;
-          }
+          initFn(createInitContext(this));
         }
       } catch (err) {
-        DevTools.error(componentName, err, { source: 'script_load' });
+        console.error(
+          `[BOREDOM:ERROR]`,
+          JSON.stringify({
+            component: componentName,
+            message: err.message,
+            stack: err.stack,
+            context: { source: "script_load" },
+          }),
+        );
       }
     }
+    this._initialized = true;
   }
 }
 
-// --- 6. INITIALIZATION ---
+const applyComponentStyle = (name, cssText) => {
+  if (!cssText || !cssText.trim()) return;
+  const style = document.createElement("style");
+  style.setAttribute("data-component", name);
+  style.textContent = cssText;
+  document.head.appendChild(style);
+};
 
-/**
- * Resource Processors handle different component definition tags.
- */
 const ResourceProcessors = {
   STYLE: (node, name) => {
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(node.textContent);
-    if (!componentStyles.has(name)) componentStyles.set(name, []);
-    componentStyles.get(name).push(sheet);
+    if (!name) return;
+    applyComponentStyle(name, node.textContent);
     node.remove();
   },
   SCRIPT: (node, name) => {
-    const blob = new Blob([node.textContent], { type: 'text/javascript' });
+    const blob = new Blob([node.textContent], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
-    loadedScripts[name] = import(url).then(m => {
+    loadedScripts[name] = import(url).then((m) => {
       URL.revokeObjectURL(url);
       return m;
     });
     node.remove();
   },
   TEMPLATE: (node, name) => {
-    // @ts-ignore
-    const templateContent = node.content;
+    if (!name) return;
+    componentTemplates.set(name, node);
     if (!customElements.get(name)) {
-      customElements.define(name, class extends ReactiveComponent {
-        constructor() {
-          super(templateContent, componentStyles.get(name) || []);
-        }
-      });
+      customElements.define(name, class extends ReactiveComponent {});
     }
-  }
+    node.remove();
+  },
 };
 
-const init = () => {
-  // 1. Initialize Global State
-  const currentScript = document.currentScript;
-  // @ts-ignore
-  const stateSelector = currentScript.dataset.state;
-  const stateElement = document.querySelector(stateSelector);
-  const initialState = stateElement ? JSON.parse(stateElement.textContent) : {};
-  
-  // Export globalState to window for debugging
-  // We use 'globalState' variable (defined below) as the reactive proxy
-  window.globalState = createReactiveState(initialState, scheduleGlobalUpdate, 'global');
-  // @ts-ignore
-  globalState = window.globalState; 
+const collectComponentNodes = () => [
+  ...document.querySelectorAll("style[data-component]"),
+  ...document.querySelectorAll("script[data-component]"),
+  ...document.querySelectorAll("template[data-component]"),
+];
 
-  // 2. Discover and Register Components
-  const componentNodes = [
-    ...document.querySelectorAll('style[data-component]'),
-    ...document.querySelectorAll('script[data-component]'),
-    ...document.querySelectorAll('template[data-component]'),
-  ];
-
+const registerComponents = (componentNodes) => {
   componentNodes.forEach((node) => {
-    // @ts-ignore
     const name = node.dataset.component;
     const tagName = node.tagName;
-
     if (ResourceProcessors[tagName]) {
       ResourceProcessors[tagName](node, name);
     }
   });
+};
 
-  // 3. Expose DevTools API
-  // @ts-ignore
+const exposeDevTools = (stateElement) => {
   window.__BOREDOM__ = {
     getState: () => JSON.parse(JSON.stringify(globalState)),
-    getComponents: (tagName) => {
-       // @ts-ignore
-       return Array.from(document.querySelectorAll(tagName)).map(el => ({
-         local: el.localState,
-         refs: el.refs,
-         slots: el.slots
-       }));
-    },
-    inspect: (el) => {
-        // @ts-ignore
-        return { local: el.localState, refs: el.refs, slots: el.slots, state: globalState };
-    },
-    query: DevTools.query,
+    inspect: (el) => ({
+      local: el.localState,
+      refs: el.refs,
+      state: globalState,
+    }),
+    query: (selector) => document.querySelector(selector),
     reset: () => {
-      // Soft reset to initial state
       const newState = JSON.parse(stateElement.textContent);
-      Object.keys(globalState).forEach(key => delete globalState[key]);
+      Object.keys(globalState).forEach((key) => delete globalState[key]);
       Object.assign(globalState, newState);
-      DevTools.log('SYSTEM', { message: 'App Reset' });
-    }
+    },
   };
-  
-  // @ts-ignore
+
   window.__RESET_APP__ = window.__BOREDOM__.reset;
 };
 
-// Variable declaration for internal usage
+const init = () => {
+  const currentScript = document.currentScript;
+  const stateSelector = currentScript.dataset.state;
+  const stateElement = initGlobalState(stateSelector);
+
+  registerComponents(collectComponentNodes());
+  exposeDevTools(stateElement);
+};
+
 var globalState;
 
-// Boot
 init();
