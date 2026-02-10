@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const readline = require("node:readline");
+const { validateHtml } = require("../src/validator");
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -12,16 +13,76 @@ const rl = readline.createInterface({
 const question = (query) =>
   new Promise((resolve) => rl.question(query, resolve));
 
+const resolveBooleanFlag = (args, truthyFlag, falsyFlag) => {
+  const hasTruthy = args.includes(truthyFlag);
+  const hasFalsy = args.includes(falsyFlag);
+  if (hasTruthy && hasFalsy) {
+    throw new Error(`Conflicting flags: ${truthyFlag} and ${falsyFlag}`);
+  }
+  if (hasTruthy) return true;
+  if (hasFalsy) return false;
+  return null;
+};
+
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
 
-  if (command !== "init") {
+  if (!["init", "validate", "component"].includes(command)) {
     console.log("Usage: npx boredom init [directory]");
+    console.log("       options: --inline | --no-inline, --vite | --no-vite");
+    console.log("       npx boredom validate [index.html]");
+    console.log("       npx boredom component <name>");
     process.exit(1);
   }
 
-  let targetDir = args[1];
+  if (command === "validate") {
+    const target = args[1] || path.join(process.cwd(), "index.html");
+    if (!fs.existsSync(target)) {
+      console.error(`File not found: ${target}`);
+      process.exit(1);
+    }
+
+    const html = fs.readFileSync(target, "utf8");
+    const warnings = validateHtml(html);
+
+    if (!warnings.length) {
+      console.log("No issues found.");
+      process.exit(0);
+    }
+
+    warnings.forEach((warning) => {
+      const loc = warning.line ? ` (line ${warning.line}:${warning.col})` : "";
+      const level = warning.severity ? warning.severity.toUpperCase() : "WARNING";
+      console.log(`${level} ${warning.code}: ${warning.message}${loc}`);
+      if (warning.suggestion) {
+        console.log(`  Suggestion: ${warning.suggestion}`);
+      }
+      if (warning.example) {
+        console.log(`  Example: ${warning.example}`);
+      }
+    });
+
+    process.exit(0);
+  }
+
+  if (command === "component") {
+    const componentName = args[1];
+    if (!componentName) {
+      console.error("Usage: npx boredom component <name>");
+      process.exit(1);
+    }
+    
+    await generateComponent(componentName);
+    rl.close();
+    return;
+  }
+
+  const initArgs = args.slice(1);
+  const inlineFlag = resolveBooleanFlag(initArgs, "--inline", "--no-inline");
+  const viteFlag = resolveBooleanFlag(initArgs, "--vite", "--no-vite");
+
+  let targetDir = initArgs.find((arg) => !arg.startsWith("--"));
 
   if (!targetDir) {
     targetDir =
@@ -46,110 +107,253 @@ async function main() {
   }
 
   const doInline =
+    inlineFlag ??
     (
       await question("Inline boreDOM runtime into index.html? (y/N): ")
     ).toLowerCase() === "y";
 
+  const useVite =
+    viteFlag ??
+    (
+      await question("Use Vite for multi-file development? (y/N): ")
+    ).toLowerCase() === "y";
+
   console.log(`\n🏗️  Scaffolding boreDOM project in ${root}...`);
 
-  // 1. Prepare Runtime
+  if (useVite) {
+    await setupViteProject(root, doInline);
+  } else {
+    await setupSingleFileProject(root, doInline);
+  }
+
+  console.log("\n✅ Done! To get started:");
+  console.log(`\n  cd ${targetDir}`);
+  
+  if (useVite) {
+    console.log("  npm install");
+    console.log("  npm run dev");
+  } else {
+    console.log("  open index.html  (or serve it with any static server)");
+  }
+  console.log();
+
+  rl.close();
+}
+
+async function setupViteProject(root, doInline) {
+  console.log("📦 Setting up Vite multi-file project...");
+  
+  // Create directory structure
+  fs.mkdirSync(path.join(root, "components", "ui"), { recursive: true });
+  fs.mkdirSync(path.join(root, "components", "layout"), { recursive: true });
+  
+  // Copy boreDOM runtime
+  const boreDomSrc = path.resolve(__dirname, "../src/boreDOM.js");
+  fs.copyFileSync(boreDomSrc, path.join(root, "boreDOM.js"));
+  
+  // Create package.json
+  const packageJson = {
+    name: path.basename(root),
+    version: "1.0.0",
+    private: true,
+    scripts: {
+      dev: "vite",
+      build: "vite build",
+      preview: "vite preview"
+    },
+    devDependencies: {
+      "@mr_hugo/vite-plugin-boredom": "^1.0.0",
+      vite: "^5.0.0"
+    }
+  };
+  
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify(packageJson, null, 2)
+  );
+  
+  // Create vite.config.js
+  const viteConfig = `import { defineConfig } from 'vite';
+import { boredomPlugin } from '@mr_hugo/vite-plugin-boredom';
+
+export default defineConfig({
+  plugins: [
+    boredomPlugin({
+      inlineRuntime: ${doInline},
+      validateComponents: true,
+      optimizeStyles: true
+    })
+  ],
+  
+  build: {
+    rollupOptions: {
+      input: {
+        main: 'index.html'
+      },
+      output: {
+        manualChunks: undefined,
+        inlineDynamicImports: true
+      }
+    },
+    cssCodeSplit: false
+  },
+
+  server: {
+    port: 3000,
+    open: true
+  }
+});`;
+  
+  fs.writeFileSync(path.join(root, "vite.config.js"), viteConfig);
+  
+  // Create example component
+  const buttonComponent = `export const metadata = {
+  name: 'ui-button',
+  version: '1.0.0',
+  dependencies: [],
+  props: ['variant', 'label'],
+  events: ['click']
+};
+
+export const style = \`
+  @layer components.ui-button {
+    ui-button button {
+      font: inherit;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+    }
+    ui-button button:hover {
+      background: #0056b3;
+    }
+  }
+\`;
+
+export const template = \`
+  <button 
+    data-dispatch="click"
+    data-text="local.label || 'Button'"
+  ></button>
+\`;
+
+export const logic = ({ on, local }) => {
+  local.label = local.label || 'Button';
+  local.variant = local.variant || 'primary';
+
+  on('click', ({ e }) => {
+    e.dispatcher.dispatchEvent(new CustomEvent('ui-button:click', {
+      bubbles: true,
+      detail: { variant: local.variant }
+    }));
+  });
+};`;
+  
+  fs.writeFileSync(
+    path.join(root, "components", "ui", "Button.js"),
+    buttonComponent
+  );
+  
+  // Create main.js
+  const mainJs = `import { loadComponent } from '@mr_hugo/vite-plugin-boredom/component-loader';
+
+async function initApp() {
+  const { Button } = await import('./components/ui/Button.js');
+  await loadComponent(Button);
+  console.log('Multi-file boreDOM app initialized');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}`;
+  
+  fs.writeFileSync(path.join(root, "main.js"), mainJs);
+  
+  // Create index.html
+  const indexHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boreDOM Multi-File App</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+    }
+    body {
+      margin: 0;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <script id="initial-state" type="application/json">
+    { "user": { "name": "Developer" } }
+  </script>
+
+  <div class="container">
+    <h1>Multi-File boreDOM App</h1>
+    <p>This app uses multi-file components that get bundled into a single HTML file.</p>
+    
+    <ui-button label="Click me!"></ui-button>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+  <script src="./boreDOM.js" data-state="#initial-state"></script>
+</body>
+</html>`;
+  
+  fs.writeFileSync(path.join(root, "index.html"), indexHtml);
+}
+
+async function setupSingleFileProject(root, doInline) {
+  console.log("📦 Setting up single-file project...");
+  
+  const boreDomSrc = path.resolve(__dirname, "../src/boreDOM.js");
+  const scaffoldTemplatePath = path.resolve(__dirname, "../src/scaffold.html");
+  const scaffoldRuntimeTag = `  <script src="./boreDOM.js" data-state="#initial-state"></script>`;
   let scriptTag;
-  let runtimeContent = "";
+
   if (doInline) {
     console.log("📦 Inlining Runtime...");
-    runtimeContent = fs.readFileSync(boreDomSrc, "utf8");
-    scriptTag = `<script data-state="#initial-state">
-${runtimeContent}
-    </script>`;
+    const runtimeContent = fs.readFileSync(boreDomSrc, "utf8").trimEnd();
+    scriptTag = [
+      `  <script data-state="#initial-state">`,
+      runtimeContent,
+      `  </script>`,
+    ].join("\n");
   } else {
     console.log("📦 Copying Runtime...");
     fs.copyFileSync(boreDomSrc, path.join(root, "boreDOM.js"));
-    scriptTag = `<script src="./boreDOM.js" data-state="#initial-state"></script>`;
+    scriptTag = scaffoldRuntimeTag;
   }
 
   // 2. Create index.html (The Single File App)
   console.log("📄 Creating index.html...");
+  const scaffoldTemplate = fs.readFileSync(scaffoldTemplatePath, "utf8");
 
-  const template = [
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "  <head>",
-    '    <meta charset="utf-8" />',
-    '    <meta name="viewport" content="width=device-width, initial-scale=1" />',
-    "    <title>boreDOM App</title>",
-    "    <style>",
-    "      :root {",
-    "        font-family: system-ui, sans-serif;",
-    "        max-width: 800px;",
-    "        margin: 0 auto;",
-    "        padding: 2rem;",
-    "        background: #f4f4f5;",
-    "        color: #1f2937;",
-    "      }",
-    "    </style>",
-    "",
-    "    <!-- COMPONENT STYLES -->",
-    '    <style data-component="hello-world">',
-    "      .card {",
-    "        background: white;",
-    "        padding: 2rem;",
-    "        border-radius: 12px;",
-    "        box-shadow: 0 4px 6px rgba(0,0,0,0.1);",
-    "        text-align: center;",
-    "      }",
-    "      button {",
-    "        background: #2563eb;",
-    "        color: white;",
-    "        border: none;",
-    "        padding: 0.5rem 1rem;",
-    "        border-radius: 6px;",
-    "        font-size: 1rem;",
-    "        cursor: pointer;",
-    "        margin-top: 1rem;",
-    "      }",
-    "      button:hover {",
-    "        background: #1d4ed8;",
-    "      }",
-    "    </style>",
-    "  </head>",
-    "",
-    "  <body>",
-    "    <!-- INITIAL STATE -->",
-    '    <script id="initial-state" type="application/json">',
-    "      {}",
-    "    </script>",
-    "",
-    "    <hello-world></hello-world>",
-    "",
-    "    <!-- COMPONENT TEMPLATE -->",
-    '    <template data-component="hello-world">',
-    '      <div class="card">',
-    "        <h1>Hello, boreDOM! 🥱</h1>",
-    "        <p>This is a single-file LLM-first application.</p>",
-    '        <p>Local Count: <strong data-text="local.count">0</strong></p>',
-    '        <button data-dispatch="increment">Increment</button>',
-    "      </div>",
-    "    </template>",
-    "",
-    "    <!-- COMPONENT LOGIC -->",
-    '    <script type="text/boredom" data-component="hello-world">',
-    "      export default ({ on, local }) => {",
-    "        // Initialize local state",
-    "        local.count = 0;",
-    "",
-    '        on("increment", () => {',
-    "          local.count++;",
-    "        }); ",
-    "      };",
-    "    </script>",
-    "",
-    "    <!-- boreDOM Runtime -->",
-    `    ${scriptTag}`,
-    "  </body>",
-    "</html>",
-  ].join("\n");
+  if (!scaffoldTemplate.includes(scaffoldRuntimeTag)) {
+    throw new Error(
+      `Scaffold template is missing runtime marker: ${scaffoldTemplatePath}`,
+    );
+  }
 
-  fs.writeFileSync(path.join(root, "index.html"), template);
+  const indexHtml = scaffoldTemplate.replace(scaffoldRuntimeTag, scriptTag);
+  fs.writeFileSync(path.join(root, "index.html"), indexHtml);
 
   // 3. Create AGENTS.md (Context for LLMs)
   console.log("🤖 Creating AGENTS.md...");
@@ -158,384 +362,157 @@ ${runtimeContent}
   const q3 = q + q + q;
 
   const agentsGuide = [
-    "# boreDOM Framework Guidelines",
+    "# boreDOM Lite Framework Guidelines",
     "",
-    "This project utilizes the boreDOM framework, a single-file, zero-build JavaScript runtime.",
+    "boreDOM is a single-file, zero-build JavaScript runtime.",
     doInline
-      ? `The current index.html includes the boreDOM framework inline in the script tag <script data-state="#initial-state">. Do not remove it and include it always. Keep it since this is the core of the app.`
-      : `The current index.html imports the boreDOM.js framework in a <script> tag, this file is available locally, do not remove it and include it always.`,
+      ? "The runtime is inlined in <script data-state=\"#initial-state\">. Do not remove it."
+      : "The runtime is loaded from ./boreDOM.js. Do not remove it.",
     "",
-    "## Philosophy",
+    "## Validation Loop (CLI)",
     "",
-    "- **Single File:** The entire application resides in `index.html`. Logic, UI, and CSS are collocated.",
-    "- **Zero Build:** There is no bundler, no npm install, and no transpilation. Code runs directly in the browser.",
-    "- **Declarative:** Use data attributes for bindings instead of imperative DOM manipulation.",
+    "- Run: `npx boredom validate index.html`.",
+    "- Fix issues, then re-run until clean.",
+    "- Warnings are guidance; do not sacrifice semantics/UX to silence them.",
     "",
-    "## boreDOM code",
+    "## Complexity Guardrails",
     "",
-    `${JSON.stringify(runtimeContent)}`,
+    "- Do NOT eject from boreDOM by default.",
+    "- For complex apps, use a hybrid: keep UI/state declarative, keep real-time engines imperative inside onMount.",
+    "- If the user explicitly wants no framework, ask before switching.",
+    "",
+    "## Incremental Delivery",
+    "",
+    "- Build the smallest working slice first.",
+    "- Verify behavior, then add features one at a time.",
     "",
     "## Non-Negotiables",
     "",
-    "1. **Single Source of Truth**: Logic, CSS, and HTML must remain in `index.html`. Do not suggest splitting files.",
-    "2. **No NPM**: Do not try to import packages. If a library is needed, use an ESM CDN url.",
-    "3. **Persistence**: Ensure the boreDOM script tag remains at the end of the body in `index.html`.",
-    "4. **Runtime Location**: The `boreDOM` runtime is already present in your folder.",
-    doInline
-      ? "    * **Inlined**: It may be inside a `<script>` tag in `index.html`."
-      : "    * **File**: It may be `./boreDOM.js`.",
-    "    * Do not import it from a URL (e.g. unpkg/esm.sh). Use what is there.",
-    "5. **Declarative over Imperative**:",
-    "    * No: `div.innerText = value`",
-    '    * Yes: `<div data-text="local.value">`',
-    "6. **Refs over QuerySelector**:",
-    '    * No: `self.querySelector(".input")`',
-    '    * Yes: `<input data-ref="input">` -> `refs.input`',
+    "- All app code stays in index.html.",
+    "- No build tools or npm installs.",
+    "- Keep the boreDOM runtime script tag at the end of <body>.",
     "",
-    "## Architecture",
+    "## Component Triad",
     "",
-    "### The Component Triad",
-    "Each component is defined by three tags sharing a `data-component` attribute:",
-    "1. `<template>`: Defines the HTML structure.",
-    "2. `<style>`: Defines scoped CSS.",
-    '3. `<script type="text/boredom">`: Defines the ES Module logic.',
+    "- <style data-component>, <template data-component>, <script type=\"text/boredom\" data-component>",
     "",
-    "### State Management",
-    "- **Local State (`local`):** Reactive state scoped to a specific component instance. Use this for UI state (inputs, toggles, counters).",
-    "- **Global State (`state`):** Reactive state shared across the entire application. Use this for data that must be accessed by multiple distinct components.",
+    "## Directives Cheatsheet",
     "",
-    "### DOM Access",
-    '- **Refs:** Use `data-ref="name"` in the template and access via `refs.name` in the script.',
-    "- **Avoid QuerySelector:** Do not use `querySelector` inside components unless absolutely necessary.",
+    "- data-text=\"expr\"",
+    "- data-show=\"expr\"",
+    "- data-value=\"expr\" + data-dispatch-input/change",
+    "- data-checked=\"expr\"",
+    "- data-class=\"className:expr; other:expr\"",
+    "- data-ref=\"name\" -> refs.name",
+    "- data-dispatch / data-dispatch-<event>",
+    "- data-list=\"expr\" + <template data-item> + data-list-key (or data-list-once)",
+    "- data-arg-foo=\"expr\" -> e.args.foo",
+    "- data-attr-foo=\"expr\" (sets attribute \"foo\")",
     "",
-    "## Debugging & Telemetry (For Agents)",
+    "## Events & Cleanup",
     "",
-    "This runtime is \"Glass Box\" instrumented. You can deterministically inspect and debug the application state.",
+    "- No built-in event modifiers (no data-dispatch-stop). Use a handler:",
+    "  on(\"stopEvent\", ({ e }) => e.event.stopPropagation())",
+    "- Global listeners are OK when necessary; always remove them in onCleanup.",
+    "- Action handlers receive { self } (component element).",
+    "- data-arg-* values are available in handlers as e.args.<name>.",
+    "- Guard keyboard shortcuts against editable targets (input/textarea/select/contenteditable).",
     "",
-    "### 1. Console Telemetry",
-    "The runtime emits structured logs for every action and state change. Monitor the console for:",
-    "- `[BOREDOM:ACTION]`: When a user interaction triggers a handler.",
-    "- `[BOREDOM:STATE]`: When state changes (includes path, prev, and next values).",
-    "- `[BOREDOM:ERROR]`: When an error occurs in a component.",
+    "## Common Patterns",
     "",
-    "### 2. Global DevTools API (`window.__BOREDOM__`)",
-    "Access the runtime internals via the console or `page.evaluate()`:",
-    "- `window.__BOREDOM__.getState()`: Returns a clean JSON snapshot of the global state.",
-    "- `window.__BOREDOM__.query(selector)`: A \"Shadow-Piercing\" selector that finds elements anywhere in the component tree.",
-    "- `window.__BOREDOM__.inspect(element)`: Returns the internal context (`local`, `refs`, `slots`) of a component instance.",
-    "- `window.__RESET_APP__()`: Performs a hard reset of the application state to the initial JSON. **Use this if the app gets stuck.**",
+    "- Async init: onMount(async () => { /* await load */ })",
+    "- Animation loops: keep rAF id and cancel in onCleanup.",
     "",
-    "### 3. Testing Strategies & Event Contracts",
-    "Use these contracts to verify behavior via Chrome DevTools or Playwright.",
+    "## Lists",
     "",
-    "#### The Event Log Contract",
-    "Every interaction emits a structured log. Use this to verify that your clicks reached the runtime.",
-    "- **Success:** Console contains `[BOREDOM:ACTION] {\"component\": \"...\", \"action\": \"...\"}`",
-    "- **Failure:** Console contains `[BOREDOM:ERROR]`",
+    "- <template data-item> must exist inside the list element (it may be nested).",
+    "- Nested lists are not allowed in Lite. Flatten or use child components.",
+    "- Use data-list-key for stable DOM; use data-list-once for static lists.",
     "",
-    "#### Testing Opaque APIs (Canvas, WebGL, Audio)",
-    "You cannot assert pixel values or audio output directly. Instead, implement **State Echoing**:",
-    "1. **Echo to State:** Inside your opaque logic (e.g., canvas `draw` function), update a state property: `state.lastOp = { op: 'lineTo', x, y }`.",
-    "2. **Trigger Action:** Use `page.click()` or `dispatch` events.",
-    "3. **Verify Echo:** Assert `window.__BOREDOM__.getState().lastOp` matches your input.",
+    "## Styles",
     "",
-    "**Example Test Flow:**",
-    "1. `page.click('[data-dispatch=\"playNote\"]')`",
-    "2. Assert Console Log: `[BOREDOM:ACTION] ... \"playNote\"`",
-    "3. Assert State: `getState().audioStatus === 'playing'`",
+    "- No data-style directive. Prefer CSS classes + data-class.",
+    "- Use data-attr-style for simple dynamic inline styles.",
+    "- Prefix selectors with the component tag (e.g. app-shell .card).",
+    "- Prefer CSS Layers (@layer) to keep component styles reusable.",
     "",
-    "## Best Practices",
+    "## Debugging",
     "",
-    "### 1. Component Granularity (KISS)",
-    'Avoid building monolithic "God Components". If a component has more than 50 lines of HTML or complex distinct logic sections, split it.',
+    "- window.__BOREDOM__.getState(), .inspect(el), .query(selector), window.__RESET_APP__()",
+    "- use the developer tools MCP when available",
+    "- Use browser tools MCP to check the console for errors.",
+    "- Open index.html in a browser. No build step required.",
     "",
-    "**Bad:** `<my-app>` containing header, sidebar, grid, and footer logic.",
-    "**Good:** `<my-app>` composing `<app-header>`, `<app-sidebar>`, and `<app-grid>`.",
+    "## Example: Scoped Global Key Handler",
     "",
-    "### 2. Reusability (DRY)",
-    "If you copy-paste the same HTML structure or styles twice, create a generic component.",
-    'Example: Instead of styling `<button class="btn primary">` everywhere, create a `<ui-button>` component that accepts a `variant` prop.',
-    "",
-    "### 3. Separation of Concerns",
-    "- **UI Components:** Focus on display and interaction (e.g., `<user-card>`). They should receive data via props.",
-    "- **Container Components:** Focus on data fetching and state management (e.g., `<user-list-container>`). They pass data down to UI components.",
-    "",
-    "## Code Style",
-    "",
-    "### Component Definition",
-    "Always initialize local state variables before usage.",
-    "",
-    q3 + "html",
-    '<style data-component="example-component">',
-    "  .active { color: blue; }",
-    "</style>",
-    "",
-    '<template data-component="example-component">',
-    '  <div data-ref="container">',
-    '    <span data-text="local.count"></span>',
-    '    <button data-dispatch="increment">Increment</button>',
-    "  </div>",
-    "</template>",
-    "",
-    '<script type="text/boredom" data-component="example-component">',
-    "  export default ({ on, local, refs, state }) => {",
-    "    local.count = 0;",
-    "",
-    '    on("increment", () => {',
-    "      local.count++;",
-    '      refs.container.classList.add("active");',
-    "    });",
+    q3 + "js",
+    "export default ({ onMount, onCleanup, self }) => {",
+    "  const onKey = (e) => {",
+    "    const path = e.composedPath ? e.composedPath() : [e.target];",
+    "    const tag = e.target && e.target.tagName;",
+    "    const isEditable = path.some(el => el && el.isContentEditable) ||",
+    "      (tag && [\"INPUT\", \"TEXTAREA\", \"SELECT\"].includes(tag));",
+    "    if (isEditable) return;",
+    "    if (self && !path.includes(self)) return;",
+    "    // handle key",
     "  };",
-    "</script>",
+    "  document.addEventListener(\"keydown\", onKey);",
+    "  onCleanup(() => document.removeEventListener(\"keydown\", onKey));",
+    "};",
     q3,
-    "",
-    "### API Reference",
-    "",
-    "| Directive | Usage | Description |",
-    "|-----------|-------|-------------|",
-    '| `data-text` | `data-text="local.count"` | Sets text content from expression. |',
-    '| `data-show` | `data-show="local.isOpen"` | Toggles display: none. |',
-    '| `data-value` | `data-value="local.input"` | Two-way binding for form inputs. |',
-    '| `data-ref` | `data-ref="myElement"` | Exposes element as `refs.myElement`. |',
-    '| `data-dispatch` | `data-dispatch="action"` | Triggers event handler registered with `on`. |',
-    '| `data-list` | `data-list="state.items"` | Iterates array. Requires nested `<template data-item>`. |',
-    "",
-    "## Reference Examples (Full Files)",
-    "",
-    "### 1. Simple Counter (Local State & Styling)",
-    "Demonstrates isolated component state and scoped CSS.",
-    "",
-    q3 + "html",
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "<head>",
-    '  <meta charset="utf-8">',
-    "  <title>Counter</title>",
-    "  ",
-    "  <!-- Scoped Styles -->",
-    '  <style data-component="simple-counter">',
-    "    button { color: blue; font-weight: bold; }",
-    "    span { font-size: 2rem; }",
-    "  </style>",
-    "</head>",
-    "<body>",
-    "  <!-- Initial State -->",
-    '  <script id="initial-state" type="application/json">{}</script>',
-    "",
-    "  <!-- Usage -->",
-    "  <simple-counter></simple-counter>",
-    "",
-    "  <!-- Template -->",
-    '  <template data-component="simple-counter">',
-    "    <div>",
-    '      <span data-text="local.count"></span>',
-    '      <button data-dispatch="inc">+</button>',
-    "    </div>",
-    "  </template>",
-    "",
-    "  <!-- Logic -->",
-    '  <script type="text/boredom" data-component="simple-counter">',
-    "    export default ({ on, local }) => {",
-    "      local.count = 0;",
-    '      on("inc", ({ local }) => { local.count++ });',
-    "    };",
-    "  </script>",
-    "",
-    "  <!-- boreDOM Runtime -->",
-    '  <script src="./boreDOM.js" data-state="#initial-state"></script>',
-    "</body>",
-    "</html>",
-    q3,
-    "",
-    "### 2. Todo List (Refs + Lists)",
-    "Demonstrates imperative DOM access (focus) and list rendering.",
-    "",
-    q3 + "html",
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "<head>",
-    '  <meta charset="utf-8">',
-    "  <title>Todo List</title>",
-    "</head>",
-    "<body>",
-    '  <script id="initial-state" type="application/json">',
-    '    { "todos": [] }',
-    "  </script>",
-    "",
-    "  <todo-list></todo-list>",
-    "",
-    '  <template data-component="todo-list">',
-    '    <input type="text" data-ref="input" data-value="local.text" data-dispatch-input="update">',
-    '    <button data-dispatch="add">Add</button>',
-    '    <ul data-list="state.todos">',
-    "      <template data-item>",
-    '        <li data-text="item.title"></li>',
-    "      </template>",
-    "    </ul>",
-    "  </template>",
-    "",
-    '  <script type="text/boredom" data-component="todo-list">',
-    "    export default ({ on, local, refs }) => {",
-    '      local.text = "";',
-    "      ",
-    '      on("update", ({ e, local }) => { ',
-    "        local.text = e.event.target.value;",
-    "      });",
-    "",
-    '      on("add", ({ state, local, refs }) => {',
-    "        if (!local.text) return;",
-    "        state.todos.push({ title: local.text });",
-    '        local.text = "";',
-    "        refs.input.focus(); // Imperative focus via Refs",
-    "      });",
-    "    };",
-    "  </script>",
-    "",
-    "  <!-- boreDOM Runtime -->",
-    '  <script src="./boreDOM.js" data-state="#initial-state"></script>',
-    "</body>",
-    "</html>",
-    q3,
-    "",
-    "### 3. Drawing Canvas (Imperative Integration)",
-    "Demonstrates mixing high-performance imperative code (Canvas) with reactive UI.",
-    "",
-    q3 + "html",
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "<head>",
-    '  <meta charset="utf-8">',
-    "  <title>Drawing</title>",
-    "</head>",
-    "<body>",
-    '  <script id="initial-state" type="application/json">{}</script>',
-    "",
-    "  <drawing-canvas></drawing-canvas>",
-    "",
-    '  <template data-component="drawing-canvas">',
-    '    <div data-ref="container" style="height: 300px; border: 1px solid #ccc;">',
-    '      <canvas data-ref="canvas", data-dispatch-pointerdown="start", data-dispatch-pointermove="draw", data-dispatch-pointerup="stop"></canvas>',
-    '      <div data-show="local.isDrawing">Painting...</div>',
-    "    </div>",
-    "  </template>",
-    "",
-    '  <script type="text/boredom" data-component="drawing-canvas">',
-    "    export default ({ on, refs, local }) => {",
-    "      let ctx = null;",
-    "      local.isDrawing = false;",
-    "",
-    "      const init = () => {",
-    "        const { canvas, container } = refs;",
-    "        canvas.width = container.clientWidth;",
-    "        canvas.height = container.clientHeight;",
-    '        ctx = canvas.getContext("2d");',
-    "      };",
-    "      setTimeout(init, 0);",
-    "",
-    '      on("start", ({ e, local }) => {',
-    "        if (!ctx) init();",
-    "        local.isDrawing = true;",
-    "        ctx.beginPath(); ",
-    "        ctx.moveTo(e.event.offsetX, e.event.offsetY);",
-    "      });",
-    '      on("draw", ({ e, local }) => {',
-    "        if (local.isDrawing) {",
-    "          ctx.lineTo(e.event.offsetX, e.event.offsetY);",
-    "          ctx.stroke();",
-    "        }",
-    "      });",
-    '      on("stop", ({ local }) => { local.isDrawing = false; });',
-    "    };",
-    "  </script>",
-    "",
-    "  <!-- boreDOM Runtime -->",
-    '  <script src="./boreDOM.js" data-state="#initial-state"></script>',
-    "</body>",
-    "</html>",
-    q3,
-    "",
-    "### 4. Tic-Tac-Toe (Props & Composition)",
-    "Demonstrates component-to-component communication via props.",
-    "",
-    q3 + "html",
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "<head>",
-    '  <meta charset="utf-8">',
-    "  <title>Tic Tac Toe</title>",
-    "</head>",
-    "<body>",
-    '  <script id="initial-state" type="application/json">',
-    '    { "board": [null, null, null], "turn": "X" }',
-    "  </script>",
-    "",
-    "  <game-board></game-board>",
-    "",
-    '  <template data-component="game-board">',
-    '    <div class="grid" data-ref="grid">',
-    "      <!-- Props are passed as attributes -->",
-    '      <game-button data-prop-index="0"></game-button>',
-    '      <game-button data-prop-index="1"></game-button>',
-    "      <!-- ... -->",
-    "    </div>",
-    "  </template>",
-    "",
-    '  <script type="text/boredom" data-component="game-board">',
-    "    export default ({ on, refs, state }) => {",
-    '      on("play", ({ state, e }) => {',
-    "        const index = Number(e.dispatcher.dataset.index);",
-    "        state.board[index] = state.turn;",
-    "      });",
-    "    };",
-    "  </script>",
-    "",
-    "  <!-- boreDOM Runtime -->",
-    '  <script src="./boreDOM.js" data-state="#initial-state"></script>',
-    "</body>",
-    "</html>",
-    q3,
-    "",
-    "### 5. Palette Test (Theme Piercing)",
-    "Demonstrates using CSS Variables to style Shadow DOM from the outside.",
-    "",
-    q3 + "html",
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "<head>",
-    '  <meta charset="utf-8">',
-    "  <title>Theme</title>",
-    "  <style>",
-    "    :root { --accent: blue; }",
-    "    body.dark { --accent: red; }",
-    "  </style>",
-    "",
-    '  <style data-component="themed-card">',
-    "    .card { background: var(--accent); color: white; }",
-    "  </style>",
-    "</head>",
-    "<body>",
-    '  <script id="initial-state" type="application/json">{}</script>',
-    "",
-    "  <themed-card></themed-card>",
-    "",
-    '  <template data-component="themed-card">',
-    '    <div class="card">I react to global theme variables</div>',
-    "  </template>",
-    "",
-    "  <!-- boreDOM Runtime -->",
-    '  <script src="./boreDOM.js" data-state="#initial-state"></script>',
-    "</body>",
-    "</html>",
-    q3,
-  ].join("\n");
+  ];
 
-  fs.writeFileSync(path.join(root, "AGENTS.md"), agentsGuide);
-
-  console.log("\n✅ Done! To get started:");
-  console.log(`\n  cd ${targetDir}`);
-  console.log("  open index.html  (or serve it with any static server)\n");
-
-  rl.close();
+  fs.writeFileSync(path.join(root, "AGENTS.md"), agentsGuide.join("\n"));
+  fs.writeFileSync(path.join(root, "CLAUDE.md"), agentsGuide.join("\n"));
 }
 
-main().catch(console.error);
+async function generateComponent(componentName) {
+  const componentDir = path.join(process.cwd(), "components");
+  
+  if (!fs.existsSync(componentDir)) {
+    console.error("No components directory found. Are you in a multi-file boreDOM project?");
+    process.exit(1);
+  }
+
+  // Convert kebab-case to PascalCase for file name
+  const fileName = componentName.split('-').map(part => 
+    part.charAt(0).toUpperCase() + part.slice(1)
+  ).join('');
+  
+  const filePath = path.join(componentDir, "ui", `${fileName}.js`);
+  
+  if (fs.existsSync(filePath)) {
+    const overwrite = await question(`Component ${fileName} already exists. Overwrite? (y/N): `);
+    if (overwrite.toLowerCase() !== "y") {
+      console.log("Aborted.");
+      return;
+    }
+  }
+
+  const componentTemplatePath = path.resolve(
+    __dirname,
+    "../src/component.template.js",
+  );
+  const componentTemplate = fs.readFileSync(componentTemplatePath, "utf8");
+  const token = "__COMPONENT_NAME__";
+  if (!componentTemplate.includes(token)) {
+    throw new Error(
+      `Component template is missing placeholder "${token}": ${componentTemplatePath}`,
+    );
+  }
+  const renderedComponent = componentTemplate.split(token).join(componentName);
+
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, renderedComponent);
+  
+  console.log(`✅ Component created: ${filePath}`);
+  console.log(`\nTo use it:`);
+  console.log(`1. Import: const { ${fileName} } = await import('./components/ui/${fileName}.js');`);
+  console.log(`2. Load: await loadComponent(${fileName});`);
+  console.log(`3. Use: <${componentName}></${componentName}>`);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

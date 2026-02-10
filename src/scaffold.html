@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>boreDOM Scaffold Example</title>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #0f172a;
+      --accent-2: #6366f1;
+      --accent-soft: #eef2ff;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 32px 24px 48px;
+      background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+    }
+    h1, h2, h3, h4 {
+      margin: 0 0 8px 0;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+    button {
+      font: inherit;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <script id="initial-state" type="application/json">
+    {
+      "projects": [
+        {
+          "id": "proj-1",
+          "name": "Demo Project",
+          "events": [
+            { "id": "evt-1", "note": "C4", "start": 0, "duration": 0.25 }
+          ]
+        }
+      ],
+      "activeProjectId": "proj-1",
+      "lastOp": null
+    }
+  </script>
+
+  <app-shell></app-shell>
+
+  <style data-component="app-shell">
+    @layer components.app-shell {
+      app-shell .app {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 16px;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      app-shell header {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        background: var(--surface);
+        padding: 16px;
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+      app-shell .title {
+        display: grid;
+        gap: 4px;
+      }
+      app-shell .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      app-shell header input[type="text"] {
+        flex: 1;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+      }
+      app-shell .button {
+        border: none;
+        border-radius: 10px;
+        padding: 8px 12px;
+        background: var(--accent);
+        color: white;
+      }
+      app-shell .button.secondary {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border: 1px solid var(--border);
+      }
+      app-shell .sidebar,
+      app-shell .main {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: var(--shadow);
+      }
+      app-shell .project-list {
+        padding: 0;
+        margin: 0 0 12px 0;
+        display: grid;
+        gap: 8px;
+      }
+      app-shell .project button {
+        width: 100%;
+        text-align: left;
+        border: 1px solid var(--border);
+        background: #f1f5f9;
+        padding: 6px 8px;
+        border-radius: 10px;
+      }
+      app-shell .project button.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+      }
+      app-shell .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      app-shell .pill {
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      app-shell .pad-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      app-shell .pad {
+        padding: 14px 0;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #e2e8f0;
+      }
+      app-shell .timeline {
+        display: grid;
+        gap: 6px;
+      }
+      app-shell .note {
+        padding: 6px 8px;
+        border-radius: 10px;
+        background: #e0f2fe;
+      }
+      app-shell .status {
+        margin-top: 12px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      app-shell .modal {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(15, 23, 42, 0.5);
+      }
+      app-shell .modal-card {
+        background: var(--surface);
+        padding: 20px;
+        border-radius: 16px;
+        min-width: 280px;
+      }
+      app-shell .key-capture {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+        height: 0;
+        width: 0;
+      }
+    }
+  </style>
+
+  <template data-component="app-shell">
+    <div class="app">
+      <header>
+        <div class="title">
+          <h1>Mini MPC</h1>
+          <p>Single-file scaffold with persistence and key capture.</p>
+        </div>
+        <div class="header-actions">
+          <input
+            data-ref="nameInput"
+            type="text"
+            placeholder="Project name"
+            data-value="local.projectName"
+            data-dispatch-input="editName"
+          />
+          <button class="button" data-dispatch="saveProject">Save</button>
+          <label>
+            <input type="checkbox" data-checked="local.metronomeOn" data-dispatch-change="toggleMetronome" />
+            Metronome
+          </label>
+        </div>
+      </header>
+
+      <aside class="sidebar">
+        <div class="section-header">
+          <h3>Projects</h3>
+          <span class="pill" data-text="'Active: ' + state.activeProjectId"></span>
+        </div>
+        <div class="project-list" data-list="state.projects" data-list-key="item.id">
+          <div>
+            <template data-item>
+              <div class="project">
+                <button
+                  data-dispatch="selectProject"
+                  data-arg-id="item.id"
+                  data-class="active:item.id === state.activeProjectId"
+                  data-text="item.name"
+                ></button>
+              </div>
+            </template>
+          </div>
+        </div>
+        <button class="button secondary" data-dispatch="newProject">New Project</button>
+      </aside>
+
+      <main class="main">
+        <div class="section-header">
+          <h3>Pads</h3>
+          <button class="button secondary" data-dispatch="focusKeys">Focus Keys</button>
+        </div>
+        <div class="pad-grid" data-list="local.padMap" data-list-key="item.id">
+          <template data-item>
+            <button
+              class="pad"
+              data-dispatch="triggerPad"
+              data-arg-pad="item.id"
+              data-arg-key="item.key"
+              data-text="'Pad ' + item.id + ' (' + item.key + ')'"
+            ></button>
+          </template>
+        </div>
+
+        <div class="section-header">
+          <h3>Timeline</h3>
+          <span class="pill" data-text="'Events: ' + local.activeEvents.length"></span>
+        </div>
+        <div class="timeline" data-list="local.activeEvents" data-list-key="item.id">
+          <template data-item>
+            <div class="note" data-text="item.note"></div>
+          </template>
+        </div>
+
+        <div class="status" data-text="'Last action: ' + (state.lastOp || 'idle')"></div>
+      </main>
+
+      <input
+        class="key-capture"
+        data-ref="keyCapture"
+        data-dispatch-keydown="keyDown"
+        data-dispatch-keyup="keyUp"
+        aria-hidden="true"
+      />
+
+      <div class="modal" data-show="local.showModal">
+        <div class="modal-card">
+          <h4>Modal</h4>
+          <p data-text="local.modalText"></p>
+          <button data-dispatch="closeModal">Close</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script type="text/boredom" data-component="app-shell">
+    const STORAGE_KEY = "boredom-projects";
+
+    export default ({ state, local, refs, on, onMount, onCleanup }) => {
+      local.projectName = "";
+      local.metronomeOn = false;
+      local.showModal = false;
+      local.modalText = "";
+      local.padMap = [
+        { id: "1", key: "1" },
+        { id: "2", key: "2" },
+        { id: "3", key: "3" },
+        { id: "4", key: "4" },
+        { id: "5", key: "Q" },
+        { id: "6", key: "W" },
+        { id: "7", key: "E" },
+        { id: "8", key: "R" },
+        { id: "9", key: "A" },
+        { id: "10", key: "S" },
+        { id: "11", key: "D" },
+        { id: "12", key: "F" },
+        { id: "13", key: "Z" },
+        { id: "14", key: "X" },
+        { id: "15", key: "C" },
+        { id: "16", key: "V" }
+      ];
+      local.activeEvents = [];
+
+      const load = () => {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        try {
+          const data = JSON.parse(raw);
+          if (Array.isArray(data.projects)) state.projects = data.projects;
+          if (data.activeProjectId) state.activeProjectId = data.activeProjectId;
+        } catch (err) {
+          console.error("Failed to load project", err);
+        }
+      };
+
+      const save = () => {
+        const payload = {
+          projects: state.projects,
+          activeProjectId: state.activeProjectId,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      };
+
+      const syncActiveProject = () => {
+        const project = state.projects.find((p) => p.id === state.activeProjectId) || state.projects[0];
+        if (!project) return;
+        state.activeProjectId = project.id;
+        local.projectName = project.name;
+        local.activeEvents = project.events;
+      };
+
+      onMount(() => {
+        load();
+        syncActiveProject();
+        if (refs.keyCapture) refs.keyCapture.focus();
+      });
+
+      on("editName", ({ e }) => {
+        local.projectName = e.event.target.value;
+      });
+
+      on("focusKeys", () => {
+        if (refs.keyCapture) refs.keyCapture.focus();
+      });
+
+      on("saveProject", () => {
+        const project = state.projects.find((p) => p.id === state.activeProjectId);
+        if (!project) return;
+        project.name = local.projectName || project.name;
+        save();
+        state.lastOp = `saved:${project.id}`;
+      });
+
+      on("toggleMetronome", ({ e }) => {
+        local.metronomeOn = !!e.event.target.checked;
+        state.lastOp = `metronome:${local.metronomeOn}`;
+      });
+
+      on("newProject", () => {
+        const id = `proj-${Date.now()}`;
+        const next = { id, name: "Untitled", events: [] };
+        state.projects.push(next);
+        state.activeProjectId = id;
+        syncActiveProject();
+        save();
+        state.lastOp = `new:${id}`;
+      });
+
+      on("selectProject", ({ e }) => {
+        const id = e.args.id;
+        if (!id) return;
+        state.activeProjectId = id;
+        syncActiveProject();
+        state.lastOp = `select:${id}`;
+      });
+
+      const addPadEvent = (pad) => {
+        const project = state.projects.find((p) => p.id === state.activeProjectId);
+        if (!project) return;
+        const event = { id: `evt-${Date.now()}`, note: `Pad ${pad}`, start: 0, duration: 0.25 };
+        project.events.push(event);
+        local.activeEvents = project.events;
+        save();
+        state.lastOp = `pad:${pad}`;
+      };
+
+      on("triggerPad", ({ e }) => {
+        const pad = e.args.pad || "?";
+        addPadEvent(pad);
+      });
+
+      on("keyDown", ({ e }) => {
+        const key = String(e.event.key || "").toUpperCase();
+        const match = local.padMap.find((pad) => pad.key === key);
+        if (match) {
+          addPadEvent(match.id);
+          return;
+        }
+        if (key === "?") {
+          local.modalText = "Keyboard shortcut help";
+          local.showModal = true;
+        }
+      });
+
+      on("keyUp", () => {});
+
+      on("closeModal", () => {
+        local.showModal = false;
+      });
+
+      onCleanup(() => {
+        if (refs.keyCapture) refs.keyCapture.blur();
+      });
+    };
+  </script>
+
+  <script src="./boreDOM.js" data-state="#initial-state"></script>
+</body>
+</html>
