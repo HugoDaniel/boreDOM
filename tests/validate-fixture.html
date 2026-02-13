@@ -45,7 +45,19 @@
       </template>
     </div>
 
-    <input data-value="state.name" />
+    <div data-list="1bad in state.badAlias">
+      <template data-item><span data-text="item"></span></template>
+    </div>
+
+    <div data-list="row from state.rows">
+      <template data-item><span data-text="item"></span></template>
+    </div>
+
+    <div data-list="state in state.rows">
+      <template data-item><span data-text="item"></span></template>
+    </div>
+
+    <input data-value="state.name + '!'" />
 
     <div data-class="active:state.ui.activePads.1"></div>
 

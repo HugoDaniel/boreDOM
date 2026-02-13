@@ -68,10 +68,10 @@
       <li><code>data-text="path.to.value"</code>: Sets textContent.</li>
       <li><code>data-show="path.to.bool"</code>: Toggles display.</li>
       <li>
-        <code>data-value="path.to.value"</code>: Two-way binding for inputs.
+        <code>data-value="path.to.value"</code>: Two-way binding for assignable paths (falls back to one-way for non-assignable expressions).
       </li>
       <li>
-        <code>data-list="path.to.array"</code>: Renders a list (requires
+        <code>data-list="path.to.array"</code> or <code>data-list="item in path.to.array"</code>: Renders a list (requires
         <code>&lt;template data-item&gt;</code> inside).
       </li>
       <li>

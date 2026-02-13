@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>boreDOM Bindings Lab</title>
+</head>
+
+<body>
+  <script id="initial-state" type="application/json">
+      {
+        "isError": true,
+        "ternary": true,
+        "groups": [
+          {
+            "id": "g1",
+            "name": "Drums",
+            "members": [
+              { "id": "m1", "name": "Kick" },
+              { "id": "m2", "name": "Snare" }
+            ]
+          },
+          {
+            "id": "g2",
+            "name": "Bass",
+            "members": [
+              { "id": "m3", "name": "Sub" },
+              { "id": "m4", "name": "Noah" }
+            ]
+          }
+        ]
+      }
+    </script>
+
+  <bindings-lab></bindings-lab>
+
+  <template data-component="bindings-lab">
+    <section>
+      <h2>Value Binding</h2>
+      <input data-ref="nameInput" data-value="local.name" />
+      <input data-ref="invalidInput" data-value="local.name + '!'" />
+      <p data-ref="nameEcho" data-text="local.name"></p>
+
+      <h2>Numeric Coercion</h2>
+      <input type="number" data-ref="numInput" data-value="local.count" />
+      <p data-ref="numType" data-text="typeof local.count"></p>
+      <p data-ref="numCalc" data-text="local.count + 1"></p>
+
+      <h2>Class Parsing</h2>
+      <div data-ref="classTarget" data-class="hover:bg-red-500:state.isError;active:state.ternary ? true : false"></div>
+
+      <h2>Nested Lists</h2>
+      <p data-ref="selection" data-text="local.selection"></p>
+      <div data-list="group in state.groups" data-list-key="group.id">
+        <template data-item>
+          <article>
+            <h3 data-text="group.name"></h3>
+            <ul data-list="(member, i) in group.members" data-list-key="member.id">
+              <template data-item>
+                <li>
+                  <button data-dispatch="pick" data-arg-group-name="group.name" data-arg-member-name="member.name"
+                    data-arg-member-index="i" data-text="i + ':' + member.name"></button>
+                </li>
+              </template>
+            </ul>
+          </article>
+        </template>
+      </div>
+    </section>
+  </template>
+
+  <script type="text/boredom" data-component="bindings-lab">
+      export default ({ on, local }) => {
+        local.name = "Ada";
+        local.count = 0;
+        local.selection = "-";
+
+        on("pick", ({ local, e }) => {
+          local.selection = `${e.args.groupName}:${e.args.memberName}`;
+        });
+      };
+    </script>
+
+  <script src="./boreDOM.js" data-state="#initial-state"></script>
+</body>
+
+</html>

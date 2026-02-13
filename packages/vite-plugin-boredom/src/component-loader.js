@@ -100,6 +100,14 @@ function registerRuntimeScriptModule(name, modulePromise, appId) {
   queuePendingScriptModule(name, modulePromise, appId);
 }
 
+function toSourceUrlSegment(value, fallback) {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  const normalized = trimmed.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return normalized || fallback;
+}
+
 function ensureComponentDefinition(name, appId) {
   if (customElements.get(name)) return;
 
@@ -182,7 +190,10 @@ export async function loadComponent(componentModule, options = {}) {
 
   // Register component logic using boreDOM runtime mechanism
   const logicSource = typeof logic === 'function' ? logic.toString() : logic;
-  const logicBlob = new Blob([`export default ${logicSource}`], {
+  const appSegment = toSourceUrlSegment(appId || 'default', 'default');
+  const componentSegment = toSourceUrlSegment(name, 'component');
+  const sourceUrl = `boredom://${appSegment}/${componentSegment}.js`;
+  const logicBlob = new Blob([`export default ${logicSource}\n//# sourceURL=${sourceUrl}`], {
     type: 'text/javascript'
   });
   const logicUrl = URL.createObjectURL(logicBlob);

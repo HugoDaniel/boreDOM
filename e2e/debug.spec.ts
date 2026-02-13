@@ -28,10 +28,12 @@ test.describe('boreDOM Telemetry & Debugging', () => {
 
     const errorLog = logs.find(l => l.includes('[BOREDOM:ERROR]'));
     expect(errorLog).toBeDefined();
-    expect(JSON.parse(errorLog!.split('] ')[1])).toMatchObject({
+    const payload = JSON.parse(errorLog!.split('] ')[1]);
+    expect(payload).toMatchObject({
       component: 'debug-component',
       message: 'Simulated Crash'
     });
+    expect(payload.stack).toContain('boredom://default/debug-component.js');
 
     await page.locator('debug-component').getByText('Inc').click();
     await expect(page.locator('debug-component h1')).toHaveText('Count: 1');

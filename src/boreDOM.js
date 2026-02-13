@@ -1,5 +1,5 @@
 /**
- * boreDOM Lite runtime (v3.1.0)
+ * boreDOM Lite runtime (v0.28.1)
  */
 
 (() => {
@@ -62,6 +62,9 @@
   const appRegistry = new Map();
   const pendingScriptModules = new Map();
   const fnCache = new Map();
+  const setterCache = new Map();
+  const expressionParseCache = new Map();
+  const invalidValueSetterWarnings = new Set();
   const LEGACY_PENDING_SCRIPT_MODULES_KEY = "__BOREDOM_PENDING_SCRIPTS__";
 
   const normalizeAppId = (value) => {
@@ -206,10 +209,19 @@
     return stateElement;
   };
 
+  const flattenScope = (scope) => {
+    const flat = {};
+    for (const key in scope) {
+      flat[key] = scope[key];
+    }
+    return flat;
+  };
+
   const evaluate = (expr, scope) => {
     try {
-      const keys = Object.keys(scope);
-      const values = Object.values(scope);
+      const flat = flattenScope(scope);
+      const keys = Object.keys(flat);
+      const values = Object.values(flat);
       const cacheKey = `${expr}|${keys.join(",")}`;
       let fn = fnCache.get(cacheKey);
       if (!fn) {
@@ -222,6 +234,43 @@
     }
   };
 
+  const isParsableExpression = (expr) => {
+    if (expr == null) return false;
+    const source = String(expr).trim();
+    if (!source) return false;
+    if (expressionParseCache.has(source)) {
+      return expressionParseCache.get(source);
+    }
+    try {
+      new Function(`return (${source});`);
+      expressionParseCache.set(source, true);
+      return true;
+    } catch (_err) {
+      expressionParseCache.set(source, false);
+      return false;
+    }
+  };
+
+  const compileSetter = (expr, scope) => {
+    if (!scope || typeof scope !== "object") return null;
+    const source = String(expr || "").trim();
+    if (!source) return null;
+    const flat = flattenScope(scope);
+    const keys = Object.keys(flat);
+    const cacheKey = `${source}|${keys.join(",")}`;
+    if (setterCache.has(cacheKey)) {
+      return setterCache.get(cacheKey);
+    }
+    try {
+      const setter = new Function(...keys, "__boreValue", `${source} = __boreValue;`);
+      setterCache.set(cacheKey, setter);
+      return setter;
+    } catch (_err) {
+      setterCache.set(cacheKey, null);
+      return null;
+    }
+  };
+
   const createComponentContext = (component) => {
     const app = component.__boreApp;
     return {
@@ -231,16 +280,24 @@
     };
   };
 
-  const withItemContext = (context, item, index) => ({
-    ...context,
-    item,
-    index,
-  });
+  const withItemContext = (context, item, index, alias = "item", indexAlias = null) => {
+    const next = Object.create(context);
+    next.item = item;
+    next.index = index;
+    if (alias && alias !== "item" && alias !== "index") {
+      next[alias] = item;
+    }
+    if (indexAlias && indexAlias !== "item" && indexAlias !== "index") {
+      next[indexAlias] = index;
+    }
+    return next;
+  };
 
-  const withEventContext = (context, event, dispatcher, args) => ({
-    ...context,
-    e: { event, dispatcher, args },
-  });
+  const withEventContext = (context, event, dispatcher, args) => {
+    const next = Object.create(context);
+    next.e = { event, dispatcher, args };
+    return next;
+  };
 
   const createInitContext = (component) => ({
     on: (name, fn) => registerAction(component.eventHandlers, name, fn),
@@ -321,24 +378,47 @@
   };
 
   const hasListContext = (el) =>
-    !!el && Object.prototype.hasOwnProperty.call(el, "__boreItem");
+    !!el &&
+    Object.prototype.hasOwnProperty.call(el, "__boreListContext") &&
+    !!el.__boreListContext;
 
-  const findListContext = (el, component) => {
+  const getListContextChain = (el, component) => {
+    const chain = [];
     let cur = el;
     while (cur && cur !== component) {
       if (hasListContext(cur)) {
-        return { item: cur.__boreItem, index: cur.__boreIndex };
+        chain.push(cur.__boreListContext);
       }
       if (isComponentHost(cur) && cur !== component) return null;
       cur = cur.parentElement;
     }
     if (cur && hasListContext(cur)) {
-      return { item: cur.__boreItem, index: cur.__boreIndex };
+      chain.push(cur.__boreListContext);
     }
-    return null;
+    return chain.length ? chain : null;
   };
 
-  const isElementInListItem = (el, component) => !!findListContext(el, component);
+  const withListContext = (context, chain) => {
+    if (!chain || !chain.length) return context;
+    const next = Object.create(context);
+    const nearest = chain[0];
+    next.item = nearest.item;
+    next.index = nearest.index;
+
+    chain.forEach((entry) => {
+      if (!entry || !entry.alias) return;
+      if (!Object.prototype.hasOwnProperty.call(next, entry.alias)) {
+        next[entry.alias] = entry.item;
+      }
+      if (entry.indexAlias && !Object.prototype.hasOwnProperty.call(next, entry.indexAlias)) {
+        next[entry.indexAlias] = entry.index;
+      }
+    });
+
+    return next;
+  };
+
+  const isElementInListItem = (el, component) => !!getListContextChain(el, component);
 
   const toCamel = (value) =>
     value.replace(/-([a-z0-9])/g, (_, ch) => ch.toUpperCase());
@@ -386,13 +466,13 @@
     if (!handlers || !handlers.length) return;
 
     const baseContext = component._createContext();
-    const listContext = findListContext(dispatcher, component);
-    const context = listContext
-      ? withItemContext(baseContext, listContext.item, listContext.index)
-      : baseContext;
+    const listContextChain = getListContextChain(dispatcher, component);
+    const context = withListContext(baseContext, listContextChain);
     const args = collectArgs(dispatcher, context);
+    const selfContext = Object.create(context);
+    selfContext.self = component;
     const eventContext = withEventContext(
-      { ...context, self: component },
+      selfContext,
       event,
       dispatcher,
       args,
@@ -423,19 +503,142 @@
     runActionHandlers(component, actionName, dispatcher, event);
   };
 
+  const parseDataClassPair = (pair) => {
+    const source = String(pair || "").trim();
+    if (!source) return null;
+    let idx = source.indexOf(":");
+    while (idx !== -1) {
+      const cls = source.slice(0, idx).trim();
+      const expr = source.slice(idx + 1).trim();
+      if (cls && expr && isParsableExpression(expr)) {
+        return { cls, expr };
+      }
+      idx = source.indexOf(":", idx + 1);
+    }
+    return null;
+  };
+
+  const isCheckableInput = (el) => {
+    if (!el || typeof el.type !== "string") return false;
+    const type = el.type.toLowerCase();
+    return type === "checkbox" || type === "radio";
+  };
+
+  const readWritableValue = (el) => {
+    if (!el) return undefined;
+    if (isCheckableInput(el) && "checked" in el) return !!el.checked;
+    if ("value" in el) {
+      const type = (el.type || "").toLowerCase();
+      if (type === "number" || type === "range") {
+        return el.value === "" ? null : Number(el.value);
+      }
+      return el.value;
+    }
+    return undefined;
+  };
+
+  const getValueBindingEventName = (el) => {
+    if (!el) return "input";
+    const tagName = (el.tagName || "").toLowerCase();
+    if (isCheckableInput(el) || tagName === "select") return "change";
+    return "input";
+  };
+
+  const warnInvalidValueSetter = (el, expr, err) => {
+    const host = findHost(el);
+    const componentName = host
+      ? host.tagName.toLowerCase()
+      : el && el.tagName
+        ? el.tagName.toLowerCase()
+        : "unknown";
+    const key = `${componentName}|${expr}`;
+    if (invalidValueSetterWarnings.has(key)) return;
+    invalidValueSetterWarnings.add(key);
+    console.warn(
+      `[BOREDOM:WARN]`,
+      JSON.stringify({
+        component: componentName,
+        message: `data-value is not assignable: "${expr}"`,
+        stack: err && err.stack ? err.stack : undefined,
+        context: { source: "data_value_setter" },
+      }),
+    );
+  };
+
+  const ensureValueWriteback = (el, raw, ctx) => {
+    if (!el) return;
+    const eventName = getValueBindingEventName(el);
+    const existing = el.__boreValueBinding;
+    if (existing && (existing.expr !== raw || existing.eventName !== eventName)) {
+      el.removeEventListener(existing.eventName, existing.listener);
+      el.__boreValueBinding = null;
+    }
+
+    if (!el.__boreValueBinding) {
+      const listener = () => {
+        const binding = el.__boreValueBinding;
+        if (!binding || !binding.scope) return;
+        const setter = compileSetter(binding.expr, binding.scope);
+        if (!setter) {
+          warnInvalidValueSetter(el, binding.expr);
+          return;
+        }
+        try {
+          const flat = flattenScope(binding.scope);
+          const values = Object.values(flat);
+          setter(...values, readWritableValue(el));
+        } catch (err) {
+          warnInvalidValueSetter(el, binding.expr, err);
+        }
+      };
+
+      el.__boreValueBinding = {
+        expr: raw,
+        eventName,
+        listener,
+        scope: ctx,
+      };
+      el.addEventListener(eventName, listener);
+    } else {
+      el.__boreValueBinding.scope = ctx;
+    }
+  };
+
   const Directives = {
     text: (el, raw, ctx) => {
       const val = evaluate(raw, ctx);
-      el.textContent = val !== undefined && val !== null ? val : "";
+      const nextText = val !== undefined && val !== null ? String(val) : "";
+      if (el.textContent !== nextText) {
+        el.textContent = nextText;
+      }
     },
     show: (el, raw, ctx) => {
-      el.style.display = evaluate(raw, ctx) ? "" : "none";
+      const nextDisplay = evaluate(raw, ctx) ? "" : "none";
+      if (el.style.display !== nextDisplay) {
+        el.style.display = nextDisplay;
+      }
     },
     value: (el, raw, ctx) => {
-      if ("value" in el) el.value = evaluate(raw, ctx) ?? "";
+      const val = evaluate(raw, ctx);
+      if (isCheckableInput(el) && "checked" in el) {
+        const nextChecked = !!val;
+        if (el.checked !== nextChecked) {
+          el.checked = nextChecked;
+        }
+      } else if ("value" in el) {
+        const nextValue = val !== undefined && val !== null ? String(val) : "";
+        if (el.value !== nextValue) {
+          el.value = nextValue;
+        }
+      }
+      ensureValueWriteback(el, raw, ctx);
     },
     checked: (el, raw, ctx) => {
-      if ("checked" in el) el.checked = !!evaluate(raw, ctx);
+      if (!("checked" in el)) return;
+      const nextChecked = !!evaluate(raw, ctx);
+      if (el.checked !== nextChecked) {
+        el.checked = nextChecked;
+      }
     },
     class: (el, raw, ctx) => {
       const pairs = raw
@@ -443,12 +646,9 @@
         .map((part) => part.trim())
         .filter(Boolean);
       pairs.forEach((pair) => {
-        const idx = pair.indexOf(":");
-        if (idx === -1) return;
-        const cls = pair.slice(0, idx).trim();
-        const expr = pair.slice(idx + 1).trim();
-        if (!cls || !expr) return;
-        el.classList.toggle(cls, !!evaluate(expr, ctx));
+        const parsed = parseDataClassPair(pair);
+        if (!parsed) return;
+        el.classList.toggle(parsed.cls, !!evaluate(parsed.expr, ctx));
       });
     },
     ref: (el, raw, ctx) => {
@@ -464,9 +664,14 @@
       if (!rawName) return;
       const val = evaluate(attr.value, ctx);
       if (val === false || val === null || val === undefined) {
-        el.removeAttribute(rawName);
+        if (el.hasAttribute(rawName)) {
+          el.removeAttribute(rawName);
+        }
       } else {
-        el.setAttribute(rawName, String(val));
+        const nextAttr = String(val);
+        if (el.getAttribute(rawName) !== nextAttr) {
+          el.setAttribute(rawName, nextAttr);
+        }
       }
     });
   };
@@ -480,44 +685,65 @@
     return elementNodes.length === 1 && nonEmptyText.length === 0;
   };
 
-  const markListItemRoots = (fragment, item, index) => {
+  const parseListBinding = (rawListExpr) => {
+    const raw = String(rawListExpr || "").trim();
+    const aliasMatch = raw.match(
+      /^(?:([A-Za-z_$][\w$]*)|\(\s*([A-Za-z_$][\w$]*)(?:\s*,\s*([A-Za-z_$][\w$]*))?\s*\))\s+(?:in|of)\s+([\s\S]+)$/
+    );
+    if (aliasMatch) {
+      return {
+        alias: aliasMatch[1] || aliasMatch[2],
+        indexAlias: aliasMatch[3] || null,
+        itemsExpr: aliasMatch[4].trim(),
+      };
+    }
+    return {
+      alias: "item",
+      indexAlias: null,
+      itemsExpr: raw,
+    };
+  };
+
+  const markListItemRoots = (fragment, listContext) => {
     const roots = Array.from(fragment.childNodes).filter(
       (node) => node.nodeType === Node.ELEMENT_NODE,
     );
     roots.forEach((node) => {
-      node.__boreItem = item;
-      node.__boreIndex = index;
+      node.__boreListContext = listContext;
     });
     return roots;
   };
 
-  const updateListItemContext = (node, item, index) => {
+  const updateListItemContext = (node, listContext) => {
     if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
-    node.__boreItem = item;
-    node.__boreIndex = index;
+    node.__boreListContext = listContext;
   };
 
-  const renderListNaive = (listEl, template, items, context, component) => {
+  const renderListNaive = (listEl, template, items, context, alias, indexAlias, component) => {
     Array.from(listEl.children).forEach((child) => {
       if (child !== template) child.remove();
     });
 
     items.forEach((item, index) => {
       const fragment = template.content.cloneNode(true);
-      markListItemRoots(fragment, item, index);
+      const itemContext = withItemContext(context, item, index, alias, indexAlias);
+      const listContext = { alias, indexAlias, item, index };
+      markListItemRoots(fragment, listContext);
+      processListBindings(fragment, itemContext, component, { includeNested: true });
       processAttributeBindings(
         fragment,
-        withItemContext(context, item, index),
+        itemContext,
         component,
         {
           includeListItems: true,
+          listContext,
         },
       );
       listEl.appendChild(fragment);
     });
   };
 
-  const renderListKeyed = (listEl, template, items, context, keyExpr, component) => {
+  const renderListKeyed = (listEl, template, items, context, keyExpr, alias, indexAlias, component) => {
     const meta =
       listEl.__boreList ||
       (listEl.__boreList = { rendered: false, keyMap: new Map() });
@@ -526,33 +752,40 @@
     const nodesInOrder = [];
 
     items.forEach((item, index) => {
-      const key = evaluate(keyExpr, withItemContext(context, item, index));
+      const itemContext = withItemContext(context, item, index, alias, indexAlias);
+      const key = evaluate(keyExpr, itemContext);
       const resolvedKey = key !== undefined && key !== null ? key : index;
       nextKeys.add(resolvedKey);
 
       let node = keyMap.get(resolvedKey);
       if (!node) {
         const fragment = template.content.cloneNode(true);
-        const roots = markListItemRoots(fragment, item, index);
+        const listContext = { alias, indexAlias, item, index };
+        const roots = markListItemRoots(fragment, listContext);
+        processListBindings(fragment, itemContext, component, { includeNested: true });
         processAttributeBindings(
           fragment,
-          withItemContext(context, item, index),
+          itemContext,
           component,
           {
             includeListItems: true,
+            listContext,
           },
         );
         node = roots[0] || fragment.firstElementChild;
         if (!node) return;
         listEl.appendChild(fragment);
       } else {
-        updateListItemContext(node, item, index);
+        const listContext = { alias, indexAlias, item, index };
+        updateListItemContext(node, listContext);
+        processListBindings(node, itemContext, component, { includeNested: true });
         processAttributeBindings(
           node,
-          withItemContext(context, item, index),
+          itemContext,
           component,
           {
             includeListItems: true,
+            listContext,
           },
         );
       }
@@ -582,15 +815,19 @@
     meta.keyMap = keyMap;
   };
 
-  const processListBindings = (root, context, component) => {
+  const processListBindings = (root, context, component, options = {}) => {
+    if (!root || typeof root.querySelectorAll !== "function") return;
+    const includeNested = options.includeNested === true;
     const lists = root.querySelectorAll(`[${CONSTANTS.Attributes.LIST}]`);
 
     lists.forEach((listEl) => {
       if (!isElementInComponentScope(listEl, component)) return;
-      if (isElementInListItem(listEl, component)) return;
+      if (!includeNested && isElementInListItem(listEl, component)) return;
 
-      const itemsExpr = listEl.getAttribute(CONSTANTS.Attributes.LIST);
-      const evaluatedItems = evaluate(itemsExpr, context);
+      const parsedList = parseListBinding(listEl.getAttribute(CONSTANTS.Attributes.LIST));
+      const listContextChain = getListContextChain(listEl, component);
+      const scopedContext = withListContext(context, listContextChain);
+      const evaluatedItems = evaluate(parsedList.itemsExpr, scopedContext);
       const items = Array.isArray(evaluatedItems) ? evaluatedItems : [];
       const template = listEl.querySelector(
         `template[${CONSTANTS.Attributes.ITEM_TEMPLATE}]`,
@@ -608,9 +845,26 @@
       if (listOnce && meta.rendered) return;
 
       if (keyExpr && hasSingleTemplateRoot(template)) {
-        renderListKeyed(listEl, template, items, context, keyExpr, component);
+        renderListKeyed(
+          listEl,
+          template,
+          items,
+          scopedContext,
+          keyExpr,
+          parsedList.alias,
+          parsedList.indexAlias,
+          component,
+        );
       } else {
-        renderListNaive(listEl, template, items, context, component);
+        renderListNaive(
+          listEl,
+          template,
+          items,
+          scopedContext,
+          parsedList.alias,
+          parsedList.indexAlias,
+          component,
+        );
         meta.keyMap = new Map();
       }
 
@@ -619,12 +873,21 @@
   };
 
   const processAttributeBindings = (root, context, component, options = {}) => {
-    const elements = getElementsInRoot(root);
     const includeListItems = options.includeListItems === true;
+    const listContext = options.listContext || null;
+    const useStaticCache =
+      !includeListItems &&
+      root === component &&
+      Array.isArray(component._boundElements);
+    const elements = useStaticCache ? component._boundElements : getElementsInRoot(root);
 
     elements.forEach((el) => {
       if (!isElementInComponentScope(el, component)) return;
       if (!includeListItems && isElementInListItem(el, component)) return;
+      if (includeListItems && listContext) {
+        const chain = getListContextChain(el, component);
+        if (!chain || chain[0] !== listContext) return;
+      }
 
       applyAttrBindings(el, context);
 
@@ -679,6 +942,7 @@
       this._initialized = false;
       this._eventDelegationReady = false;
       this._hydrated = false;
+      this._boundElements = null;
     }
 
     _update() {
@@ -729,6 +993,7 @@
       if (!template) return;
       this.innerHTML = "";
       this.appendChild(template.content.cloneNode(true));
+      this._boundElements = getElementsInRoot(this);
     }
 
     async connectedCallback() {
@@ -789,7 +1054,7 @@
   const defineReactiveElement = (name) => {
     if (!name || customElements.get(name)) return;
     const BaseReactiveComponent = window.ReactiveComponent || ReactiveComponent;
-    customElements.define(name, class extends BaseReactiveComponent {});
+    customElements.define(name, class extends BaseReactiveComponent { });
   };
 
   const normalizePendingComponentEntry = (entry) => {
@@ -889,8 +1154,20 @@
     document.head.appendChild(style);
   };
 
+  const toSourceUrlSegment = (value, fallback) => {
+    if (typeof value !== "string") return fallback;
+    const trimmed = value.trim();
+    if (!trimmed) return fallback;
+    const normalized = trimmed.replace(/[^a-zA-Z0-9._-]/g, "_");
+    return normalized || fallback;
+  };
+
   const registerScriptText = (app, name, scriptText) => {
-    const blob = new Blob([scriptText], { type: "text/javascript" });
+    const appSegment = toSourceUrlSegment(app?.appId, "default");
+    const componentSegment = toSourceUrlSegment(name, "component");
+    const sourceUrl = `boredom://${appSegment}/${componentSegment}.js`;
+    const blobText = `${scriptText}\n//# sourceURL=${sourceUrl}`;
+    const blob = new Blob([blobText], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
     const modulePromise = import(url).then((m) => {
       URL.revokeObjectURL(url);
@@ -1095,7 +1372,7 @@
   };
 
   const runtimeApi = {
-    version: "3.1.0",
+    version: "0.28.1",
     createApp,
     autoInitFromScript,
     getApp,

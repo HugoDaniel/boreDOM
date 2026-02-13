@@ -29,6 +29,8 @@ const EXPRESSION_ATTRS = new Set([
   "data-list-key",
 ]);
 
+const RESERVED_LIST_ALIASES = new Set(["state", "local", "refs", "self", "e", "item", "index"]);
+
 const DOC_QUERY_METHODS = new Set([
   "querySelector",
   "querySelectorAll",
@@ -278,8 +280,8 @@ function validateHtml(html) {
           );
         }
         parts.forEach((pair) => {
-          const idx = pair.indexOf(":");
-          if (idx === -1) {
+          const parsedPair = parseDataClassPair(pair);
+          if (!parsedPair) {
             pushWarning(
               warnings,
               "W007",
@@ -289,9 +291,7 @@ function validateHtml(html) {
             );
             return;
           }
-          const left = pair.slice(0, idx).trim();
-          const right = pair.slice(idx + 1).trim();
-          if (!left || !right) {
+          if (!parsedPair.cls || !parsedPair.expr) {
             pushWarning(
               warnings,
               "W007",
@@ -301,6 +301,18 @@ function validateHtml(html) {
             );
             return;
           }
+          if (!parsedPair.validExpression) {
+            pushWarning(
+              warnings,
+              "W013",
+              `Invalid expression in data-class: \"${parsedPair.expr}\"`,
+              getAttrLocation(node, "data-class"),
+              "Check expression syntax in data-class.",
+            );
+            return;
+          }
+          const left = parsedPair.cls;
+          const right = parsedPair.expr;
           const looksLikeExpr =
             /(^|\b)(state|local|item|refs|e)\b/.test(left) ||
             /[\[\]\(\)\.\?=]/.test(left);
@@ -312,15 +324,6 @@ function validateHtml(html) {
               getAttrLocation(node, "data-class"),
               "Format should be \"className:expression\". Swap sides if needed.",
               `data-class=\"${right}:${left}\"`,
-            );
-          }
-          if (!isValidExpression(right)) {
-            pushWarning(
-              warnings,
-              "W013",
-              `Invalid expression in data-class: \"${right}\"`,
-              getAttrLocation(node, "data-class"),
-              "Check expression syntax in data-class.",
             );
           }
           if (/[A-Za-z_$][\w$]*\.\d+\b/.test(right)) {
@@ -350,13 +353,33 @@ function validateHtml(html) {
       }
 
       if (attrs.has("data-list")) {
-        if (context.inList) {
+        const listExprRaw = attrs.get("data-list") || "";
+        const parsedListBinding = parseListBindingExpression(listExprRaw);
+        if (parsedListBinding.invalidAlias) {
           pushWarning(
             warnings,
-            "W026",
-            "Nested data-list detected (boreDOM Lite forbids nested lists)",
+            "W013",
+            `Invalid alias in data-list: \"${parsedListBinding.invalidAlias}\"`,
             getAttrLocation(node, "data-list"),
-            "Flatten the list or move the nested list into a child component.",
+            "Use a valid identifier before in/of (e.g. item in state.items).",
+          );
+        }
+        if (parsedListBinding.invalidOperator) {
+          pushWarning(
+            warnings,
+            "W013",
+            `Invalid data-list alias syntax: \"${listExprRaw}\"`,
+            getAttrLocation(node, "data-list"),
+            "Use \"alias in expression\" or \"alias of expression\" for list aliases.",
+          );
+        }
+        if (parsedListBinding.alias && RESERVED_LIST_ALIASES.has(parsedListBinding.alias)) {
+          pushWarning(
+            warnings,
+            "W013",
+            `Reserved alias in data-list: \"${parsedListBinding.alias}\"`,
+            getAttrLocation(node, "data-list"),
+            "Choose an alias other than state/local/refs/self/e/item/index.",
           );
         }
         const listOnce = attrs.has("data-list-once") || attrs.has("data-list-static");
@@ -390,7 +413,7 @@ function validateHtml(html) {
           );
         }
 
-        const listExpr = attrs.get("data-list");
+        const listExpr = parsedListBinding.itemsExpr;
         if (listExpr && !isValidExpression(listExpr)) {
           pushWarning(
             warnings,
@@ -437,17 +460,14 @@ function validateHtml(html) {
 
       if (tagName === "input" || tagName === "select" || tagName === "textarea") {
         if (attrs.has("data-value")) {
-          const hasDispatch =
-            attrs.has("data-dispatch-input") ||
-            attrs.has("data-dispatch-change") ||
-            attrs.has("data-dispatch");
-          if (!hasDispatch) {
+          const valueExpr = attrs.get("data-value") || "";
+          if (valueExpr && !isAssignableExpression(valueExpr)) {
             pushWarning(
               warnings,
               "W004",
-              `${tagName} has data-value but no data-dispatch-input/change`,
+              `${tagName} has non-assignable data-value expression`,
               getAttrLocation(node, "data-value") || getNodeLocation(node),
-              "Add data-dispatch-input (inputs) or data-dispatch-change (selects) to keep state in sync.",
+              "Use assignable paths (e.g. local.name), or keep one-way binding and handle updates with data-dispatch-input/change.",
             );
           }
         }
@@ -579,9 +599,7 @@ function validateHtml(html) {
       }
     }
 
-    const nextContext = attrs.has("data-list")
-      ? { ...context, inList: true }
-      : context;
+    const nextContext = context;
 
     if (node.childNodes) {
       node.childNodes.forEach((child) => walk(child, nextContext));
@@ -592,7 +610,7 @@ function validateHtml(html) {
     }
   };
 
-  walk(document, { component: null, inList: false });
+  walk(document, { component: null });
 
   const listOnceNodes = [];
   const collectListOnceNodes = (node) => {
@@ -613,7 +631,8 @@ function validateHtml(html) {
   collectListOnceNodes(document);
 
   listOnceNodes.forEach(({ node, attrs }) => {
-    const listExpr = attrs.get("data-list");
+    const listBinding = parseListBindingExpression(attrs.get("data-list"));
+    const listExpr = listBinding.itemsExpr;
     if (!listExpr || isStaticListExpression(listExpr)) return;
     const templateNode = findTemplateDataItem(node);
     const dynamicBinding = templateNode ? findDynamicBindingInTemplate(templateNode) : null;
@@ -1486,6 +1505,91 @@ function isValidExpression(expr) {
     acorn.parseExpressionAt(source, 0, { ecmaVersion: "latest" });
     return true;
   } catch (err) {
+    return false;
+  }
+}
+
+function parseDataClassPair(pair) {
+  const source = String(pair || "").trim();
+  if (!source) return null;
+  let idx = source.indexOf(":");
+  while (idx !== -1) {
+    const cls = source.slice(0, idx).trim();
+    const expr = source.slice(idx + 1).trim();
+    if (cls && expr && isValidExpression(expr)) {
+      return { cls, expr, validExpression: true };
+    }
+    idx = source.indexOf(":", idx + 1);
+  }
+  const fallbackIdx = source.indexOf(":");
+  if (fallbackIdx === -1) return null;
+  const cls = source.slice(0, fallbackIdx).trim();
+  const expr = source.slice(fallbackIdx + 1).trim();
+  return {
+    cls,
+    expr,
+    validExpression: !!(expr && isValidExpression(expr)),
+  };
+}
+
+function parseListBindingExpression(expr) {
+  const source = String(expr || "").trim();
+  if (!source) {
+    return { alias: null, itemsExpr: source, invalidAlias: null, invalidOperator: false };
+  }
+  const validAliasMatch = source.match(/^([A-Za-z_$][\w$]*)\s+(?:in|of)\s+([\s\S]+)$/);
+  if (validAliasMatch) {
+    return {
+      alias: validAliasMatch[1],
+      itemsExpr: validAliasMatch[2].trim(),
+      invalidAlias: null,
+      invalidOperator: false,
+    };
+  }
+
+  const aliasLikeMatch = source.match(/^(\S+)\s+(\S+)\s+([\s\S]+)$/);
+  if (aliasLikeMatch) {
+    const aliasToken = aliasLikeMatch[1];
+    const operatorToken = aliasLikeMatch[2];
+    const itemsExpr = aliasLikeMatch[3].trim();
+    const looksLikeIdentifier = /^[A-Za-z_$][\w$]*$/.test(aliasToken);
+    if ((operatorToken === "in" || operatorToken === "of") && !looksLikeIdentifier) {
+      return {
+        alias: null,
+        itemsExpr,
+        invalidAlias: aliasToken,
+        invalidOperator: false,
+      };
+    }
+    if (
+      looksLikeIdentifier &&
+      /^[A-Za-z_$][\w$]*$/.test(operatorToken) &&
+      operatorToken !== "in" &&
+      operatorToken !== "of"
+    ) {
+      return {
+        alias: null,
+        itemsExpr,
+        invalidAlias: null,
+        invalidOperator: true,
+      };
+    }
+  }
+
+  return { alias: null, itemsExpr: source, invalidAlias: null, invalidOperator: false };
+}
+
+function isAssignableExpression(expr) {
+  if (expr == null) return false;
+  const source = String(expr).trim();
+  if (!source) return false;
+  try {
+    const node = acorn.parseExpressionAt(source, 0, { ecmaVersion: "latest" });
+    if (!node || node.end !== source.length) return false;
+    if (node.type === "Identifier") return true;
+    if (node.type === "MemberExpression" && !node.optional) return true;
+    return false;
+  } catch (_err) {
     return false;
   }
 }

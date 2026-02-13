@@ -1,95 +1,93 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=yes"
-    />
-    <meta name="author" content="Hugo Daniel" />
-    <title>boreDOM - The LLM-First Framework</title>
-    <link rel="stylesheet" href="reset.css" />
-    <link rel="stylesheet" href="index.css" />
-    <link rel="stylesheet" href="prism.css" />
-    <script src="prism.js"></script>
-  </head>
 
-  <body>
-    <table class="header">
-      <tr>
-        <td colspan="2" rowspan="2" class="width-auto">
-          <h1 class="title"><a href="boreDOM">boreDOM</a></h1>
-          <span class="subtitle">The LLM-First JS Framework</span>
-        </td>
-        <th>Version</th>
-        <td class="width-min">v0.27.1</td>
-      </tr>
-      <tr>
-        <th>Status</th>
-        <td class="width-min">Existential</td>
-      </tr>
-      <tr>
-        <th class="width-min">Author</th>
-        <td class="width-auto">
-          <a href="https://hugodaniel.com"><cite>Hugo Daniel</cite></a>
-        </td>
-        <th class="width-min">License</th>
-        <td>
-          <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>
-        </td>
-      </tr>
-    </table>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Hugo Daniel" />
+  <title>boreDOM - The LLM-First Framework</title>
+  <link rel="stylesheet" href="reset.css" />
+  <link rel="stylesheet" href="index.css" />
+  <link rel="stylesheet" href="prism.css" />
+  <script src="prism.js"></script>
+</head>
 
-    <nav id="TOC" role="doc-toc">
-      <h2 id="toc-title">Manifesto</h2>
-      <ul class="incremental">
-        <li><a href="#why" id="toc-why">Why?</a></li>
-        <li><a href="#llm-first" id="toc-llm">LLM-First</a></li>
-        <li><a href="#code" id="toc-code">The Code</a></li>
-        <li><a href="#steering" id="toc-steering">The Steering Wheel</a></li>
-        <li><a href="#performance" id="toc-performance">Benchmarks</a></li>
-        <li><a href="#docs" id="toc-docs">Get Started</a></li>
-      </ul>
-    </nav>
+<body>
+  <table class="header">
+    <tr>
+      <td colspan="2" rowspan="2" class="width-auto">
+        <h1 class="title"><a href="boreDOM">boreDOM</a></h1>
+        <span class="subtitle">The LLM-First JS Framework</span>
+      </td>
+      <th>Version</th>
+      <td class="width-min">v0.28.1</td>
+    </tr>
+    <tr>
+      <th>Status</th>
+      <td class="width-min">Existential</td>
+    </tr>
+    <tr>
+      <th class="width-min">Author</th>
+      <td class="width-auto">
+        <a href="https://hugodaniel.com"><cite>Hugo Daniel</cite></a>
+      </td>
+      <th class="width-min">License</th>
+      <td>
+        <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>
+      </td>
+    </tr>
+  </table>
 
-    <h2 id="why">Why?</h2>
-    <p>
-      <strong>boreDOM</strong> exists to fight complexity, it is a JavaScript
-      chunk of code intended to be included in single-file .html apps. It has no
-      build step. It kinda has no API (you just include the file in a
-      <code>&lt;script&gt;</code> tag verbatim or
-      <code>src="boreDOM.js"</code> it). A simple JS code that looks for tags
-      with the attribute <code>data-component="some-component"</code> and
-      creates WebComponents from them.
-    </p>
-
-    <h2 id="llm-first">LLM-First Design</h2>
-    <p>
-      boreDOM puts the <strong>Structure (HTML)</strong>,
-      <strong>Style (CSS)</strong>, and <strong>Logic (JS)</strong> for a
-      component in one place and is designed to fit in a single prompt context.
-    </p>
-    <p>
-      The LLM understands it, and it writes code that works, while boreDOM
-      allows page parts to be treated like reusable components for other
-      single-file projects that you might want to compose from or build upon
-      existing parts.
-    </p>
-    <ul>
-      <li><strong>No Build Step:</strong> Copy-paste friendly.</li>
-      <li><strong>Token Efficient:</strong> Minimal abstraction overhead.</li>
-      <li>
-        <strong>Human Mode:</strong> It also supports Vite and multi-file setups
-        if you want to write and manage components yourself by hand.
-      </li>
+  <nav id="TOC" role="doc-toc">
+    <h2 id="toc-title">Manifesto</h2>
+    <ul class="incremental">
+      <li><a href="#why" id="toc-why">Why?</a></li>
+      <li><a href="#llm-first" id="toc-llm">LLM-First</a></li>
+      <li><a href="#code" id="toc-code">The Code</a></li>
+      <li><a href="#steering" id="toc-steering">The Steering Wheel</a></li>
+      <li><a href="#performance" id="toc-performance">Benchmarks</a></li>
+      <li><a href="#docs" id="toc-docs">Get Started</a></li>
     </ul>
+  </nav>
 
-    <h2 id="code">The Code</h2>
-    <p>
-      A simple counter component, directly as you would write it in an
-      index.html file.
-    </p>
-    <pre><code class="language-html">&lt;!-- 1. The Structure --&gt;
+  <h2 id="why">Why?</h2>
+  <p>
+    <strong>boreDOM</strong> exists to fight complexity, it is a JavaScript
+    chunk of code intended to be included in single-file .html apps. It has no
+    build step. It kinda has no API (you just include the file in a
+    <code>&lt;script&gt;</code> tag verbatim or
+    <code>src="boreDOM.js"</code> it). A simple JS code that looks for tags
+    with the attribute <code>data-component="some-component"</code> and
+    creates WebComponents from them.
+  </p>
+
+  <h2 id="llm-first">LLM-First Design</h2>
+  <p>
+    boreDOM puts the <strong>Structure (HTML)</strong>,
+    <strong>Style (CSS)</strong>, and <strong>Logic (JS)</strong> for a
+    component in one place and is designed to fit in a single prompt context.
+  </p>
+  <p>
+    The LLM understands it, and it writes code that works, while boreDOM
+    allows page parts to be treated like reusable components for other
+    single-file projects that you might want to compose from or build upon
+    existing parts.
+  </p>
+  <ul>
+    <li><strong>No Build Step:</strong> Copy-paste friendly.</li>
+    <li><strong>Token Efficient:</strong> Minimal abstraction overhead.</li>
+    <li>
+      <strong>Human Mode:</strong> It also supports Vite and multi-file setups
+      if you want to write and manage components yourself by hand.
+    </li>
+  </ul>
+
+  <h2 id="code">The Code</h2>
+  <p>
+    A simple counter component, directly as you would write it in an
+    index.html file.
+  </p>
+  <pre><code class="language-html">&lt;!-- 1. The Structure --&gt;
 &lt;template data-component="boring-counter"&gt;
   &lt;div class="box"&gt;
     &lt;h1 data-text="local.count"&gt;0&lt;/h1&gt;
@@ -118,52 +116,52 @@
 &lt;!-- typically inlined, but here used as src="" for example purposes --&gt;
 &lt;script src="./boreDOM.js"&gt;&lt;/script&gt;</code></pre>
 
-    <h2 id="steering">boreDOM for the lazy</h2>
-    <p>
-      boreDOM includes a tool that helps scaffold new projects LLM-ready, and
-      validates their output.
-    </p>
+  <h2 id="steering">boreDOM for the lazy</h2>
+  <p>
+    boreDOM includes a tool that helps scaffold new projects LLM-ready, and
+    validates their output.
+  </p>
 
-    <h3>1. Context Injection</h3>
-    <p>
-      Run <code>npx @mr_hugo/boredom init</code>. It generates an
-      <code>AGENTS.md</code> file. This file tells the LLM exactly how to write
-      boreDOM code, preventing it from hallucinating dependencies or inventing
-      new syntax. It works like a cheatsheet for LLMs to start productively
-      working with boreDOM.
-    </p>
+  <h3>1. Context Injection</h3>
+  <p>
+    Run <code>npx @mr_hugo/boredom init</code>. It generates an
+    <code>AGENTS.md</code> file. This file tells the LLM exactly how to write
+    boreDOM code, preventing it from hallucinating dependencies or inventing
+    new syntax. It works like a cheatsheet for LLMs to start productively
+    working with boreDOM.
+  </p>
 
-    <h3>2. The Guardrails</h3>
-    <p>
-      Run <code>npx @mr_hugo/boredom validate index.html</code>. It's a linter
-      that understands boreDOM. It checks for:
-    </p>
-    <ul>
-      <li>
-        <strong>Binding Integrity:</strong> "You dispatched 'inc', but there is
-        no handler for it."
-      </li>
-      <li>
-        <strong>Imperative Leaks:</strong> "You used innerHTML inside a
-        component. Don't do that."
-      </li>
-      <li>
-        <strong>Event Safety:</strong> "You added a global key listener but
-        didn't clean it up."
-      </li>
-    </ul>
-    <p>
-      This creates a feedback loop:
-      <strong>Prompt → Generate → Validate → Fix</strong>. The validator catches
-      the subtle bugs so you don't have to. LLMs can use this automatically to
-      ensure work is up to standards.
-    </p>
+  <h3>2. The Guardrails</h3>
+  <p>
+    Run <code>npx @mr_hugo/boredom validate index.html</code>. It's a linter
+    that understands boreDOM. It checks for:
+  </p>
+  <ul>
+    <li>
+      <strong>Binding Integrity:</strong> "You dispatched 'inc', but there is
+      no handler for it."
+    </li>
+    <li>
+      <strong>Imperative Leaks:</strong> "You used innerHTML inside a
+      component. Don't do that."
+    </li>
+    <li>
+      <strong>Event Safety:</strong> "You added a global key listener but
+      didn't clean it up."
+    </li>
+  </ul>
+  <p>
+    This creates a feedback loop:
+    <strong>Prompt → Generate → Validate → Fix</strong>. The validator catches
+    the subtle bugs so you don't have to. LLMs can use this automatically to
+    ensure work is up to standards.
+  </p>
 
-    <h2 id="performance">Performance</h2>
+  <h2 id="performance">Performance</h2>
 
-    <p>Speed in manipulating the DOM:</p>
-    <figure>
-      <pre>
+  <p>Speed in manipulating the DOM:</p>
+  <figure>
+    <pre>
         │
   React ││ 49.3ms 
         │
@@ -174,34 +172,33 @@
 boreDOM │███████████████████████ who cares?
         │
         └──────────────────────────────────────────
-    </pre
-      >
-    </figure>
+    </pre>
+  </figure>
 
-    <h2 id="docs">Get Bored</h2>
-    <nav class="documentation">
-      <button>
-        <a href="docs/index.html">Read the Docs</a>
-      </button>
-      <button>
-        <a href="examples/index.html">View Examples</a>
-      </button>
-      <button>
-        <a href="https://github.com/HugoDaniel/boreDOM">GitHub</a>
-      </button>
-    </nav>
+  <h2 id="docs">Get Bored</h2>
+  <nav class="documentation">
+    <button>
+      <a href="docs/index.html">Read the Docs</a>
+    </button>
+    <button>
+      <a href="examples/index.html">View Examples</a>
+    </button>
+    <button>
+      <a href="https://github.com/HugoDaniel/boreDOM">GitHub</a>
+    </button>
+  </nav>
 
-    <p>
-      Go for it: <code>npx @mr_hugo/boredom init</code>. Then run your LLM CLI.
-    </p>
+  <p>
+    Go for it: <code>npx @mr_hugo/boredom init</code>. Then run your LLM CLI.
+  </p>
 
-    <p style="margin-top: 2rem; font-size: 0.8em; color: #666">
-      Contact:
-      <a
-        href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#104;&#101;&#108;&#108;&#111;&#64;&#104;&#117;&#103;&#111;&#100;&#97;&#110;&#105;&#101;&#108;&#46;&#99;&#111;&#109;"
-      >
-        moc&#46;leinadoguh&#64;olleh
-      </a>
-    </p>
-  </body>
+  <p style="margin-top: 2rem; font-size: 0.8em; color: #666">
+    Contact:
+    <a
+      href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#104;&#101;&#108;&#108;&#111;&#64;&#104;&#117;&#103;&#111;&#100;&#97;&#110;&#105;&#101;&#108;&#46;&#99;&#111;&#109;">
+      moc&#46;leinadoguh&#64;olleh
+    </a>
+  </p>
+</body>
+
 </html>

@@ -1,6 +1,6 @@
 {
   "name": "@mr_hugo/boredom",
-  "version": "0.27.1",
+  "version": "0.28.1",
   "description": "The LLM-First JavaScript Framework",
   "bin": {
     "boredom": "./bin/boredom.js"
@@ -27,6 +27,8 @@
     "test:headless": "playwright test",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
+    "check:runtime-parity": "node scripts/check-runtime-parity.js",
+    "sync:landing": "cp src/boreDOM.js landing-page/boreDOM.js",
     "build:cli": "node scripts/build-cli.js",
     "build:plugin": "cd packages/vite-plugin-boredom && npm run build"
   },
@@ -34,7 +36,13 @@
     "type": "git",
     "url": "git+https://github.com/HugoDaniel/boreDOM.git"
   },
-  "keywords": ["framework", "llm", "single-file", "web-components", "zero-build"],
+  "keywords": [
+    "framework",
+    "llm",
+    "single-file",
+    "web-components",
+    "zero-build"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",

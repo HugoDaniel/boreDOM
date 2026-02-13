@@ -1,6 +1,6 @@
-# boreDOM Lite 🥱
+# boreDOM 🥱
 
-**The LLM-First JavaScript Framework (Lite)**
+**The LLM-First JavaScript Framework**
 
 boreDOM is a specialized runtime designed to allow Large Language Models (LLMs) to generate, maintain, and deliver complex web applications contained entirely within a **single HTML file**.
 
@@ -22,7 +22,7 @@ For an LLM, this is **Cognitive Overload**. To change a button color, it needs c
 
 ## 🥱 Core Philosophy
 
-1.  **Zero-Build Componentization**: Components are defined via standard HTML `<template>`, `<style>`, and `<script>` tags. boreDOM Lite upgrades them into **light DOM** Custom Elements at runtime.
+1.  **Zero-Build Componentization**: Components are defined via standard HTML `<template>`, `<style>`, and `<script>` tags. boreDOM upgrades them into **light DOM** Custom Elements at runtime.
 2.  **Declarative Bindings**: UI updates are handled via `data-` attributes (`data-text`, `data-list`), reducing the need for fragile DOM manipulation code.
 3.  **Composable Styling**: Component styles remain separate and can be layered via CSS Layers for reuse.
 
@@ -86,7 +86,7 @@ An entire interactive Counter app in one file:
 ## 🥱 Technical Deep Dive
 
 ### How Templates Become Components
-boreDOM Lite acts as a "JIT Compiler" for the browser:
+boreDOM acts as a "JIT Compiler" for the browser:
 1.  **Scan**: It finds all `<template>`, `<style>`, and `<script>` tags with `data-component="name"`.
 2.  **Register**: It defines a custom Web Component (e.g., `<simple-counter>`) in light DOM.
 3.  **Hydrate**: When the component mounts:
@@ -101,10 +101,10 @@ boreDOM Lite acts as a "JIT Compiler" for the browser:
 |-----------|-------|-------------|
 | `data-text` | `data-text="state.count"` | Sets `textContent` to the result of the expression. |
 | `data-show` | `data-show="state.isVisible"` | Toggles `display: none` based on truthiness. |
-| `data-value` | `data-value="state.inputValue"` | Two-way binding for input values. |
+| `data-value` | `data-value="state.inputValue"` | Two-way binding for assignable paths (falls back to one-way for non-assignable expressions). |
 | `data-checked` | `data-checked="state.isOn"` | Sets checkbox/radio checked state. |
 | `data-class` | `data-class="active:state.isOn; muted:!state.isOn"` | Toggles one or more classes based on conditions. |
-| `data-list` | `data-list="state.items"` | Renders a list. Must contain a `<template data-item>` |
+| `data-list` | `data-list="state.items"` or `data-list="item in state.items"` | Renders a list. Must contain a `<template data-item>` |
 | `data-list-key` | `data-list-key="item.id"` | Enables keyed updates to keep list nodes stable. |
 | `data-list-once` | `data-list-once` | Renders a list only once (static lists, alias: `data-list-static`). |
 | `data-dispatch`| `data-dispatch="actionName"` | Dispatches an event to the logic script (e.g., `on('actionName', ...)`). |
@@ -113,12 +113,13 @@ boreDOM Lite acts as a "JIT Compiler" for the browser:
 | `data-attr-*` | `data-attr-aria-label=\"item.name\"` | Sets an attribute from an expression (use for `aria-*`, `style`, etc.). |
 
 Notes:
-- `data-class` supports multiple pairs separated by `;` (e.g. `active:expr; muted:expr2`).
+- `data-class` supports multiple pairs separated by `;` (e.g. `active:expr; muted:expr2`) and class names containing `:`.
 - `data-list` requires a `<template data-item>` inside the list element (it can be nested inside wrappers).
-- **Nested lists are not allowed** in Lite. Flatten or use child components.
+- `data-list` supports aliases via `alias in expr` / `alias of expr` and nested lists.
+- `data-value` updates state automatically for assignable paths; keep `data-dispatch-input/change` for side effects or custom validation.
 - There is no `data-style` or `data-dispatch-stop` built in; use `data-attr-style` or handlers when needed.
 
-### Styling in Lite
+### Styling in 
 Component styles are injected into `<head>` and apply globally. To keep styles reusable:
 
 - Prefix selectors with the component tag name (e.g. `simple-counter .counter`).

@@ -43,7 +43,6 @@ test.describe('boredom validate', () => {
     expect(output).toContain('WARNING W023');
     expect(output).toContain('INFO W024');
     expect(output).toContain('ERROR W025');
-    expect(output).toContain('ERROR W026');
     expect(output).toContain('ERROR W027');
     expect(output).toContain('ERROR W028');
     expect(output).toContain('WARNING W029');
@@ -60,12 +59,12 @@ test.describe('boredom validate', () => {
     expect(output).toContain('Suggestion: Rename to data-dispatch');
     expect(output).toContain('Suggestion: Format should be "className:expression"');
     expect(output).toContain('Suggestion: Add a <template data-item>');
-    expect(output).toContain('Suggestion: Add data-dispatch-input');
+    expect(output).toContain('Suggestion: Use assignable paths (e.g. local.name)');
     expect(output).toContain('Suggestion: Use bracket notation for numeric keys');
     expect(output).toContain('Suggestion: If your handler branches on keyup');
     expect(output).toContain('Suggestion: Use a single <template data-item>');
     expect(output).toContain('Suggestion: Use stable unique IDs for list keys');
-    expect(output).toContain('Suggestion: Use one of: click, input, change');
+    expect(output).toContain('Suggestion: Use one of: click, dblclick, input, change');
     expect(output).toContain('Suggestion: Use unique data-ref values');
     expect(output).toContain('Suggestion: Check expression syntax');
     expect(output).toContain('Suggestion: Provide a valid expression for data-arg');
@@ -87,10 +86,12 @@ test.describe('boredom validate', () => {
     expect(output).toContain("Suggestion: Guard key handlers with event.target/composedPath()");
     expect(output).toContain('Suggestion: Consider state echoing for audio/canvas');
     expect(output).toContain('Suggestion: Use data-arg-* for event arguments');
-    expect(output).toContain('Suggestion: Flatten the list or move the nested list');
     expect(output).toContain('Suggestion: Add <script src="./boreDOM.js" data-state="#initial-state"></script>.');
     expect(output).toContain('Suggestion: Replace with <script src="./boreDOM.js" data-state="#initial-state"></script>.');
     expect(output).toContain('Suggestion: Remove data-list-once/data-list-static when list items or state are expected to change.');
+    expect(output).toContain('Suggestion: Use a valid identifier before in/of');
+    expect(output).toContain('Suggestion: Use "alias in expression" or "alias of expression"');
+    expect(output).toContain('Suggestion: Choose an alias other than state/local/refs/self/e/item/index');
   });
 
   test('recognizes handler registrations through aliases', async () => {
