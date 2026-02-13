@@ -1,15 +1,15 @@
 {
   "name": "@mr_hugo/vite-plugin-boredom",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Vite plugin for multi-file boreDOM development with single-file deployment",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     },
     "./component-loader": {
       "import": "./src/component-loader.js",
@@ -24,8 +24,13 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "prepack": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
   },
   "keywords": [
     "vite",

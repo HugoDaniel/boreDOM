@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>boreDOM Action Scope</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color: #111827;
+        background: #f9fafb;
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+      }
+    </style>
+
+    <style data-component="action-a">
+      @layer components.action-a {
+        action-a .row {
+          display: flex;
+          gap: 1rem;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+        action-a button {
+          border: none;
+          border-radius: 999px;
+          padding: 0.4rem 0.9rem;
+          background: #0ea5e9;
+          color: #fff;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        action-a .count {
+          min-width: 2rem;
+          text-align: center;
+          font-weight: 700;
+        }
+      }
+    </style>
+
+    <style data-component="action-b">
+      @layer components.action-b {
+        action-b .row {
+          display: flex;
+          gap: 1rem;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+        action-b button {
+          border: none;
+          border-radius: 999px;
+          padding: 0.4rem 0.9rem;
+          background: #0ea5e9;
+          color: #fff;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        action-b .count {
+          min-width: 2rem;
+          text-align: center;
+          font-weight: 700;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <script id="initial-state" type="application/json">{}</script>
+
+    <action-a></action-a>
+    <action-b></action-b>
+
+    <template data-component="action-a">
+      <div class="row">
+        <span>Component A</span>
+        <span class="count" data-text="local.count"></span>
+        <button data-dispatch="ping">Ping A</button>
+      </div>
+    </template>
+
+    <template data-component="action-b">
+      <div class="row">
+        <span>Component B</span>
+        <span class="count" data-text="local.count"></span>
+        <button data-dispatch="ping">Ping B</button>
+      </div>
+    </template>
+
+    <script type="text/boredom" data-component="action-a">
+      export default ({ on, local }) => {
+        local.count = 0;
+        on("ping", ({ local }) => {
+          local.count += 1;
+        });
+      };
+    </script>
+
+    <script type="text/boredom" data-component="action-b">
+      export default ({ on, local }) => {
+        local.count = 0;
+        on("ping", ({ local }) => {
+          local.count += 1;
+        });
+      };
+    </script>
+
+    <script src="./boreDOM.js" data-state="#initial-state"></script>
+  </body>
+</html>

@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Disk Folder Viewer Demo</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --panel: #ffffff;
+      --line: #d8dce7;
+      --text: #101827;
+      --muted: #5f6b80;
+      --accent: #1d4ed8;
+      --accent-soft: #e5eeff;
+      --error: #b42318;
+      --ok: #0f766e;
+      --shadow: 0 16px 40px rgba(16, 24, 39, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 18% -5%, rgba(29, 78, 216, 0.12), transparent 40%),
+        radial-gradient(circle at 110% 20%, rgba(15, 118, 110, 0.12), transparent 36%),
+        var(--bg);
+    }
+
+    #disk-folder-demo-app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 22px 30px;
+    }
+
+    .hero {
+      margin-bottom: 16px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 1.45rem;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 78ch;
+      font-size: 0.95rem;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-height: 580px;
+    }
+
+    .panel-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 0.95rem;
+      letter-spacing: 0.01em;
+    }
+
+    .panel-subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .left-panel-body {
+      display: flex;
+      flex-direction: column;
+      height: calc(580px - 58px);
+    }
+
+    .controls {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      gap: 10px;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid #1e40af;
+      background: #1d4ed8;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+      box-shadow: 0 2px 10px rgba(29, 78, 216, 0.26);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .folder-meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .folder-meta strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .tree-shell {
+      flex: 1;
+      min-height: 0;
+      margin: 10px 12px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f9fbff;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .tree-overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.84rem;
+      padding: 12px;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(249, 251, 255, 0.95), rgba(249, 251, 255, 0.97));
+      z-index: 2;
+    }
+
+    .tree-overlay.hidden {
+      display: none;
+    }
+
+    ui-layer-tree {
+      height: 100%;
+      --bg-color: #f9fbff;
+      --selection-bg: #dbe7ff;
+      --selection-hover-bg: #cadaff;
+      --selection-bg-faint: rgba(219, 231, 255, 0.62);
+      --selection-text: #1f3b95;
+      --selection-text-faint: #3653b0;
+    }
+
+    /* Read-only hardening: keep panel browse-focused. */
+    ui-layer-tree .actions {
+      display: none !important;
+    }
+
+    .preview-body {
+      height: calc(580px - 58px);
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-height: 0;
+    }
+
+    .preview-meta {
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+      background: #fcfdff;
+    }
+
+    .preview-file {
+      margin: 0;
+      font-size: 0.92rem;
+      font-weight: 650;
+      word-break: break-word;
+    }
+
+    .preview-file.empty {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .preview-details {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+      min-height: 1.2em;
+    }
+
+    .preview-status {
+      margin: 0;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+    }
+
+    .preview-status.ok {
+      color: var(--ok);
+      background: #f1fcfb;
+    }
+
+    .preview-status.error {
+      color: var(--error);
+      background: #fef3f2;
+    }
+
+    #preview-content {
+      margin: 0;
+      padding: 14px;
+      overflow: auto;
+      font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      color: #0f172a;
+      background: #fff;
+      white-space: pre;
+      tab-size: 2;
+    }
+
+    @media (max-width: 930px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        min-height: 460px;
+      }
+
+      .left-panel-body,
+      .preview-body {
+        height: calc(460px - 58px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="disk-folder-demo-app">
+    <script id="initial-state" type="application/json">
+      {}
+    </script>
+
+    <section class="hero">
+      <h1>Disk Folder Viewer (Layer Panel Demo)</h1>
+      <p>
+        Pick a local folder, browse its hierarchy through the layer panel, and preview file contents.
+        Folder nodes are browse-only; file nodes drive the preview.
+      </p>
+    </section>
+
+    <section class="workspace">
+      <article class="panel">
+        <header class="panel-header">
+          <h2 class="panel-title">Layer Panel</h2>
+          <p class="panel-subtitle">Folder and file tree rendered with <code>ui-layer-tree</code></p>
+        </header>
+
+        <div class="left-panel-body">
+          <div class="controls">
+            <div class="control-row">
+              <button id="choose-folder-btn" class="btn" type="button" disabled>Choose Folder</button>
+              <input id="folder-input" type="file" webkitdirectory directory multiple hidden>
+            </div>
+            <p id="folder-meta" class="folder-meta">
+              <strong>Folder:</strong> <span id="folder-name">None</span><br>
+              <strong>Files:</strong> <span id="file-count">0</span><br>
+              <strong>Loaded:</strong> <span id="loaded-time">-</span>
+            </p>
+          </div>
+
+          <div class="tree-shell">
+            <div id="tree-overlay" class="tree-overlay">Choose a folder to populate the panel.</div>
+            <ui-layer-tree></ui-layer-tree>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <header class="panel-header">
+          <h2 class="panel-title">File Preview</h2>
+          <p class="panel-subtitle">Text-first rendering with binary fallback</p>
+        </header>
+
+        <div class="preview-body">
+          <div class="preview-meta">
+            <h3 id="preview-file" class="preview-file empty">No file selected</h3>
+            <p id="preview-details" class="preview-details"></p>
+          </div>
+          <p id="preview-status" class="preview-status">Choose a folder and select a file from the panel.</p>
+          <pre id="preview-content"></pre>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const APP_ID = "disk-folder-demo";
+      const APP_ROOT_SELECTOR = "#disk-folder-demo-app";
+      const STATE_SELECTOR = "#initial-state";
+      const PREVIEW_LIMIT_BYTES = 1024 * 1024;
+      const TEXT_EXTENSIONS = new Set([
+        "txt", "md", "markdown", "js", "mjs", "cjs", "ts", "tsx", "jsx",
+        "json", "jsonc", "css", "scss", "less", "html", "htm", "xml",
+        "yml", "yaml", "toml", "ini", "cfg", "conf", "env", "gitignore",
+        "gitattributes", "sh", "bash", "zsh", "fish", "py", "rb", "php",
+        "java", "kt", "go", "rs", "c", "h", "cpp", "hpp", "cs", "sql",
+        "csv", "tsv", "svg", "wgsl", "lock", "log"
+      ]);
+      const TEXT_FILENAMES = new Set([
+        "dockerfile", "makefile", "readme", "license"
+      ]);
+
+      const appState = {
+        tree: null,
+        fileIndex: new Map(),
+        ready: false
+      };
+
+      const ui = {
+        chooseFolderBtn: null,
+        folderInput: null,
+        folderName: null,
+        fileCount: null,
+        loadedTime: null,
+        treeOverlay: null,
+        previewFile: null,
+        previewDetails: null,
+        previewStatus: null,
+        previewContent: null
+      };
+
+      const normalizePath = (value) =>
+        String(value || "")
+          .replace(/\\/g, "/")
+          .replace(/\/+/g, "/")
+          .replace(/^\/+/, "")
+          .replace(/\/+$/, "");
+
+      const formatBytes = (size) => {
+        if (!Number.isFinite(size) || size < 0) return "unknown";
+        if (size < 1024) return `${size} B`;
+        if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+        if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+        return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+      };
+
+      const setFolderMeta = ({ folderName = "None", fileCount = 0, loadedTime = "-" } = {}) => {
+        if (ui.folderName) ui.folderName.textContent = folderName;
+        if (ui.fileCount) ui.fileCount.textContent = String(fileCount);
+        if (ui.loadedTime) ui.loadedTime.textContent = loadedTime;
+      };
+
+      const setTreeOverlay = (message, show = true) => {
+        if (!ui.treeOverlay) return;
+        ui.treeOverlay.textContent = message || "";
+        ui.treeOverlay.classList.toggle("hidden", !show);
+      };
+
+      const setPreviewStatus = (message, tone = "neutral") => {
+        if (!ui.previewStatus) return;
+        ui.previewStatus.textContent = message || "";
+        ui.previewStatus.classList.remove("ok", "error");
+        if (tone === "ok") ui.previewStatus.classList.add("ok");
+        if (tone === "error") ui.previewStatus.classList.add("error");
+      };
+
+      const setPreviewHeader = (title, details = "") => {
+        if (!ui.previewFile || !ui.previewDetails) return;
+        ui.previewFile.textContent = title || "";
+        ui.previewFile.classList.toggle("empty", !title || title === "No file selected");
+        ui.previewDetails.textContent = details;
+      };
+
+      const clearPreview = (message) => {
+        setPreviewHeader("No file selected", "");
+        setPreviewStatus(message || "Choose a folder and select a file from the panel.");
+        if (ui.previewContent) ui.previewContent.textContent = "";
+      };
+
+      const showTextPreview = (title, details, text) => {
+        setPreviewHeader(title, details);
+        setPreviewStatus("Showing UTF-8 text preview.", "ok");
+        if (ui.previewContent) ui.previewContent.textContent = text;
+      };
+
+      const showBinaryFallback = (title, details, reason) => {
+        setPreviewHeader(title, details);
+        setPreviewStatus(reason, "error");
+        if (ui.previewContent) {
+          ui.previewContent.textContent =
+            "Binary preview not enabled.\n\nUse an external viewer/editor to inspect this file.";
+        }
+      };
+
+      const containsBinaryBytes = (bytes) => {
+        const maxScan = Math.min(bytes.length, 4096);
+        let controlCount = 0;
+        for (let i = 0; i < maxScan; i++) {
+          const value = bytes[i];
+          if (value === 0) return true;
+          if ((value < 7) || (value > 14 && value < 32)) controlCount++;
+        }
+        return controlCount > maxScan * 0.3;
+      };
+
+      const hasKnownTextExtension = (relativePath) => {
+        const filename = normalizePath(relativePath).split("/").pop() || "";
+        const lower = filename.toLowerCase();
+        if (TEXT_FILENAMES.has(lower)) return true;
+        const dot = lower.lastIndexOf(".");
+        if (dot <= 0 || dot === lower.length - 1) {
+          const normalized = dot === 0 ? lower.slice(1) : lower;
+          return TEXT_EXTENSIONS.has(normalized);
+        }
+        return TEXT_EXTENSIONS.has(lower.slice(dot + 1));
+      };
+
+      const isTextLike = (file, relativePath) => {
+        const mime = String(file.type || "").toLowerCase();
+        if (mime.startsWith("text/")) return true;
+        if (mime.includes("json")) return true;
+        if (mime.includes("xml")) return true;
+        if (mime.includes("javascript")) return true;
+        if (mime.includes("typescript")) return true;
+        if (mime.includes("svg")) return true;
+        return hasKnownTextExtension(relativePath);
+      };
+
+      const pickSelectedId = (detail) => {
+        if (!detail || typeof detail !== "object") return null;
+        if (Array.isArray(detail.explicitSelectedIds) && detail.explicitSelectedIds.length > 0) {
+          return detail.explicitSelectedIds[detail.explicitSelectedIds.length - 1];
+        }
+        if (Array.isArray(detail.selectedIds) && detail.selectedIds.length > 0) {
+          return detail.selectedIds[detail.selectedIds.length - 1];
+        }
+        return null;
+      };
+
+      const getRootFolderName = (files) => {
+        for (const file of files) {
+          const raw = normalizePath(file.webkitRelativePath || "");
+          if (!raw) continue;
+          const root = raw.split("/")[0];
+          if (root) return root;
+        }
+        return "selected-folder";
+      };
+
+      const getRelativePath = (file, rootFolder) => {
+        const raw = normalizePath(file.webkitRelativePath || file.name || "");
+        const prefix = `${rootFolder}/`;
+        if (raw === rootFolder) return normalizePath(file.name || "");
+        if (raw.startsWith(prefix)) return raw.slice(prefix.length);
+        return raw;
+      };
+
+      const nodeComparator = (left, right) => {
+        const leftIsDir = Array.isArray(left.children);
+        const rightIsDir = Array.isArray(right.children);
+        if (leftIsDir && !rightIsDir) return -1;
+        if (!leftIsDir && rightIsDir) return 1;
+        return String(left.label || "").localeCompare(String(right.label || ""), undefined, {
+          sensitivity: "base",
+          numeric: true
+        });
+      };
+
+      const sortTreeNodes = (nodes) => {
+        nodes.sort(nodeComparator);
+        nodes.forEach((node) => {
+          if (Array.isArray(node.children)) sortTreeNodes(node.children);
+        });
+      };
+
+      const buildTreeFromFiles = (files, rootFolderName) => {
+        const rootNode = { id: "dir:.", label: rootFolderName, children: [] };
+        const dirMap = new Map([["", rootNode]]);
+        const fileIndex = new Map();
+
+        for (const file of files) {
+          const relativePath = normalizePath(getRelativePath(file, rootFolderName));
+          if (!relativePath) continue;
+          fileIndex.set(relativePath, file);
+
+          const segments = relativePath.split("/").filter(Boolean);
+          if (segments.length === 0) continue;
+
+          const fileName = segments.pop();
+          let parentPath = "";
+
+          for (const segment of segments) {
+            const dirPath = parentPath ? `${parentPath}/${segment}` : segment;
+            if (!dirMap.has(dirPath)) {
+              const dirNode = { id: `dir:${dirPath}`, label: segment, children: [] };
+              const parentNode = dirMap.get(parentPath);
+              parentNode.children.push(dirNode);
+              dirMap.set(dirPath, dirNode);
+            }
+            parentPath = dirPath;
+          }
+
+          const parentNode = dirMap.get(parentPath) || rootNode;
+          parentNode.children.push({
+            id: `file:${relativePath}`,
+            label: fileName,
+            type: "item"
+          });
+        }
+
+        sortTreeNodes(rootNode.children);
+
+        const expandedIds = ["dir:."];
+        rootNode.children.forEach((child) => {
+          if (Array.isArray(child.children) && child.children.length > 0) {
+            expandedIds.push(child.id);
+          }
+        });
+
+        return {
+          treeData: [rootNode],
+          expandedIds,
+          fileIndex
+        };
+      };
+
+      const applyTreeData = (treeData, expandedIds) => {
+        if (!appState.tree || !appState.tree.localState) return;
+        appState.tree.localState.data = treeData;
+        appState.tree.localState.expandedIds = expandedIds;
+        appState.tree.localState.selectedIds = [];
+        appState.tree.localState.effectiveSelectedIds = [];
+      };
+
+      const renderFilePreview = async (relativePath) => {
+        const file = appState.fileIndex.get(relativePath);
+        if (!file) {
+          setPreviewStatus("Selected file entry was not found in the current folder index.", "error");
+          return;
+        }
+
+        const details = `${relativePath} | ${formatBytes(file.size)} | ${file.type || "unknown mime"}`;
+        setPreviewHeader(relativePath, details);
+        setPreviewStatus("Loading file preview...");
+        if (ui.previewContent) ui.previewContent.textContent = "";
+
+        if (file.size > PREVIEW_LIMIT_BYTES) {
+          showBinaryFallback(
+            relativePath,
+            details,
+            `File is larger than preview limit (${formatBytes(PREVIEW_LIMIT_BYTES)}).`
+          );
+          return;
+        }
+
+        if (!isTextLike(file, relativePath)) {
+          showBinaryFallback(relativePath, details, "Non-text file detected. Binary preview not enabled.");
+          return;
+        }
+
+        try {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          if (containsBinaryBytes(bytes)) {
+            showBinaryFallback(relativePath, details, "Binary bytes detected in file payload.");
+            return;
+          }
+          const decoder = new TextDecoder("utf-8", { fatal: true });
+          const decoded = decoder.decode(bytes).replace(/\r\n?/g, "\n");
+          showTextPreview(relativePath, details, decoded);
+        } catch (_err) {
+          showBinaryFallback(relativePath, details, "File is not valid UTF-8 text.");
+        }
+      };
+
+      const handleTreeSelection = async (event) => {
+        const selectedId = pickSelectedId(event.detail);
+        if (!selectedId) return;
+
+        if (selectedId.startsWith("dir:")) {
+          setPreviewStatus("Select a file to preview.", "ok");
+          return;
+        }
+
+        if (!selectedId.startsWith("file:")) return;
+        const relativePath = selectedId.slice(5);
+        await renderFilePreview(relativePath);
+      };
+
+      const handleFolderInputChange = async (event) => {
+        const files = Array.from(event.target.files || []);
+        event.target.value = "";
+
+        if (!files.length) {
+          setTreeOverlay("No folder selected.");
+          setFolderMeta();
+          clearPreview("Choose a folder and select a file from the panel.");
+          return;
+        }
+
+        const filesWithRelativePath = files.filter((file) =>
+          typeof file.webkitRelativePath === "string" && file.webkitRelativePath.trim() !== ""
+        );
+
+        if (!filesWithRelativePath.length) {
+          setTreeOverlay("Folder data unavailable. Your browser did not provide relative paths.");
+          setPreviewStatus("Unable to read folder structure from this browser.", "error");
+          return;
+        }
+
+        const rootFolderName = getRootFolderName(filesWithRelativePath);
+        const next = buildTreeFromFiles(filesWithRelativePath, rootFolderName);
+
+        appState.fileIndex = next.fileIndex;
+        applyTreeData(next.treeData, next.expandedIds);
+        setTreeOverlay(
+          next.fileIndex.size > 0 ? "" : "No files found in the selected folder.",
+          next.fileIndex.size === 0
+        );
+        setFolderMeta({
+          folderName: rootFolderName,
+          fileCount: next.fileIndex.size,
+          loadedTime: new Date().toLocaleString()
+        });
+        clearPreview("Select a file from the layer panel.");
+      };
+
+      const bindUiElements = () => {
+        ui.chooseFolderBtn = document.getElementById("choose-folder-btn");
+        ui.folderInput = document.getElementById("folder-input");
+        ui.folderName = document.getElementById("folder-name");
+        ui.fileCount = document.getElementById("file-count");
+        ui.loadedTime = document.getElementById("loaded-time");
+        ui.treeOverlay = document.getElementById("tree-overlay");
+        ui.previewFile = document.getElementById("preview-file");
+        ui.previewDetails = document.getElementById("preview-details");
+        ui.previewStatus = document.getElementById("preview-status");
+        ui.previewContent = document.getElementById("preview-content");
+      };
+
+      const installReadOnlyGuards = () => {
+        document.addEventListener("ui-layer-tree:update", (event) => {
+          event.stopPropagation();
+          setPreviewStatus("Layer updates are disabled in read-only disk browsing mode.", "ok");
+        });
+        document.addEventListener("ui-layer-tree:rename", (event) => {
+          event.stopPropagation();
+          setPreviewStatus("Renaming is disabled in read-only disk browsing mode.", "ok");
+        });
+        document.addEventListener("ui-layer-tree:reorder", (event) => {
+          event.stopPropagation();
+          setPreviewStatus("Reordering is disabled in read-only disk browsing mode.", "ok");
+        });
+      };
+
+      const disableInlineRenameByDblClick = (tree) => {
+        tree.addEventListener("dblclick", (event) => {
+          const row = event.target && event.target.closest ? event.target.closest(".tree-item") : null;
+          if (!row) return;
+          event.preventDefault();
+          event.stopPropagation();
+        }, true);
+      };
+
+      const loadRuntime = () =>
+        new Promise((resolve, reject) => {
+          const runtime = document.createElement("script");
+          runtime.src = "./boreDOM.js";
+          runtime.dataset.app = APP_ID;
+          runtime.dataset.root = APP_ROOT_SELECTOR;
+          runtime.dataset.state = STATE_SELECTOR;
+          runtime.onload = resolve;
+          runtime.onerror = () => reject(new Error("Failed to load boreDOM runtime"));
+          document.body.appendChild(runtime);
+        });
+
+      const loadLayerTree = async () => {
+        const appRoot = document.querySelector(APP_ROOT_SELECTOR) || document.body;
+        const LayerTree = await import("./components/ui/LayerTree.js");
+        const { metadata, style, template, logic } = LayerTree;
+        const name = metadata.name;
+
+        const styleEl = document.createElement("style");
+        styleEl.setAttribute("data-component", name);
+        styleEl.setAttribute("data-app", APP_ID);
+        styleEl.textContent = style;
+        document.head.appendChild(styleEl);
+
+        const templateEl = document.createElement("template");
+        templateEl.setAttribute("data-component", name);
+        templateEl.setAttribute("data-app", APP_ID);
+        templateEl.innerHTML = template;
+        appRoot.appendChild(templateEl);
+
+        const logicSource = logic.toString();
+        const blob = new Blob([`export default ${logicSource}`], { type: "text/javascript" });
+        const moduleUrl = URL.createObjectURL(blob);
+        const modulePromise = import(moduleUrl).then((module) => {
+          URL.revokeObjectURL(moduleUrl);
+          return module;
+        });
+
+        if (window.__BOREDOM_RUNTIME && typeof window.__BOREDOM_RUNTIME.registerScriptModule === "function") {
+          window.__BOREDOM_RUNTIME.registerScriptModule(name, modulePromise, { appId: APP_ID });
+        } else {
+          window.__BOREDOM_PENDING_SCRIPTS__ = window.__BOREDOM_PENDING_SCRIPTS__ || {};
+          window.__BOREDOM_PENDING_SCRIPTS__[APP_ID] = window.__BOREDOM_PENDING_SCRIPTS__[APP_ID] || {};
+          window.__BOREDOM_PENDING_SCRIPTS__[APP_ID][name] = modulePromise;
+        }
+
+        await loadRuntime();
+        await customElements.whenDefined("ui-layer-tree");
+        const tree = document.querySelector("ui-layer-tree");
+        if (!tree) throw new Error("Layer tree component not available after initialization.");
+        return tree;
+      };
+
+      const init = async () => {
+        bindUiElements();
+        setFolderMeta();
+        clearPreview("Choose a folder and select a file from the panel.");
+        setTreeOverlay("Loading layer panel...", true);
+        installReadOnlyGuards();
+
+        if (ui.chooseFolderBtn && ui.folderInput) {
+          ui.chooseFolderBtn.addEventListener("click", () => ui.folderInput.click());
+          ui.folderInput.addEventListener("change", handleFolderInputChange);
+        }
+
+        document.addEventListener("ui-layer-tree:select", handleTreeSelection);
+
+        try {
+          appState.tree = await loadLayerTree();
+          disableInlineRenameByDblClick(appState.tree);
+          applyTreeData([], []);
+          appState.ready = true;
+          if (ui.chooseFolderBtn) ui.chooseFolderBtn.disabled = false;
+          setTreeOverlay("Choose a folder to populate the panel.", true);
+        } catch (error) {
+          setTreeOverlay("Failed to initialize layer panel.");
+          setPreviewStatus(`Initialization error: ${error.message}`, "error");
+        }
+      };
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,2231 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RetroBeat MPC</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+      :root {
+        --bg: #1a1a1a;
+        --panel: #101010;
+        --panel-2: #141414;
+        --text: #e6ffe6;
+        --neon-green: #39ff14;
+        --hot-pink: #ff00ff;
+        --cyan: #00ffff;
+        --shadow: rgba(0, 0, 0, 0.5);
+        font-family: "Press Start 2P", "Courier New", monospace;
+        background: #1a1a1a;
+        color: var(--text);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background:
+          radial-gradient(circle at 20% 20%, rgba(0, 255, 255, 0.2), transparent 40%),
+          radial-gradient(circle at 80% 30%, rgba(255, 0, 255, 0.2), transparent 45%),
+          linear-gradient(135deg, #0b0b0b, #1a1a1a 60%, #111111);
+      }
+    </style>
+
+    <style data-component="retrobeat-app">
+      :host {
+        display: block;
+        width: min(1100px, 96vw);
+        color: var(--text);
+        font-family: "Press Start 2P", "Courier New", monospace;
+      }
+
+      .app {
+        border: 2px solid var(--cyan);
+        background: linear-gradient(180deg, rgba(10, 10, 10, 0.95), rgba(20, 20, 20, 0.95));
+        box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2), 0 20px 40px var(--shadow);
+        padding: 20px;
+        border-radius: 18px;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .title-block h1 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--neon-green);
+        text-shadow: 0 0 12px rgba(57, 255, 20, 0.5);
+      }
+
+      .title-block .subtitle {
+        font-size: 0.55rem;
+        color: var(--cyan);
+        margin-top: 6px;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .audio-status {
+        font-size: 0.55rem;
+        padding: 6px 10px;
+        border: 1px solid rgba(0, 255, 255, 0.5);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.5);
+      }
+
+      .audio-status.ready {
+        border-color: var(--neon-green);
+        color: var(--neon-green);
+        box-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 16px;
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+      }
+
+      .info-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 0.55rem;
+      }
+
+      .field input,
+      .field select {
+        background: #0a0a0a;
+        border: 1px solid rgba(255, 0, 255, 0.4);
+        color: var(--text);
+        padding: 8px;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 0.6rem;
+      }
+
+      .status-box {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 6px;
+        background: var(--panel-2);
+        border: 1px solid rgba(57, 255, 20, 0.3);
+        border-radius: 10px;
+        padding: 10px;
+        font-size: 0.55rem;
+      }
+
+      .status-readout {
+        color: var(--hot-pink);
+        text-shadow: 0 0 10px rgba(255, 0, 255, 0.4);
+      }
+
+      .transport-panel {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .btn {
+        background: #0b0b0b;
+        border: 1px solid rgba(0, 255, 255, 0.5);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 0.6rem;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+        transition: transform 0.1s ease, box-shadow 0.2s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
+      }
+
+      .btn.active {
+        border-color: var(--neon-green);
+        box-shadow: 0 0 14px rgba(57, 255, 20, 0.5);
+        color: var(--neon-green);
+      }
+
+      .btn.record {
+        border-color: rgba(255, 0, 255, 0.4);
+      }
+
+      .btn.record.active {
+        border-color: var(--hot-pink);
+        color: var(--hot-pink);
+        box-shadow: 0 0 16px rgba(255, 0, 255, 0.6);
+      }
+
+      .btn.small {
+        font-size: 0.5rem;
+        padding: 6px 10px;
+      }
+
+      .btn.tiny {
+        font-size: 0.45rem;
+        padding: 4px 8px;
+      }
+
+      .btn.danger {
+        border-color: rgba(255, 0, 255, 0.6);
+        color: var(--hot-pink);
+      }
+
+      .pad-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+
+      .pad {
+        background: #080808;
+        border: 2px solid rgba(57, 255, 20, 0.4);
+        border-radius: 12px;
+        min-height: 90px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.65rem;
+        cursor: pointer;
+        box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .pad:after {
+        content: "";
+        position: absolute;
+        inset: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+      }
+
+      .pad-note {
+        color: var(--neon-green);
+        text-shadow: 0 0 12px rgba(57, 255, 20, 0.5);
+      }
+
+      .pad-key {
+        font-size: 0.5rem;
+        color: var(--cyan);
+      }
+
+      .pad--active {
+        border-color: var(--hot-pink);
+        box-shadow: 0 0 16px rgba(255, 0, 255, 0.8), inset 0 0 12px rgba(255, 0, 255, 0.4);
+        transform: translateY(-2px);
+      }
+
+      .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.55rem;
+        margin-bottom: 10px;
+      }
+
+      .timeline {
+        position: relative;
+        height: 120px;
+        border: 2px solid rgba(0, 255, 255, 0.6);
+        border-radius: 12px;
+        background:
+          repeating-linear-gradient(
+            to right,
+            rgba(0, 255, 255, 0.25) 0,
+            rgba(0, 255, 255, 0.25) 1px,
+            transparent 1px,
+            transparent calc(100% / 16)
+          ),
+          linear-gradient(180deg, #0a0a0a, #050505);
+        overflow: hidden;
+        cursor: ew-resize;
+      }
+
+      .notes-layer {
+        position: absolute;
+        inset: 0;
+      }
+
+      .note {
+        position: absolute;
+        min-width: 8px;
+        height: 18px;
+        padding: 2px 4px;
+        border-radius: 6px;
+        font-size: 0.45rem;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--text);
+        border: 1px solid var(--neon-green);
+        background: rgba(57, 255, 20, 0.15);
+        box-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
+        user-select: none;
+      }
+
+      .note.selected {
+        border-color: var(--hot-pink);
+        box-shadow: 0 0 12px rgba(255, 0, 255, 0.6);
+      }
+
+      .playhead {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--hot-pink);
+        box-shadow: 0 0 14px rgba(255, 0, 255, 0.9);
+        transform: translateX(0);
+        pointer-events: none;
+      }
+
+      .help-panel {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 0.5rem;
+      }
+
+      .help-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(40px, 1fr));
+        gap: 6px;
+        color: var(--cyan);
+      }
+
+      .help-grid span {
+        padding: 4px 6px;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        border-radius: 6px;
+        text-align: center;
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+      }
+
+      .file-modal {
+        width: min(620px, 90vw);
+        background: #0b0b0b;
+        border: 2px solid var(--hot-pink);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 0 30px rgba(255, 0, 255, 0.4);
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .modal-title {
+        color: var(--hot-pink);
+        font-size: 0.7rem;
+      }
+
+      .modal-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+
+      .file-tree {
+        background: #070707;
+        border: 1px dashed rgba(0, 255, 255, 0.5);
+        border-radius: 10px;
+        padding: 12px;
+      }
+
+      .tree-root {
+        font-size: 0.55rem;
+        color: var(--cyan);
+        margin-bottom: 10px;
+      }
+
+      .file-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .file-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        background: rgba(10, 10, 10, 0.8);
+        position: relative;
+      }
+
+      .file-item:before {
+        content: "";
+        position: absolute;
+        left: -8px;
+        top: 50%;
+        width: 8px;
+        height: 1px;
+        background: rgba(0, 255, 255, 0.4);
+      }
+
+      .file-main {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+
+      .file-icon {
+        color: var(--neon-green);
+        font-size: 0.5rem;
+      }
+
+      .file-name {
+        font-size: 0.55rem;
+      }
+
+      .file-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .empty {
+        font-size: 0.55rem;
+        color: rgba(255, 255, 255, 0.5);
+        margin-top: 10px;
+      }
+
+      @media (max-width: 760px) {
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .transport-panel {
+          justify-content: flex-start;
+        }
+
+        .pad-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .timeline-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <script id="initial-state" type="application/json">
+      {
+        "appState": {
+          "project": {
+            "id": 0,
+            "name": "Untitled Project",
+            "bpm": 120,
+            "events": []
+          },
+          "isPlaying": false,
+          "isRecording": false,
+          "loopEnabled": true,
+          "selectedEventId": null,
+          "activePreset": "Retro Lead",
+          "audioReady": false,
+          "audioState": "suspended"
+        },
+        "savedProjects": []
+      }
+    </script>
+
+    <retrobeat-app></retrobeat-app>
+
+    <template data-component="retrobeat-app">
+      <div class="app" data-ref="appRoot">
+        <header class="header">
+          <div class="title-block">
+            <h1>RetroBeat MPC</h1>
+            <div class="subtitle">Cyberpunk Web Audio Groovebox</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn" data-dispatch="toggleFileModal">File</button>
+            <div class="audio-status" data-class="ready:state.appState.audioReady" data-text="local.audioStatus"></div>
+          </div>
+        </header>
+
+        <section class="panel info-panel">
+          <div class="field">
+            <label>Project</label>
+            <input
+              type="text"
+              data-value="state.appState.project.name"
+              data-dispatch-input="updateProjectName"
+              placeholder="Project name"
+            />
+          </div>
+          <div class="field">
+            <label>BPM</label>
+            <input
+              type="number"
+              min="60"
+              max="200"
+              data-value="state.appState.project.bpm"
+              data-dispatch-input="updateBpm"
+            />
+          </div>
+          <div class="field">
+            <label>Preset</label>
+            <select data-value="state.appState.activePreset" data-dispatch-change="setPreset">
+              <option>Retro Lead</option>
+              <option>Deep Bass</option>
+              <option>Chiptune</option>
+            </select>
+          </div>
+          <div class="status-box">
+            <div>Status</div>
+            <div class="status-readout" data-text="local.transportStatus"></div>
+          </div>
+        </section>
+
+        <section class="panel transport-panel">
+          <button class="btn" data-dispatch="play" data-class="active:state.appState.isPlaying">Play</button>
+          <button class="btn" data-dispatch="stop">Stop</button>
+          <button
+            class="btn record"
+            data-dispatch="toggleRecord"
+            data-class="active:state.appState.isRecording"
+          >
+            Record
+          </button>
+          <button class="btn" data-dispatch="toggleLoop" data-class="active:state.appState.loopEnabled">Loop</button>
+        </section>
+
+        <section class="panel">
+          <div class="pad-grid" data-list="local.pads" data-list-key="item.id">
+            <template data-item>
+              <button
+                class="pad"
+                data-dispatch="triggerPad"
+                data-prop-pad-id="item.id"
+                data-prop-pad-index="item.index"
+                data-class="pad--active:local.activePads[item.id]"
+              >
+                <span class="pad-note" data-text="item.note"></span>
+                <span class="pad-key" data-text="item.key"></span>
+              </button>
+            </template>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="timeline-header">
+            <div>Timeline</div>
+            <div data-text="local.timeReadout"></div>
+            <div data-text="local.selectedInfo"></div>
+          </div>
+          <div
+            class="timeline"
+            data-ref="timeline"
+            data-dispatch-pointerdown="scrubStart"
+            data-dispatch-pointermove="scrubMove"
+            data-dispatch-pointerup="scrubEnd"
+            data-dispatch-pointerout="scrubEnd"
+          >
+            <div
+              class="notes-layer"
+              data-ref="notesLayer"
+              data-list="state.appState.project.events"
+              data-list-key="item.id"
+            >
+              <template data-item>
+                <div
+                  class="note"
+                  data-dispatch-pointerdown="selectEvent"
+                  data-class="selected:state.appState.selectedEventId === item.id"
+                  data-prop-event-id="item.id"
+                  data-prop-start="item.startTime"
+                  data-prop-duration="item.duration"
+                  data-prop-preset="item.preset"
+                  data-prop-index="index"
+                >
+                  <span data-text="item.note"></span>
+                </div>
+              </template>
+            </div>
+            <div class="playhead" data-ref="playhead"></div>
+          </div>
+        </section>
+
+        <section class="panel help-panel">
+          <div>Keys</div>
+          <div class="help-grid">
+            <span>1</span>
+            <span>2</span>
+            <span>3</span>
+            <span>4</span>
+            <span>Q</span>
+            <span>W</span>
+            <span>E</span>
+            <span>R</span>
+            <span>A</span>
+            <span>S</span>
+            <span>D</span>
+            <span>F</span>
+            <span>Z</span>
+            <span>X</span>
+            <span>C</span>
+            <span>V</span>
+          </div>
+        </section>
+
+        <div class="modal-backdrop" data-show="local.showFileModal">
+          <div class="file-modal">
+            <div class="modal-header">
+              <div class="modal-title">File Manager</div>
+              <button class="btn small" data-dispatch="toggleFileModal">Close</button>
+            </div>
+            <div class="modal-actions">
+              <button class="btn small" data-dispatch="saveProject">Save</button>
+              <button class="btn small" data-dispatch="downloadProject">Download JSON</button>
+            </div>
+            <div class="file-tree">
+              <div class="tree-root">/projects</div>
+              <div class="file-list" data-ref="projectList" data-list="state.savedProjects" data-list-key="item.id">
+                <template data-item>
+                  <div class="file-item" data-prop-project-id="item.id">
+                    <div
+                      class="file-main"
+                      data-dispatch="loadProject"
+                      data-prop-project-id="item.id"
+                    >
+                      <span class="file-icon">FILE</span>
+                      <span class="file-name" data-text="item.name"></span>
+                    </div>
+                    <div class="file-actions">
+                      <button
+                        class="btn tiny"
+                        data-dispatch="loadProject"
+                        data-prop-project-id="item.id"
+                      >
+                        Load
+                      </button>
+                      <button
+                        class="btn tiny danger"
+                        data-dispatch="deleteProject"
+                        data-prop-project-id="item.id"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+              <div class="empty" data-show="state.savedProjects.length === 0">No saved projects.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <script type="text/boredom" data-component="retrobeat-app">
+      export default ({ on, onMount, onUpdate, onCleanup, state, local, refs }) => {
+        const STORAGE_KEY = "retrobeat-projects";
+        const PAD_KEYS = [
+          "1",
+          "2",
+          "3",
+          "4",
+          "Q",
+          "W",
+          "E",
+          "R",
+          "A",
+          "S",
+          "D",
+          "F",
+          "Z",
+          "X",
+          "C",
+          "V",
+        ];
+        const PAD_NOTES = [
+          "C4",
+          "D4",
+          "E4",
+          "G4",
+          "A4",
+          "B4",
+          "C5",
+          "D5",
+          "E5",
+          "G5",
+          "A5",
+          "B5",
+          "C6",
+          "D6",
+          "E6",
+          "G6",
+        ];
+
+        const NOTE_MAP = {
+          C: 0,
+          "C#": 1,
+          Db: 1,
+          D: 2,
+          "D#": 3,
+          Eb: 3,
+          E: 4,
+          F: 5,
+          "F#": 6,
+          Gb: 6,
+          G: 7,
+          "G#": 8,
+          Ab: 8,
+          A: 9,
+          "A#": 10,
+          Bb: 10,
+          B: 11,
+        };
+
+        const ADSR = {
+          attack: 0.01,
+          decay: 0.08,
+          sustain: 0.6,
+          release: 0.2,
+        };
+
+        const presetStyles = {
+          "Retro Lead": {
+            border: "var(--neon-green)",
+            glow: "rgba(57, 255, 20, 0.6)",
+            fill: "rgba(57, 255, 20, 0.18)",
+          },
+          "Deep Bass": {
+            border: "var(--cyan)",
+            glow: "rgba(0, 255, 255, 0.6)",
+            fill: "rgba(0, 255, 255, 0.16)",
+          },
+          Chiptune: {
+            border: "var(--hot-pink)",
+            glow: "rgba(255, 0, 255, 0.6)",
+            fill: "rgba(255, 0, 255, 0.16)",
+          },
+        };
+
+        const ensureState = () => {
+          if (!state.appState) {
+            state.appState = {
+              project: {
+                id: 0,
+                name: "Untitled Project",
+                bpm: 120,
+                events: [],
+              },
+              isPlaying: false,
+              isRecording: false,
+              loopEnabled: true,
+              selectedEventId: null,
+              activePreset: "Retro Lead",
+              audioReady: false,
+              audioState: "suspended",
+            };
+          }
+
+          if (!state.savedProjects) {
+            state.savedProjects = [];
+          }
+        };
+
+        ensureState();
+        const appState = state.appState;
+        if (!appState.project.id) {
+          appState.project.id = Date.now();
+        }
+
+        local.showFileModal = false;
+        local.pads = PAD_KEYS.map((key, index) => ({
+          id: `pad-${index}`,
+          index,
+          key,
+          note: PAD_NOTES[index],
+        }));
+        local.activePads = {};
+        local.transportStatus = "STOP";
+        local.audioStatus = "AUDIO: CLICK TO ARM";
+        local.timeReadout = "STEP 01";
+        local.selectedInfo = "SEL NONE";
+        local.dragging = false;
+
+        let engine = null;
+        let loopStartTime = 0;
+        let playheadPosition = 0;
+        let lastStep = -1;
+        let rafId = null;
+
+        const keyMap = local.pads.reduce((acc, pad) => {
+          acc[pad.key.toLowerCase()] = pad.index;
+          return acc;
+        }, {});
+
+        const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+        const computeLoopLength = (bpm) => (60 / bpm) * 4;
+        local.loopLength = computeLoopLength(appState.project.bpm);
+        local.stepLength = local.loopLength / 16;
+
+        const updateTiming = (bpm, oldLoopLength) => {
+          const nextLoop = computeLoopLength(bpm);
+          let ratio = 1;
+          if (oldLoopLength && oldLoopLength > 0) {
+            ratio = nextLoop / oldLoopLength;
+            appState.project.events.forEach((event) => {
+              event.startTime *= ratio;
+              event.duration *= ratio;
+            });
+          }
+          local.loopLength = nextLoop;
+          local.stepLength = nextLoop / 16;
+          if (ratio !== 1) {
+            playheadPosition *= ratio;
+          }
+          setPlayheadPosition(playheadPosition);
+        };
+
+        const noteToFrequency = (note) => {
+          const match = /^(?<pitch>[A-G])(?<accidental>#|b)?(?<octave>\d)$/.exec(note);
+          if (!match || !match.groups) return 440;
+          const pitch = `${match.groups.pitch}${match.groups.accidental || ""}`;
+          const octave = Number(match.groups.octave);
+          const semitone = NOTE_MAP[pitch];
+          const midi = (octave + 1) * 12 + semitone;
+          return 440 * Math.pow(2, (midi - 69) / 12);
+        };
+
+        const createPulseWave = (ctx, duty) => {
+          const harmonics = 32;
+          const real = new Float32Array(harmonics + 1);
+          const imag = new Float32Array(harmonics + 1);
+          for (let n = 1; n <= harmonics; n += 1) {
+            imag[n] = (2 / (n * Math.PI)) * Math.sin(n * Math.PI * duty);
+          }
+          return ctx.createPeriodicWave(real, imag, { disableNormalization: false });
+        };
+
+        class SynthEngine {
+          constructor() {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioCtx();
+            this.master = this.ctx.createGain();
+            this.master.gain.value = 0.7;
+            this.master.connect(this.ctx.destination);
+            this.pulseWave = createPulseWave(this.ctx, 0.25);
+          }
+
+          playNote(note, preset, when, duration) {
+            const freq = noteToFrequency(note);
+            const osc = this.ctx.createOscillator();
+            const amp = this.ctx.createGain();
+
+            if (preset === "Deep Bass") {
+              osc.type = "square";
+            } else if (preset === "Chiptune") {
+              osc.setPeriodicWave(this.pulseWave);
+            } else {
+              osc.type = "sawtooth";
+            }
+
+            osc.frequency.setValueAtTime(freq, when);
+            amp.gain.setValueAtTime(0.0001, when);
+            amp.gain.linearRampToValueAtTime(0.9, when + ADSR.attack);
+            amp.gain.linearRampToValueAtTime(0.9 * ADSR.sustain, when + ADSR.attack + ADSR.decay);
+            amp.gain.setValueAtTime(0.9 * ADSR.sustain, when + duration);
+            amp.gain.linearRampToValueAtTime(0.0001, when + duration + ADSR.release);
+
+            osc.connect(amp);
+            amp.connect(this.master);
+            osc.start(when);
+            osc.stop(when + duration + ADSR.release + 0.05);
+
+            osc.onended = () => {
+              amp.disconnect();
+              osc.disconnect();
+            };
+          }
+        }
+
+        const ensureEngine = async () => {
+          if (!engine) {
+            engine = new SynthEngine();
+          }
+
+          if (engine.ctx.state !== "running") {
+            await engine.ctx.resume();
+          }
+
+          appState.audioReady = engine.ctx.state === "running";
+          appState.audioState = engine.ctx.state;
+          local.audioStatus = appState.audioReady ? "AUDIO: READY" : "AUDIO: CLICK TO ARM";
+        };
+
+        const updateStatus = () => {
+          if (appState.isRecording) {
+            local.transportStatus = "REC";
+            return;
+          }
+
+          if (appState.isPlaying) {
+            local.transportStatus = "PLAY";
+            return;
+          }
+
+          local.transportStatus = "STOP";
+        };
+
+        const formatStepLabel = (pos) => {
+          const step = Math.floor(pos / local.stepLength) + 1;
+          const padded = String(step).padStart(2, "0");
+          return `STEP ${padded}`;
+        };
+
+        const updateSelectedInfo = () => {
+          if (!appState.selectedEventId) {
+            local.selectedInfo = "SEL NONE";
+            return;
+          }
+
+          const selected = appState.project.events.find((event) => event.id === appState.selectedEventId);
+          if (!selected) {
+            local.selectedInfo = "SEL NONE";
+            appState.selectedEventId = null;
+            return;
+          }
+
+          const step = Math.floor(selected.startTime / local.stepLength) + 1;
+          local.selectedInfo = `SEL ${selected.note} @ ${String(step).padStart(2, "0")}`;
+        };
+
+        const updatePlayheadVisual = () => {
+          if (!refs.playhead || !refs.timeline) return;
+          const ratio = local.loopLength ? playheadPosition / local.loopLength : 0;
+          const rect = refs.timeline.getBoundingClientRect();
+          const x = rect.width * ratio;
+          refs.playhead.style.transform = `translateX(${x}px)`;
+        };
+
+        const setPlayheadPosition = (pos) => {
+          playheadPosition = clamp(pos, 0, local.loopLength);
+          local.timeReadout = formatStepLabel(playheadPosition);
+          updatePlayheadVisual();
+
+          if (appState.isPlaying && engine) {
+            loopStartTime = engine.ctx.currentTime - playheadPosition;
+          }
+        };
+
+        const getLoopPosition = () => {
+          if (!engine || !appState.isPlaying) return playheadPosition;
+          const elapsed = engine.ctx.currentTime - loopStartTime;
+          if (appState.loopEnabled) {
+            return ((elapsed % local.loopLength) + local.loopLength) % local.loopLength;
+          }
+          return clamp(elapsed, 0, local.loopLength);
+        };
+
+        const flashPad = (padId) => {
+          local.activePads[padId] = true;
+          setTimeout(() => {
+            local.activePads[padId] = false;
+          }, 180);
+        };
+
+        const playEvent = (event) => {
+          if (!engine) return;
+          const duration = event.duration || local.stepLength * 0.9;
+          const when = engine.ctx.currentTime + 0.001;
+          engine.playNote(event.note, event.preset, when, duration);
+        };
+
+        const triggerStep = (step) => {
+          const start = step * local.stepLength;
+          const end = start + local.stepLength;
+          appState.project.events.forEach((event) => {
+            const position = ((event.startTime % local.loopLength) + local.loopLength) % local.loopLength;
+            if (position >= start && position < end) {
+              playEvent(event);
+            }
+          });
+        };
+
+        const tick = () => {
+          if (!engine || !appState.isPlaying) {
+            rafId = null;
+            return;
+          }
+
+          const now = engine.ctx.currentTime;
+          let elapsed = now - loopStartTime;
+
+          if (!appState.loopEnabled && elapsed >= local.loopLength) {
+            appState.isPlaying = false;
+            appState.isRecording = false;
+            setPlayheadPosition(0);
+            updateStatus();
+            rafId = null;
+            return;
+          }
+
+          if (appState.loopEnabled) {
+            elapsed = ((elapsed % local.loopLength) + local.loopLength) % local.loopLength;
+          } else {
+            elapsed = clamp(elapsed, 0, local.loopLength);
+          }
+
+          playheadPosition = elapsed;
+          const step = Math.floor(elapsed / local.stepLength);
+          if (step !== lastStep) {
+            lastStep = step;
+            triggerStep(step);
+            local.timeReadout = formatStepLabel(elapsed);
+          }
+
+          updatePlayheadVisual();
+          rafId = requestAnimationFrame(tick);
+        };
+
+        const startPlayback = async () => {
+          await ensureEngine();
+          if (!engine) return;
+          if (!appState.isPlaying) {
+            appState.isPlaying = true;
+          }
+          loopStartTime = engine.ctx.currentTime - playheadPosition;
+          lastStep = -1;
+          if (!rafId) {
+            rafId = requestAnimationFrame(tick);
+          }
+        };
+
+        const stopPlayback = () => {
+          appState.isPlaying = false;
+          appState.isRecording = false;
+          loopStartTime = 0;
+          lastStep = -1;
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+          setPlayheadPosition(0);
+          updateStatus();
+        };
+
+        const triggerPad = async (index) => {
+          const pad = local.pads[index];
+          if (!pad) return;
+          await ensureEngine();
+          flashPad(pad.id);
+
+          if (engine) {
+            engine.playNote(pad.note, appState.activePreset, engine.ctx.currentTime + 0.001, local.stepLength * 0.9);
+          }
+
+          if (appState.selectedEventId) {
+            const selected = appState.project.events.find((event) => event.id === appState.selectedEventId);
+            if (selected) {
+              selected.note = pad.note;
+              selected.preset = appState.activePreset;
+              appState.selectedEventId = null;
+            }
+            return;
+          }
+
+          if (appState.isRecording) {
+            if (!appState.isPlaying) {
+              await startPlayback();
+            }
+            const startTime = getLoopPosition();
+            appState.project.events.push({
+              id: Date.now() + Math.random(),
+              note: pad.note,
+              startTime,
+              duration: local.stepLength * 0.9,
+              preset: appState.activePreset,
+            });
+          }
+        };
+
+        const positionNotes = () => {
+          if (!refs.notesLayer) return;
+          const nodes = refs.notesLayer.querySelectorAll(".note");
+          nodes.forEach((node) => {
+            const start = Number(node.dataset.start) || 0;
+            const duration = Number(node.dataset.duration) || local.stepLength * 0.9;
+            const left = local.loopLength ? (start / local.loopLength) * 100 : 0;
+            const width = local.loopLength ? (duration / local.loopLength) * 100 : 0;
+            const lane = Number(node.dataset.index || 0) % 4;
+            const preset = node.dataset.preset || "Retro Lead";
+            const style = presetStyles[preset] || presetStyles["Retro Lead"];
+            node.style.left = `${left}%`;
+            node.style.width = `${Math.max(width, 1.5)}%`;
+            node.style.top = `${8 + lane * 22}px`;
+            node.style.borderColor = style.border;
+            node.style.background = style.fill;
+            node.style.boxShadow = `0 0 8px ${style.glow}`;
+          });
+        };
+
+        const loadLibrary = () => {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            state.savedProjects = raw ? JSON.parse(raw) : [];
+          } catch (err) {
+            state.savedProjects = [];
+          }
+        };
+
+        const saveLibrary = (projects) => {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+          state.savedProjects = projects;
+        };
+
+        const saveProject = () => {
+          const project = appState.project;
+          if (!project.id || project.id === 0) {
+            project.id = Date.now();
+          }
+          const snapshot = JSON.parse(JSON.stringify(project));
+          const projects = Array.isArray(state.savedProjects) ? [...state.savedProjects] : [];
+          const index = projects.findIndex((item) => item.id === snapshot.id);
+          if (index >= 0) {
+            projects[index] = snapshot;
+          } else {
+            projects.push(snapshot);
+          }
+          saveLibrary(projects);
+        };
+
+        const loadProjectById = (id) => {
+          const projects = Array.isArray(state.savedProjects) ? state.savedProjects : [];
+          const found = projects.find((item) => item.id === id);
+          if (!found) return;
+          appState.project = JSON.parse(JSON.stringify(found));
+          updateTiming(appState.project.bpm);
+          appState.selectedEventId = null;
+          setPlayheadPosition(0);
+        };
+
+        const deleteProjectById = (id) => {
+          const projects = Array.isArray(state.savedProjects) ? state.savedProjects : [];
+          const next = projects.filter((item) => item.id !== id);
+          saveLibrary(next);
+        };
+
+        const downloadProject = () => {
+          const blob = new Blob([JSON.stringify(appState.project, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement("a");
+          anchor.href = url;
+          anchor.download = `${appState.project.name || "retrobeat-project"}.json`;
+          anchor.click();
+          setTimeout(() => URL.revokeObjectURL(url), 500);
+        };
+
+        const handleKeyDown = (event) => {
+          if (event.repeat) return;
+          const activeTag = document.activeElement ? document.activeElement.tagName : "";
+          if (activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT") {
+            return;
+          }
+
+          if (event.key === "Backspace" && appState.selectedEventId) {
+            event.preventDefault();
+            appState.project.events = appState.project.events.filter(
+              (item) => item.id !== appState.selectedEventId,
+            );
+            appState.selectedEventId = null;
+            return;
+          }
+
+          const key = event.key.toLowerCase();
+          if (keyMap[key] !== undefined) {
+            event.preventDefault();
+            triggerPad(keyMap[key]);
+          }
+        };
+
+        const updateScrub = (evt) => {
+          if (!refs.timeline) return;
+          const rect = refs.timeline.getBoundingClientRect();
+          const x = clamp(evt.clientX - rect.left, 0, rect.width);
+          const ratio = rect.width ? x / rect.width : 0;
+          setPlayheadPosition(ratio * local.loopLength);
+        };
+
+        on("play", () => {
+          startPlayback();
+        });
+
+        on("stop", () => {
+          stopPlayback();
+        });
+
+        on("toggleRecord", () => {
+          appState.isRecording = !appState.isRecording;
+          if (appState.isRecording && !appState.isPlaying) {
+            startPlayback();
+          }
+          updateStatus();
+        });
+
+        on("toggleLoop", () => {
+          appState.loopEnabled = !appState.loopEnabled;
+        });
+
+        on("triggerPad", ({ e }) => {
+          const index = Number(e.dispatcher.dataset.padIndex);
+          triggerPad(index);
+        });
+
+        on("updateBpm", ({ e }) => {
+          const value = Number(e.event.target.value);
+          if (!Number.isFinite(value)) return;
+          const bpm = clamp(Math.round(value), 60, 200);
+          const oldLoop = local.loopLength;
+          appState.project.bpm = bpm;
+          updateTiming(bpm, oldLoop);
+        });
+
+        on("updateProjectName", ({ e }) => {
+          appState.project.name = e.event.target.value;
+        });
+
+        on("setPreset", ({ e }) => {
+          appState.activePreset = e.event.target.value;
+        });
+
+        on("toggleFileModal", () => {
+          local.showFileModal = !local.showFileModal;
+        });
+
+        on("saveProject", () => {
+          saveProject();
+        });
+
+        on("loadProject", ({ e }) => {
+          const id = Number(e.dispatcher.dataset.projectId);
+          loadProjectById(id);
+        });
+
+        on("deleteProject", ({ e }) => {
+          const id = Number(e.dispatcher.dataset.projectId);
+          deleteProjectById(id);
+        });
+
+        on("downloadProject", () => {
+          downloadProject();
+        });
+
+        on("selectEvent", ({ e }) => {
+          const id = Number(e.dispatcher.dataset.eventId);
+          appState.selectedEventId = id;
+        });
+
+        on("scrubStart", ({ e }) => {
+          local.dragging = true;
+          if (e.dispatcher.setPointerCapture) {
+            e.dispatcher.setPointerCapture(e.event.pointerId);
+          }
+          updateScrub(e.event);
+        });
+
+        on("scrubMove", ({ e }) => {
+          if (!local.dragging) return;
+          updateScrub(e.event);
+        });
+
+        on("scrubEnd", ({ e }) => {
+          if (!local.dragging) return;
+          local.dragging = false;
+          if (e.dispatcher.releasePointerCapture) {
+            e.dispatcher.releasePointerCapture(e.event.pointerId);
+          }
+        });
+
+        onMount(() => {
+          loadLibrary();
+          updateStatus();
+          updateSelectedInfo();
+          setTimeout(updatePlayheadVisual, 0);
+          window.addEventListener("keydown", handleKeyDown);
+          window.addEventListener("resize", updatePlayheadVisual);
+        });
+
+        onUpdate(() => {
+          updateStatus();
+          updateSelectedInfo();
+          positionNotes();
+          local.audioStatus = appState.audioReady ? "AUDIO: READY" : "AUDIO: CLICK TO ARM";
+        });
+
+        onCleanup(() => {
+          window.removeEventListener("keydown", handleKeyDown);
+          window.removeEventListener("resize", updatePlayheadVisual);
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+          }
+        });
+      };
+    </script>
+
+    <script data-state="#initial-state">
+/**
+ * @file boreDOM.js
+ * @description A minimalist, reactivity-driven JavaScript framework optimized for LLM readability and generation.
+ * @version 2.0.0
+ */
+
+/**
+ * Runtime pipeline (high level):
+ * 1) Init global state
+ * 2) Register component resources (style/template/script)
+ * 3) Hydrate components (Shadow DOM + logic)
+ * 4) Apply bindings
+ * 5) Run hooks
+ * 6) Dispatch events
+ */
+
+/**
+ * Quick walkthrough for LLMs:
+ * - init(): scans for <style>/<template>/<script data-component>, registers components, and sets global state.
+ * - ReactiveComponent: builds Shadow DOM, wires events, runs component logic, then applies bindings + hooks.
+ * - createReactiveState(): wraps state in a proxy, schedules updates only on actual changes.
+ * - processBindings(): runs list bindings first, then attribute bindings.
+ */
+
+// --- 1. CONSTANTS & CONFIGURATION ---
+
+const CONSTANTS = {
+  Attributes: {
+    COMPONENT: 'data-component',
+    STATE: 'data-state',
+    LIST: 'data-list',
+    ITEM_TEMPLATE: 'data-item',
+    LIST_KEY: 'data-list-key',
+    LIST_ONCE: 'data-list-once',
+    LIST_STATIC: 'data-list-static',
+    TEXT: 'data-text',
+    SHOW: 'data-show',
+    VALUE: 'data-value',
+    CHECKED: 'data-checked',
+    CLASS: 'data-class',
+    REF: 'data-ref',
+    DISPATCH: 'data-dispatch',
+    INPUT: 'data-input',
+    CHANGE: 'data-change',
+    PROP_PREFIX: 'data-prop-',
+  },
+  // Supported events - names will be dynamically mapped to data-dispatch attributes
+  Events: [
+    'click',
+    'input',
+    'change',
+    'pointerdown',
+    'pointermove',
+    'pointerup',
+    'pointerout',
+    'keydown',
+    'keyup',
+    'focus',
+    'blur',
+  ],
+};
+
+// Global Registries
+/** @type {Set<ShadowRoot>} */
+const activeShadowRoots = new Set();
+
+/** @type {Map<string, CSSStyleSheet[]>} */
+const componentStyles = new Map();
+
+/** @type {Record<string, Promise<any>>} */
+const loadedScripts = {};
+
+/** @type {WeakMap<object, number>} */
+const objectVersions = new WeakMap();
+
+/** @type {WeakMap<object, object>} */
+const proxyTargets = new WeakMap();
+
+/** @type {WeakMap<Element, { itemsRef: any, version: number, rendered: boolean, keyExpr: string | null, keyMap: Map<any, Element> }>} */
+const listCache = new WeakMap();
+
+/** @type {Set<ReactiveComponent>} */
+const pendingComponentUpdates = new Set();
+
+let updatesScheduled = false;
+
+// --- 1.5 DEVTOOLS & TELEMETRY ---
+
+const DevTools = {
+  log: (type, data) => {
+    console.log(`[BOREDOM:${type}]`, JSON.stringify(data));
+  },
+  
+  error: (component, error, context = {}) => {
+    console.error(`[BOREDOM:ERROR]`, JSON.stringify({
+      component,
+      message: error.message,
+      stack: error.stack,
+      context
+    }));
+  },
+
+  // Shadow-piercing query selector
+  query: (selector, root = document.body) => {
+    let result = root.querySelector(selector);
+    if (result) return result;
+    
+    // Depth-first search through Shadow DOMs
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.shadowRoot) {
+        result = DevTools.query(selector, node.shadowRoot);
+        if (result) return result;
+      }
+    }
+    return null;
+  }
+};
+
+// --- 2. UPDATE SCHEDULING (COALESCED UPDATES) ---
+
+const scheduleMicrotask = (fn) => {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(fn);
+  } else {
+    Promise.resolve().then(fn);
+  }
+};
+
+const getObjectVersion = (obj) => {
+  if (!obj || typeof obj !== 'object') return 0;
+  const target = proxyTargets.get(obj) || obj;
+  return objectVersions.get(target) || 0;
+};
+
+const bumpObjectVersion = (obj) => {
+  if (!obj || typeof obj !== 'object') return 0;
+  const target = proxyTargets.get(obj) || obj;
+  const next = getObjectVersion(target) + 1;
+  objectVersions.set(target, next);
+  return next;
+};
+
+const scheduleComponentUpdate = (component) => {
+  if (!component) return;
+  pendingComponentUpdates.add(component);
+  if (!updatesScheduled) {
+    updatesScheduled = true;
+    scheduleMicrotask(flushComponentUpdates);
+  }
+};
+
+const flushComponentUpdates = () => {
+  updatesScheduled = false;
+  const queue = Array.from(pendingComponentUpdates);
+  pendingComponentUpdates.clear();
+  queue.forEach((component) => {
+    if (!component) return;
+    if (component.isConnected === false) return;
+    component._update();
+  });
+};
+
+// --- 3. REACTIVITY SYSTEM ---
+
+/**
+ * Creates a reactive proxy for state management.
+ * @template T
+ * @param {T} target - The state object to observe.
+ * @param {Function} callback - The function to call on mutation.
+ * @param {string} [path=''] - Path for debugging/logging.
+ * @returns {T} - The reactive proxy.
+ */
+const createReactiveState = (target, callback, path = 'root', cache = new WeakMap()) => {
+  if (typeof target !== 'object' || target === null) return target;
+  if (cache.has(target)) return cache.get(target);
+
+  const proxy = new Proxy(target, {
+    set(obj, prop, value) {
+      const oldValue = obj[prop];
+      if (Object.is(oldValue, value)) return true;
+      obj[prop] = value;
+
+      bumpObjectVersion(obj);
+      DevTools.log('STATE', { path: `${path}.${String(prop)}`, prev: oldValue, next: value });
+
+      callback();
+      return true;
+    },
+    get(obj, prop) {
+      // Lazy recursion for deep reactivity
+      return createReactiveState(obj[prop], callback, `${path}.${String(prop)}`, cache);
+    },
+    deleteProperty(obj, prop) {
+      const hadKey = Object.prototype.hasOwnProperty.call(obj, prop);
+      if (!hadKey) return true;
+      DevTools.log('STATE', { path: `${path}.${String(prop)}`, action: 'delete' });
+      delete obj[prop];
+      bumpObjectVersion(obj);
+      callback();
+      return true;
+    },
+  });
+
+  cache.set(target, proxy);
+  proxyTargets.set(proxy, target);
+  return proxy;
+};
+
+const initGlobalState = (stateSelector) => {
+  const stateElement = document.querySelector(stateSelector);
+  const initialState = stateElement ? JSON.parse(stateElement.textContent) : {};
+  window.globalState = createReactiveState(initialState, scheduleGlobalUpdate, 'global');
+  // @ts-ignore
+  globalState = window.globalState;
+  return stateElement;
+};
+
+const collectComponentNodes = () => ([
+  ...document.querySelectorAll('style[data-component]'),
+  ...document.querySelectorAll('script[data-component]'),
+  ...document.querySelectorAll('template[data-component]'),
+]);
+
+const registerComponents = (componentNodes) => {
+  componentNodes.forEach((node) => {
+    // @ts-ignore
+    const name = node.dataset.component;
+    const tagName = node.tagName;
+
+    if (ResourceProcessors[tagName]) {
+      ResourceProcessors[tagName](node, name);
+    }
+  });
+};
+
+const exposeDevTools = (stateElement) => {
+  // @ts-ignore
+  window.__BOREDOM__ = {
+    getState: () => JSON.parse(JSON.stringify(globalState)),
+    getComponents: (tagName) => {
+      // @ts-ignore
+      return Array.from(document.querySelectorAll(tagName)).map(el => ({
+        local: el.localState,
+        refs: el.refs,
+        slots: el.slots
+      }));
+    },
+    inspect: (el) => {
+      // @ts-ignore
+      return { local: el.localState, refs: el.refs, slots: el.slots, state: globalState };
+    },
+    query: DevTools.query,
+    reset: () => {
+      // Soft reset to initial state
+      const newState = JSON.parse(stateElement.textContent);
+      Object.keys(globalState).forEach(key => delete globalState[key]);
+      Object.assign(globalState, newState);
+      DevTools.log('SYSTEM', { message: 'App Reset' });
+    }
+  };
+
+  // @ts-ignore
+  window.__RESET_APP__ = window.__BOREDOM__.reset;
+};
+
+/**
+ * Triggers a DOM update across all active components.
+ */
+const scheduleGlobalUpdate = () => {
+  activeShadowRoots.forEach((root) => {
+    // @ts-ignore - 'host' property exists on ShadowRoot
+    scheduleComponentUpdate(root.host);
+  });
+};
+
+// --- 4. EXPRESSION EVALUATION ---
+
+/**
+ * Evaluates a string expression within a specific scope.
+ * @param {string} expr - The JavaScript expression to evaluate.
+ * @param {Object} scope - The variables available to the expression.
+ * @returns {any} - The result of the evaluation.
+ */
+const evaluate = (expr, scope) => {
+  try {
+    const keys = Object.keys(scope);
+    const values = Object.values(scope);
+    // Function constructor allows evaluation without 'eval()' and strict scoping
+    return new Function(...keys, `return ${expr}`)(...values);
+  } catch (e) {
+    // Fail silently to prevent UI crashes during intermediate states
+    return undefined;
+  }
+};
+
+// --- 5. CONTEXT HELPERS ---
+
+const createComponentContext = (component) => ({
+  state: globalState,
+  local: component.localState,
+  detail: component.slots,
+  refs: component.refs,
+});
+
+const withItemContext = (context, item, index) => ({
+  ...context,
+  item,
+  index,
+});
+
+const withEventContext = (context, event, dispatcher) => ({
+  ...context,
+  e: { event, dispatcher },
+});
+
+const createInitContext = (component) => ({
+  on: (name, fn) => registerAction(component.eventHandlers, name, fn),
+  onMount: (fn) => registerHook(component.mountHooks, fn),
+  onUpdate: (fn) => registerHook(component.updateHooks, fn),
+  onCleanup: (fn) => registerHook(component.cleanupHooks, fn),
+  self: component.shadowRoot,
+  ...createComponentContext(component),
+});
+
+const getDispatchAttribute = (eventName) =>
+  eventName === 'click'
+    ? 'dispatch'
+    : `dispatch${eventName[0].toUpperCase()}${eventName.slice(1)}`;
+
+const shouldUseCapture = (eventName) => ['focus', 'blur'].includes(eventName);
+
+const createDispatcherProxy = (dispatcher, componentDataset) => new Proxy(dispatcher, {
+  get: (target, prop) => {
+    if (prop === 'dataset') return { ...dispatcher.dataset, ...componentDataset };
+    const val = target[prop];
+    return typeof val === 'function' ? val.bind(target) : val;
+  },
+});
+
+const getElementsInRoot = (root) => {
+  const elements = root.querySelectorAll ? Array.from(root.querySelectorAll('*')) : [];
+  if (root && root.nodeType === Node.ELEMENT_NODE) {
+    elements.unshift(root);
+  }
+  return elements;
+};
+
+const registerHook = (hooks, fn) => {
+  hooks.push(fn);
+  return () => {
+    const index = hooks.indexOf(fn);
+    if (index >= 0) hooks.splice(index, 1);
+  };
+};
+
+const registerAction = (handlersMap, name, fn) => {
+  if (!handlersMap.has(name)) {
+    handlersMap.set(name, []);
+  }
+  const handlers = handlersMap.get(name);
+  handlers.push(fn);
+  return () => {
+    const index = handlers.indexOf(fn);
+    if (index >= 0) handlers.splice(index, 1);
+  };
+};
+
+const runHooks = (component, hooks, context, source) => {
+  hooks.forEach((hook) => {
+    try {
+      hook(context);
+    } catch (err) {
+      DevTools.error(component.tagName.toLowerCase(), err, { source });
+    }
+  });
+};
+
+const findDispatcher = (event, actionType) =>
+  event.composedPath().find((el) => el.dataset && el.dataset[actionType]);
+
+const runActionHandlers = (component, actionName, dispatcher, event) => {
+  const handlers = component.eventHandlers.get(actionName);
+  if (!handlers || !handlers.length) return;
+
+  const proxyDispatcher = createDispatcherProxy(dispatcher, component.dataset);
+  const context = withEventContext(component._createContext(), event, proxyDispatcher);
+
+  DevTools.log('ACTION', { component: component.tagName.toLowerCase(), action: actionName });
+
+  handlers.forEach((handler) => {
+    try {
+      handler(context);
+    } catch (err) {
+      DevTools.error(component.tagName.toLowerCase(), err, { action: actionName });
+    }
+  });
+
+  event.stopPropagation();
+};
+
+const dispatchComponentEvent = (component, event, actionType) => {
+  const dispatcher = findDispatcher(event, actionType);
+  if (!dispatcher) return;
+  const actionName = dispatcher.dataset[actionType];
+  if (!actionName) return;
+  runActionHandlers(component, actionName, dispatcher, event);
+};
+
+// --- 6. DOM DIRECTIVES & BINDINGS ---
+
+/**
+ * Directives map dataset keys (camelCase of data-attributes) to DOM manipulations.
+ * Receives: element, raw expression string, and current context.
+ */
+const Directives = {
+  text: (el, raw, ctx) => {
+    const val = evaluate(raw, ctx);
+    el.textContent = val !== undefined && val !== null ? val : '';
+  },
+  show: (el, raw, ctx) => {
+    el.style.display = evaluate(raw, ctx) ? '' : 'none';
+  },
+  value: (el, raw, ctx) => {
+    if ('value' in el) el.value = evaluate(raw, ctx) || '';
+  },
+  checked: (el, raw, ctx) => {
+    if ('checked' in el) el.checked = !!evaluate(raw, ctx);
+  },
+  class: (el, raw, ctx) => {
+    // Format: "className:condition"
+    const parts = raw.split(':');
+    if (parts.length === 2) {
+      const [cls, conditionExpr] = parts;
+      el.classList.toggle(cls, !!evaluate(conditionExpr, ctx));
+    }
+  },
+  ref: (el, raw, ctx) => {
+    // data-ref="myInput" -> ctx.refs.myInput = el
+    if (ctx.refs) {
+      ctx.refs[raw] = el;
+    }
+  }
+};
+
+/**
+ * Determines if an element is owned by the current ShadowRoot or a nested list.
+ * @param {Element} el
+ * @param {ShadowRoot} root
+ * @returns {boolean}
+ */
+const isElementInScope = (el, root) => {
+  let cur = el.parentElement;
+  const rootList =
+    root && root.nodeType === Node.ELEMENT_NODE && typeof root.closest === 'function'
+      ? root.closest(`[${CONSTANTS.Attributes.LIST}]`)
+      : null;
+  while (cur && cur !== root) {
+    if (cur.dataset && cur.dataset.list && cur !== rootList) return false;
+    cur = cur.parentElement;
+  }
+  return true;
+};
+
+// List rendering pipeline helpers: config -> cache -> render/update.
+const getListCacheEntry = (listEl) => {
+  const cached = listCache.get(listEl);
+  if (cached) return cached;
+  const entry = {
+    itemsRef: null,
+    version: -1,
+    rendered: false,
+    keyExpr: null,
+    keyMap: new Map(),
+  };
+  listCache.set(listEl, entry);
+  return entry;
+};
+
+const getListItems = (value) => (Array.isArray(value) ? value : []);
+
+const getListConfig = (listEl, context) => {
+  const itemsExpr = listEl.getAttribute(CONSTANTS.Attributes.LIST);
+  const rawItems = evaluate(itemsExpr, context);
+  return {
+    rawItems,
+    items: getListItems(rawItems),
+    itemsVersion: getObjectVersion(rawItems),
+    template: listEl.querySelector(`template[${CONSTANTS.Attributes.ITEM_TEMPLATE}]`),
+    cache: getListCacheEntry(listEl),
+    listOnce:
+      listEl.hasAttribute(CONSTANTS.Attributes.LIST_ONCE) ||
+      listEl.hasAttribute(CONSTANTS.Attributes.LIST_STATIC),
+    keyExpr: listEl.getAttribute(CONSTANTS.Attributes.LIST_KEY),
+  };
+};
+
+const getListStrategy = (listEl, context) => {
+  const config = getListConfig(listEl, context);
+  if (!config.template) {
+    return { type: 'missing-template', ...config };
+  }
+  if (config.listOnce && config.cache.rendered) {
+    return { type: 'skip', ...config };
+  }
+  if (isSameListInput(config.cache, config.rawItems, config.itemsVersion, config.keyExpr)) {
+    return { type: 'update', ...config };
+  }
+  if (config.keyExpr && hasSingleTemplateRoot(config.template)) {
+    return { type: 'keyed', ...config };
+  }
+  return { type: 'naive', ...config };
+};
+
+const isSameListInput = (cache, rawItems, itemsVersion, keyExpr) =>
+  cache.itemsRef === rawItems &&
+  cache.version === itemsVersion &&
+  cache.keyExpr === keyExpr;
+
+const commitListCache = (cache, rawItems, itemsVersion, keyExpr) => {
+  cache.itemsRef = rawItems;
+  cache.version = itemsVersion;
+  cache.keyExpr = keyExpr;
+  cache.rendered = true;
+};
+
+const hasSingleTemplateRoot = (template) => {
+  const nodes = Array.from(template.content.childNodes);
+  const elementNodes = nodes.filter((node) => node.nodeType === Node.ELEMENT_NODE);
+  const nonEmptyText = nodes.filter(
+    (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '',
+  );
+  return elementNodes.length === 1 && nonEmptyText.length === 0;
+};
+
+const renderListNaive = (listEl, template, items, context) => {
+  Array.from(listEl.children).forEach((child) => {
+    if (child !== template) child.remove();
+  });
+
+  items.forEach((item, index) => {
+    // @ts-ignore
+    const clone = template.content.cloneNode(true);
+    processBindings(clone, withItemContext(context, item, index));
+    listEl.appendChild(clone);
+  });
+};
+
+const renderListKeyed = (listEl, template, items, context, keyExpr, cache) => {
+  const keyMap = cache.keyMap || new Map();
+  const nextKeys = new Set();
+  const nodesInOrder = [];
+
+  items.forEach((item, index) => {
+    const key = evaluate(keyExpr, withItemContext(context, item, index));
+    const resolvedKey = key !== undefined && key !== null ? key : index;
+    nextKeys.add(resolvedKey);
+
+    let node = keyMap.get(resolvedKey);
+    if (!node) {
+      // @ts-ignore
+      const fragment = template.content.cloneNode(true);
+      processBindings(fragment, withItemContext(context, item, index));
+      node = fragment.firstElementChild;
+      if (!node) return;
+      listEl.appendChild(fragment);
+    } else {
+      processBindings(node, withItemContext(context, item, index));
+    }
+
+    keyMap.set(resolvedKey, node);
+    nodesInOrder.push(node);
+  });
+
+  keyMap.forEach((node, key) => {
+    if (!nextKeys.has(key)) {
+      if (node && node.parentNode === listEl) node.remove();
+      keyMap.delete(key);
+    }
+  });
+
+  nodesInOrder.forEach((node) => {
+    if (node && node.parentNode === listEl) {
+      listEl.appendChild(node);
+    }
+  });
+
+  cache.keyMap = keyMap;
+};
+
+const updateListBindings = (listEl, template, items, context, keyExpr, cache) => {
+  if (keyExpr && cache.keyMap && cache.keyMap.size > 0) {
+    let missingKeys = false;
+    const nextKeys = new Set();
+    const orderedNodes = [];
+
+    items.forEach((item, index) => {
+      const key = evaluate(keyExpr, withItemContext(context, item, index));
+      const resolvedKey = key !== undefined && key !== null ? key : index;
+      if (nextKeys.has(resolvedKey)) missingKeys = true;
+      nextKeys.add(resolvedKey);
+      const node = cache.keyMap.get(resolvedKey);
+      if (!node) {
+        missingKeys = true;
+        return;
+      }
+      processBindings(node, withItemContext(context, item, index));
+      orderedNodes.push(node);
+    });
+
+    if (missingKeys || nextKeys.size !== cache.keyMap.size) {
+      renderListKeyed(listEl, template, items, context, keyExpr, cache);
+      return;
+    }
+
+    orderedNodes.forEach((node) => {
+      if (node && node.parentNode === listEl) {
+        listEl.appendChild(node);
+      }
+    });
+    return;
+  }
+
+  const children = Array.from(listEl.children).filter((child) => child !== template);
+  children.forEach((child, index) => {
+    if (index >= items.length) return;
+    processBindings(child, withItemContext(context, items[index], index));
+  });
+};
+
+/**
+ * Processes 'data-list' attributes for rendering lists.
+ * @param {ShadowRoot|Element} root
+ * @param {Object} context
+ */
+const processListBindings = (root, context) => {
+  const lists = root.querySelectorAll(`[${CONSTANTS.Attributes.LIST}]`);
+  
+  lists.forEach((listEl) => {
+    if (!isElementInScope(listEl, root)) return;
+
+    const strategy = getListStrategy(listEl, context);
+    const { template, items, keyExpr, cache, rawItems, itemsVersion } = strategy;
+
+    if (strategy.type === 'missing-template' || strategy.type === 'skip') return;
+
+    if (strategy.type === 'update') {
+      updateListBindings(listEl, template, items, context, keyExpr, cache);
+      return;
+    }
+
+    if (strategy.type === 'keyed') {
+      renderListKeyed(listEl, template, items, context, keyExpr, cache);
+    } else {
+      renderListNaive(listEl, template, items, context);
+      cache.keyMap = new Map();
+    }
+
+    commitListCache(cache, rawItems, itemsVersion, keyExpr);
+  });
+};
+
+/**
+ * Applies all Directives to elements within the root using generic loop.
+ * @param {ShadowRoot|Element} root
+ * @param {Object} context
+ */
+const processAttributeBindings = (root, context) => {
+  const elements = getElementsInRoot(root);
+
+  elements.forEach((el) => {
+    if (!isElementInScope(el, root)) return;
+
+    Object.keys(el.dataset).forEach((key) => {
+      const rawValue = el.dataset[key];
+
+      // 1. Standard Directives (data-text, data-show, etc.)
+      if (Directives[key]) {
+        Directives[key](el, rawValue, context);
+      }
+      
+      // 2. Dynamic Props (data-prop-*)
+      // Maps data-prop-user-id (dataset.propUserId) -> dataset.userId
+      else if (key.startsWith('prop') && key.length > 4) {
+        // 'propUserId' -> 'UserId' -> 'userId'
+        const propName = key.slice(4)[0].toLowerCase() + key.slice(5);
+        const val = evaluate(rawValue, context);
+        if (val !== undefined) {
+          el.dataset[propName] = val;
+        }
+      }
+    });
+  });
+};
+
+/**
+ * Binding Strategies Registry.
+ * Defines the order and type of bindings to apply.
+ */
+const BindingStrategies = [
+  processListBindings,      // Structural bindings first (modifies DOM tree)
+  processAttributeBindings, // Attribute bindings second (modifies properties)
+];
+
+const processBindings = (root, context) => {
+  BindingStrategies.forEach(strategy => strategy(root, context));
+};
+
+// --- 7. COMPONENT SYSTEM ---
+
+/**
+ * The base class for all boreDOM components.
+ * Encapsulates Shadow DOM creation, style application, and event delegation.
+ */
+class ReactiveComponent extends HTMLElement {
+  constructor(templateContent, styles) {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot.appendChild(templateContent.cloneNode(true));
+    this.shadowRoot.adoptedStyleSheets = styles;
+    
+    // Instance-level state and refs
+    this.localState = createReactiveState({}, () => scheduleComponentUpdate(this));
+    this.refs = {};
+    this.eventHandlers = new Map();
+    this.mountHooks = [];
+    this.updateHooks = [];
+    this.cleanupHooks = [];
+    this._initialized = false;
+    this._eventDelegationReady = false;
+
+    // Initialize Slots Proxy
+    this.slots = new Proxy({}, {
+      set: (target, prop, value) => {
+        target[prop] = value;
+        scheduleComponentUpdate(this);
+        return true;
+      },
+    });
+
+    this._setupPropMirroring();
+    this._overrideQuerySelector();
+  }
+
+  /**
+   * Internal update method.
+   * Merges global state, local state, and props (detail/slots) into the context.
+   */
+  _update() {
+    try {
+      const context = this._createContext();
+
+      processBindings(this.shadowRoot, context);
+      runHooks(this, this.updateHooks, context, 'update_hook');
+    } catch (err) {
+      DevTools.error(this.tagName.toLowerCase(), err, { source: '_update' });
+    }
+  }
+
+  _createContext() {
+    return createComponentContext(this);
+  }
+
+  /**
+   * Mirrors data-prop-* attributes to standard data-* attributes
+   * for easier CSS targeting.
+   */
+  _setupPropMirroring() {
+    for (const attr of this.attributes) {
+      if (attr.name.startsWith(CONSTANTS.Attributes.PROP_PREFIX)) {
+        const newName = attr.name.replace(CONSTANTS.Attributes.PROP_PREFIX, 'data-');
+        if (!this.hasAttribute(newName)) {
+          this.setAttribute(newName, attr.value);
+        }
+      }
+    }
+  }
+
+  /**
+   * Convenience method to default querySelector to shadowRoot.
+   */
+  _overrideQuerySelector() {
+    const originalQuerySelector = this.querySelector.bind(this);
+    this.querySelector = (selector) => {
+      return originalQuerySelector(selector) || this.shadowRoot.querySelector(selector);
+    };
+  }
+
+  async connectedCallback() {
+    // Step 3: Hydrate component (Shadow DOM + logic)
+    activeShadowRoots.add(this.shadowRoot);
+    this._setupEventDelegation();
+    await this._loadScriptLogic();
+    // Step 4: Apply bindings + Step 5: Run hooks
+    this._update();
+    runHooks(this, this.mountHooks, this._createContext(), 'mount_hook');
+  }
+
+  disconnectedCallback() {
+    activeShadowRoots.delete(this.shadowRoot);
+    const hooks = [...this.cleanupHooks].reverse();
+    runHooks(this, hooks, this._createContext(), 'cleanup_hook');
+  }
+
+  _setupEventDelegation() {
+    if (this._eventDelegationReady) return;
+    this._eventDelegationReady = true;
+
+    // Register all supported event listeners with dynamic attribute mapping
+    CONSTANTS.Events.forEach((event) => {
+      // Rule: click -> dispatch, others -> dispatchName
+      const actionType = getDispatchAttribute(event);
+      const useCapture = shouldUseCapture(event);
+      this.shadowRoot.addEventListener(
+        event,
+        (e) => dispatchComponentEvent(this, e, actionType),
+        { capture: useCapture },
+      );
+    });
+  }
+
+  async _loadScriptLogic() {
+    if (this._initialized) return;
+    const componentName = this.tagName.toLowerCase();
+    if (loadedScripts[componentName]) {
+      try {
+        const module = await loadedScripts[componentName];
+        if (module && module.default) {
+          const initFn = module.default;
+          // Inject lifecycle hooks and context into initialization
+          initFn(createInitContext(this));
+        }
+      } catch (err) {
+        DevTools.error(componentName, err, { source: 'script_load' });
+      }
+    }
+    this._initialized = true;
+  }
+}
+
+// --- 8. INITIALIZATION ---
+
+/**
+ * Resource Processors handle different component definition tags.
+ */
+const ResourceProcessors = {
+  STYLE: (node, name) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(node.textContent);
+    if (!componentStyles.has(name)) componentStyles.set(name, []);
+    componentStyles.get(name).push(sheet);
+    node.remove();
+  },
+  SCRIPT: (node, name) => {
+    const blob = new Blob([node.textContent], { type: 'text/javascript' });
+    const url = URL.createObjectURL(blob);
+    loadedScripts[name] = import(url).then(m => {
+      URL.revokeObjectURL(url);
+      return m;
+    });
+    node.remove();
+  },
+  TEMPLATE: (node, name) => {
+    // @ts-ignore
+    const templateContent = node.content;
+    if (!customElements.get(name)) {
+      customElements.define(name, class extends ReactiveComponent {
+        constructor() {
+          super(templateContent, componentStyles.get(name) || []);
+        }
+      });
+    }
+  }
+};
+
+const init = () => {
+  // Step 1: Initialize Global State
+  const currentScript = document.currentScript;
+  // @ts-ignore
+  const stateSelector = currentScript.dataset.state;
+  const stateElement = initGlobalState(stateSelector);
+
+  // Step 2: Discover and Register Components
+  registerComponents(collectComponentNodes());
+
+  // Step 6: Expose DevTools API
+  exposeDevTools(stateElement);
+};
+
+// Variable declaration for internal usage
+var globalState;
+
+// Boot
+init();
+
+    </script>
+  </body>
+</html>

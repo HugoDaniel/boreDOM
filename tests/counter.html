@@ -21,8 +21,47 @@
         padding: 2rem;
       }
     </style>
+  </head>
 
-    <style data-component="simple-counter">
+  <body>
+    <!-- STATE -->
+    <script id="initial-state" type="application/json">
+      {}
+    </script>
+
+    <simple-counter></simple-counter>
+
+    <!-- TEMPLATES -->
+    <template data-component="simple-counter">
+      <div class="counter-shell">
+        <h2>Simple Counter</h2>
+        <p class="counter-display" data-text="local.count">0</p>
+        <div class="counter-controls">
+          <button data-dispatch="decrement">-</button>
+          <button data-dispatch="increment">+</button>
+          <button data-dispatch="reset" class="secondary">Reset</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- LOGIC -->
+    <script type="text/boredom" data-component="simple-counter">
+      export default ({ on, local }) => {
+        local.count = 0;
+        on("increment", ({ local }) => { local.count += 1 });
+        on("decrement", ({ local }) => { local.count -= 1 });
+        on("reset", ({ local }) => { local.count = 0 });
+      };
+    </script>
+
+    <!-- RUNTIME -->
+    <script
+      type="module"
+      src="../src/boreDOM.js"
+      data-state="#initial-state"
+    ></script>
+
+    <style type="boredom" data-component="simple-counter">
       @layer components.simple-counter {
         simple-counter .counter-shell {
           max-width: 400px;
@@ -64,40 +103,5 @@
         }
       }
     </style>
-  </head>
-
-  <body>
-    <!-- STATE -->
-    <script id="initial-state" type="application/json">
-      {}
-    </script>
-
-    <simple-counter></simple-counter>
-
-    <!-- TEMPLATES -->
-    <template data-component="simple-counter">
-      <div class="counter-shell">
-        <h2>Simple Counter</h2>
-        <p class="counter-display" data-text="local.count">0</p>
-        <div class="counter-controls">
-          <button data-dispatch="decrement">-</button>
-          <button data-dispatch="increment">+</button>
-          <button data-dispatch="reset" class="secondary">Reset</button>
-        </div>
-      </div>
-    </template>
-
-    <!-- LOGIC -->
-    <script type="text/boredom" data-component="simple-counter">
-      export default ({ on, local }) => {
-        local.count = 0;
-        on("increment", ({ local }) => { local.count += 1 });
-        on("decrement", ({ local }) => { local.count -= 1 });
-        on("reset", ({ local }) => { local.count = 0 });
-      };
-    </script>
-
-    <!-- RUNTIME -->
-    <script src="./boreDOM.js" data-state="#initial-state"></script>
   </body>
 </html>

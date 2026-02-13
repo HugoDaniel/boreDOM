@@ -1,0 +1,14 @@
+{
+  "name": "boredom-multi-file-example",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@mr_hugo/vite-plugin-boredom": "file:../../packages/vite-plugin-boredom",
+    "vite": "^5.0.0"
+  }
+}

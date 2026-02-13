@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>boreDOM Lifecycle</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color: #111827;
+        background: #f3f4f6;
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+      }
+    </style>
+
+    <style data-component="lifecycle-host">
+      @layer components.lifecycle-host {
+        lifecycle-host .host {
+          max-width: 520px;
+          margin: 0 auto;
+          background: #fff;
+          padding: 1.5rem;
+          border-radius: 12px;
+          box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+          display: grid;
+          gap: 1rem;
+        }
+        lifecycle-host button {
+          border: none;
+          border-radius: 999px;
+          padding: 0.5rem 1rem;
+          background: #2563eb;
+          color: #fff;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        lifecycle-host .label {
+          color: #6b7280;
+          font-size: 0.85rem;
+        }
+      }
+    </style>
+
+    <style data-component="lifecycle-widget">
+      @layer components.lifecycle-widget {
+        lifecycle-widget .widget {
+          padding: 1rem;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          display: grid;
+          gap: 0.25rem;
+        }
+        lifecycle-widget .label {
+          color: #6b7280;
+          font-size: 0.85rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <script id="initial-state" type="application/json">
+      { "cleanups": 0, "widgets": [1] }
+    </script>
+
+    <lifecycle-host></lifecycle-host>
+
+    <template data-component="lifecycle-host">
+      <div class="host">
+        <button data-dispatch="toggle">Toggle Widget</button>
+        <div class="label">
+          Cleanup count: <strong class="cleanup-count" data-text="state.cleanups"></strong>
+        </div>
+        <div data-list="state.widgets">
+          <template data-item>
+            <lifecycle-widget></lifecycle-widget>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <template data-component="lifecycle-widget">
+      <div class="widget">
+        <div class="label">Bindings:</div>
+        <div>Value: <strong data-ref="bound" data-text="local.value"></strong></div>
+        <div>Update Hook: <strong class="update-log" data-ref="updateLog"></strong></div>
+        <div>Mount Hook: <strong class="mount-log" data-ref="mountLog"></strong></div>
+      </div>
+    </template>
+
+    <script type="text/boredom" data-component="lifecycle-host">
+      export default ({ on }) => {
+        on("toggle", ({ state }) => {
+          state.widgets = state.widgets.length ? [] : [1];
+        });
+      };
+    </script>
+
+    <script type="text/boredom" data-component="lifecycle-widget">
+      export default ({ local, onMount, onUpdate, onCleanup }) => {
+        local.value = "ready";
+
+        onMount(({ refs }) => {
+          refs.mountLog.textContent = "mounted";
+        });
+
+        onUpdate(({ refs }) => {
+          refs.updateLog.textContent = refs.bound.textContent;
+        });
+
+        onCleanup(({ state }) => {
+          state.cleanups += 1;
+        });
+      };
+    </script>
+
+    <script src="./boreDOM.js" data-state="#initial-state"></script>
+  </body>
+</html>

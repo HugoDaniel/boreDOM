@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>boreDOM List Stability Lab</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color: #111827;
+        background: #f9fafb;
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+      }
+    </style>
+
+    <style data-component="list-stability-lab">
+      @layer components.list-stability-lab {
+        list-stability-lab .lab {
+          max-width: 980px;
+          margin: 0 auto;
+          background: #fff;
+          border-radius: 16px;
+          padding: 1.5rem;
+          box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+          display: grid;
+          gap: 1.5rem;
+        }
+        list-stability-lab .controls {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+          align-items: center;
+        }
+        list-stability-lab button {
+          border: none;
+          border-radius: 999px;
+          padding: 0.5rem 1.25rem;
+          background: #2563eb;
+          color: #fff;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        list-stability-lab button.secondary {
+          background: #e2e8f0;
+          color: #1f2937;
+        }
+        list-stability-lab .stats {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 0.75rem;
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 1rem;
+        }
+        list-stability-lab .stat {
+          display: grid;
+          gap: 0.25rem;
+          font-size: 0.9rem;
+        }
+        list-stability-lab .stat strong {
+          font-size: 1.4rem;
+        }
+        list-stability-lab .grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 0.75rem;
+        }
+        list-stability-lab .pad {
+          display: grid;
+          gap: 0.25rem;
+          border-radius: 12px;
+          border: 1px solid #e5e7eb;
+          padding: 0.75rem;
+          background: #f8fafc;
+          cursor: pointer;
+          text-align: left;
+        }
+        list-stability-lab .pad small {
+          color: #6b7280;
+        }
+        list-stability-lab .timeline {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: grid;
+          gap: 0.5rem;
+        }
+        list-stability-lab .timeline li {
+          padding: 0.6rem 0.9rem;
+          border-radius: 10px;
+          background: #f1f5f9;
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.9rem;
+        }
+        list-stability-lab .hint {
+          color: #64748b;
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <script id="initial-state" type="application/json">
+      {
+        "tick": 0,
+        "pads": [
+          { "id": 1, "label": "Kick" },
+          { "id": 2, "label": "Snare" },
+          { "id": 3, "label": "Hi-Hat" },
+          { "id": 4, "label": "Clap" },
+          { "id": 5, "label": "Bass" },
+          { "id": 6, "label": "Synth" },
+          { "id": 7, "label": "Lead" },
+          { "id": 8, "label": "Vox" },
+          { "id": 9, "label": "FX" },
+          { "id": 10, "label": "Riser" },
+          { "id": 11, "label": "Perc" },
+          { "id": 12, "label": "Chord" }
+        ],
+        "events": []
+      }
+    </script>
+
+    <list-stability-lab></list-stability-lab>
+
+    <template data-component="list-stability-lab">
+      <div class="lab">
+        <header>
+          <h1>List Stability Lab</h1>
+          <p class="hint">
+            Start the ticker and click pads while updates are firing. The pad grid should stay
+            stable even as <code>state.tick</code> changes.
+          </p>
+        </header>
+
+        <div class="controls">
+          <button data-dispatch="toggleTicker">
+            <span data-text="local.running ? 'Stop ticker' : 'Start ticker'"></span>
+          </button>
+          <button class="secondary" data-dispatch="toggleNoop">
+            <span data-text="local.noop ? 'Disable no-op writes' : 'Enable no-op writes'"></span>
+          </button>
+          <span class="hint">Status: <strong data-text="local.running ? 'running' : 'stopped'"></strong></span>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <span>Tick</span>
+            <strong data-text="state.tick"></strong>
+          </div>
+          <div class="stat">
+            <span>Total updates</span>
+            <strong data-ref="updateCount">0</strong>
+          </div>
+          <div class="stat">
+            <span>Pad list rebuilds</span>
+            <strong data-ref="rebuildCount">0</strong>
+          </div>
+          <div class="stat">
+            <span>Pad nodes stable?</span>
+            <strong data-ref="stableFlag">unknown</strong>
+          </div>
+          <div class="stat">
+            <span>Pad clicks</span>
+            <strong data-text="local.clicks"></strong>
+          </div>
+          <div class="stat">
+            <span>Last pad</span>
+            <strong data-text="local.lastPad"></strong>
+          </div>
+        </div>
+
+        <section>
+          <h2>Static Pad Grid</h2>
+          <div class="grid" data-ref="padGrid" data-list="state.pads" data-list-once>
+            <template data-item>
+              <button class="pad" data-dispatch="padClick" data-arg-id="item.id">
+                <strong data-text="item.label"></strong>
+                <small>ID: <span data-text="item.id"></span></small>
+              </button>
+            </template>
+          </div>
+        </section>
+
+        <section>
+          <h2>Timeline (updates every 10 ticks)</h2>
+          <ul class="timeline" data-ref="timeline" data-list="state.events" data-list-key="item.id">
+            <template data-item>
+              <li>
+                <span data-text="item.label"></span>
+                <span>#<span data-text="item.id"></span></span>
+              </li>
+            </template>
+          </ul>
+        </section>
+      </div>
+    </template>
+
+    <script type="text/boredom" data-component="list-stability-lab">
+      export default ({ on, onMount, onUpdate, state, local, refs }) => {
+        let rafId = 0;
+        let updateCount = 0;
+        let rebuildCount = 0;
+        let padNodes = [];
+
+        local.running = false;
+        local.noop = false;
+        local.clicks = 0;
+        local.lastPad = "-";
+
+        const tick = () => {
+          if (!local.running) return;
+
+          state.tick += 1;
+
+          if (local.noop) {
+            state.tick = state.tick;
+          }
+
+          if (state.tick % 10 === 0) {
+            const next = { id: state.tick, label: "Tick " + state.tick };
+            state.events = [next, ...state.events].slice(0, 8);
+          }
+
+          rafId = requestAnimationFrame(tick);
+        };
+
+        on("toggleTicker", () => {
+          local.running = !local.running;
+          if (local.running) {
+            rafId = requestAnimationFrame(tick);
+          } else {
+            cancelAnimationFrame(rafId);
+          }
+        });
+
+        on("toggleNoop", () => {
+          local.noop = !local.noop;
+        });
+
+        on("padClick", ({ e }) => {
+          local.clicks += 1;
+          local.lastPad = e.args.id;
+        });
+
+        onMount(() => {
+          padNodes = Array.from(refs.padGrid.querySelectorAll(".pad"));
+        });
+
+        onUpdate(() => {
+          updateCount += 1;
+
+          const currentNodes = Array.from(refs.padGrid.querySelectorAll(".pad"));
+          let stable = false;
+
+          if (padNodes.length === currentNodes.length && padNodes.length > 0) {
+            stable = currentNodes.every((node, idx) => node === padNodes[idx]);
+          }
+
+          if (padNodes.length > 0 && !stable) {
+            rebuildCount += 1;
+          }
+
+          padNodes = currentNodes;
+
+          refs.updateCount.textContent = String(updateCount);
+          refs.rebuildCount.textContent = String(rebuildCount);
+          refs.stableFlag.textContent = stable ? "yes" : "no";
+        });
+      };
+    </script>
+
+    <script src="./boreDOM.js" data-state="#initial-state"></script>
+  </body>
+</html>

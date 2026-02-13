@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <title>boreDOM Palette Test</title>
     <style>
-      /* Global Variables - Should pierce Shadow DOM */
+      /* Global Variables - Shared across components */
       :root {
         --bg-color: #ffffff;
         --text-color: #333333;
@@ -29,53 +29,57 @@
 
     <!-- COMPONENT 1: Theme Switcher -->
     <style data-component="theme-switcher">
-      .container {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 2rem;
-        padding: 1rem;
-        border: 1px solid var(--text-color);
-        border-radius: 8px;
-        align-items: center;
-      }
-      button {
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-        border: 3px solid green; 
-        background: var(--bg-color);
-        color: var(--text-color);
-      }
-      .debug {
-        margin-left: auto;
-        font-family: monospace;
-        font-size: 0.9rem;
+      @layer components.theme-switcher {
+        theme-switcher .container {
+          display: flex;
+          gap: 1rem;
+          margin-bottom: 2rem;
+          padding: 1rem;
+          border: 1px solid var(--text-color);
+          border-radius: 8px;
+          align-items: center;
+        }
+        theme-switcher button {
+          padding: 0.5rem 1rem;
+          cursor: pointer;
+          border: 3px solid green; 
+          background: var(--bg-color);
+          color: var(--text-color);
+        }
+        theme-switcher .debug {
+          margin-left: auto;
+          font-family: monospace;
+          font-size: 0.9rem;
+        }
       }
     </style>
 
     <!-- COMPONENT 2: Display Card -->
     <style data-component="display-card">
-      .card {
-        padding: 2rem;
-        border-radius: 12px;
-        background-color: var(--accent-color);
-        color: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      }
-      h2 { margin: 0; }
-      p { opacity: 0.9; }
-      code {
-        background: rgba(0,0,0,0.2);
-        padding: 0.2rem 0.4rem;
-        border-radius: 4px;
-      }
-      
-      button {
-        margin-top: 1rem;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
-        background: rgba(255,255,255,0.2);
-        color: white;
+      @layer components.display-card {
+        display-card .card {
+          padding: 2rem;
+          border-radius: 12px;
+          background-color: var(--accent-color);
+          color: white;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        display-card h2 { margin: 0; }
+        display-card p { opacity: 0.9; }
+        display-card code {
+          background: rgba(0,0,0,0.2);
+          padding: 0.2rem 0.4rem;
+          border-radius: 4px;
+        }
+        
+        display-card button {
+          margin-top: 1rem;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 4px;
+          background: rgba(255,255,255,0.2);
+          color: white;
+        }
       }
     </style>
   </head>
@@ -111,11 +115,11 @@
 
     <!-- LOGIC -->
     <script type="text/boredom" data-component="theme-switcher">
-      export default ({ on }) => {
+      export default ({ on, onUpdate }) => {
         on("setLight", ({ state }) => { state.theme = "light"; });
         on("setDark", ({ state }) => { state.theme = "dark"; });
 
-        return ({ state }) => {
+        onUpdate(({ state }) => {
           // 1. Apply Theme
           const cls = state.theme === "dark" ? "dark-mode" : "";
           if (document.body.className !== cls) {
@@ -130,7 +134,7 @@
                  state.activeColor = color;
              }
           });
-        };
+        });
       };
     </script>
 

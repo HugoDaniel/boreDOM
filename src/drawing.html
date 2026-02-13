@@ -33,101 +33,105 @@
 
     <!-- COMPONENT: Toolbar -->
     <style data-component="drawing-toolbar">
-      .toolbar {
-        padding: 1rem;
-        background: #ffffff;
-        border-bottom: 1px solid #e5e7eb;
-        display: flex;
-        gap: 1.5rem;
-        align-items: center;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-      .group {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-      }
-      .label {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #6b7280;
-        font-weight: 600;
-        margin-right: 0.25rem;
-      }
-      
-      /* Color Swatches */
-      .color-btn {
-        width: 2rem;
-        height: 2rem;
-        border-radius: 50%;
-        border: 2px solid transparent;
-        cursor: pointer;
-        transition: transform 0.1s;
-      }
-      .color-btn:hover { transform: scale(1.1); }
-      .color-btn.active { border-color: #000; box-shadow: 0 0 0 2px rgba(0,0,0,0.1); }
+      @layer components.drawing-toolbar {
+        drawing-toolbar .toolbar {
+          padding: 1rem;
+          background: #ffffff;
+          border-bottom: 1px solid #e5e7eb;
+          display: flex;
+          gap: 1.5rem;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+        drawing-toolbar .group {
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+        }
+        drawing-toolbar .label {
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #6b7280;
+          font-weight: 600;
+          margin-right: 0.25rem;
+        }
+        
+        /* Color Swatches */
+        drawing-toolbar .color-btn {
+          width: 2rem;
+          height: 2rem;
+          border-radius: 50%;
+          border: 2px solid transparent;
+          cursor: pointer;
+          transition: transform 0.1s;
+        }
+        drawing-toolbar .color-btn:hover { transform: scale(1.1); }
+        drawing-toolbar .color-btn.active { border-color: #000; box-shadow: 0 0 0 2px rgba(0,0,0,0.1); }
 
-      /* Size Buttons */
-      .size-btn {
-        width: 2rem;
-        height: 2rem;
-        border: 1px solid #e5e7eb;
-        background: white;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-      }
-      .size-btn.active { background: #eff6ff; border-color: #2563eb; color: #2563eb; }
-      .dot { background: currentColor; border-radius: 50%; }
+        /* Size Buttons */
+        drawing-toolbar .size-btn {
+          width: 2rem;
+          height: 2rem;
+          border: 1px solid #e5e7eb;
+          background: white;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+        drawing-toolbar .size-btn.active { background: #eff6ff; border-color: #2563eb; color: #2563eb; }
+        drawing-toolbar .dot { background: currentColor; border-radius: 50%; }
 
-      /* Tool Buttons */
-      .tool-btn {
-        padding: 0.5rem 1rem;
-        border: 1px solid #e5e7eb;
-        background: white;
-        border-radius: 6px;
-        font-weight: 500;
-        cursor: pointer;
+        /* Tool Buttons */
+        drawing-toolbar .tool-btn {
+          padding: 0.5rem 1rem;
+          border: 1px solid #e5e7eb;
+          background: white;
+          border-radius: 6px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        drawing-toolbar .tool-btn:hover { background: #f9fafb; }
+        drawing-toolbar .tool-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+        drawing-toolbar .tool-btn.danger { color: #dc2626; border-color: #fca5a5; }
+        drawing-toolbar .tool-btn.danger:hover { background: #fef2f2; }
       }
-      .tool-btn:hover { background: #f9fafb; }
-      .tool-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
-      .tool-btn.danger { color: #dc2626; border-color: #fca5a5; }
-      .tool-btn.danger:hover { background: #fef2f2; }
     </style>
 
     <!-- COMPONENT: Canvas -->
     <style data-component="drawing-canvas">
-      .canvas-container {
-        flex: 1;
-        position: relative;
-        cursor: crosshair;
-        background: white;
-        margin: 1rem;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-        touch-action: none; /* Prevent scrolling while drawing */
-      }
-      canvas {
-        display: block;
-        width: 100%;
-        height: 100%;
-      }
-      .drawing-status {
-        position: absolute;
-        bottom: 1rem;
-        right: 1rem;
-        background: rgba(37, 99, 235, 0.1);
-        color: #2563eb;
-        padding: 0.25rem 0.75rem;
-        border-radius: 99px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        pointer-events: none;
+      @layer components.drawing-canvas {
+        drawing-canvas .canvas-container {
+          flex: 1;
+          position: relative;
+          cursor: crosshair;
+          background: white;
+          margin: 1rem;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          touch-action: none; /* Prevent scrolling while drawing */
+        }
+        drawing-canvas canvas {
+          display: block;
+          width: 100%;
+          height: 100%;
+        }
+        drawing-canvas .drawing-status {
+          position: absolute;
+          bottom: 1rem;
+          right: 1rem;
+          background: rgba(37, 99, 235, 0.1);
+          color: #2563eb;
+          padding: 0.25rem 0.75rem;
+          border-radius: 99px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          pointer-events: none;
+        }
       }
     </style>
   </head>
@@ -160,10 +164,10 @@
             <template data-item>
               <button 
                 class="color-btn"
-                data-prop-bg="item"
+                data-attr-style="'background:' + item"
                 data-class="active:state.activeColor === item"
                 data-dispatch="setColor"
-                data-prop-color="item"
+                data-arg-color="item"
               ></button>
             </template>
           </div>
@@ -178,9 +182,9 @@
                 class="size-btn"
                 data-class="active:state.activeSize === item"
                 data-dispatch="setSize"
-                data-prop-size="item"
+                data-arg-size="item"
               >
-                <div class="dot" data-prop-style="'width:' + item + 'px; height:' + item + 'px'"></div>
+                <div class="dot" data-attr-style="'width:' + item + 'px; height:' + item + 'px'"></div>
               </button>
             </template>
           </div>
@@ -221,14 +225,14 @@
     <!-- LOGIC -->
 
     <script type="text/boredom" data-component="drawing-toolbar">
-      export default ({ on, self }) => {
+      export default ({ on }) => {
         on("setColor", ({ state, e }) => {
-          state.activeColor = e.dispatcher.dataset.color;
+          state.activeColor = e.args.color;
           state.tool = "brush"; // Switch back to brush if picking color
         });
 
         on("setSize", ({ state, e }) => {
-          state.activeSize = Number(e.dispatcher.dataset.size);
+          state.activeSize = Number(e.args.size);
         });
 
         on("setBrush", ({ state }) => { state.tool = "brush"; });
@@ -238,17 +242,11 @@
           state.clearSignal += 1; 
         });
 
-        // Set background colors dynamically for swatches
-        return ({ state }) => {
-          self.querySelectorAll(".color-btn").forEach(btn => {
-            if (btn.dataset.bg) btn.style.backgroundColor = btn.dataset.bg;
-          });
-        };
       };
     </script>
 
     <script type="text/boredom" data-component="drawing-canvas">
-      export default ({ on, refs, local }) => {
+      export default ({ on, onMount, onUpdate, refs, local }) => {
         let ctx = null;
         let lastClear = 0;
         local.isDrawing = false;
@@ -271,7 +269,9 @@
         };
 
         // Resize observer to handle window changes
-        setTimeout(initCanvas, 50); // Initial setup
+        onMount(() => {
+          setTimeout(initCanvas, 50); // Initial setup
+        });
         
         // Drawing Logic
         const getPos = (e) => {
@@ -309,7 +309,7 @@
         });
 
         // Reactive Updates (State -> Canvas Context)
-        return ({ state }) => {
+        onUpdate(({ state }) => {
           if (!ctx) return;
 
           // Clear Signal
@@ -327,7 +327,7 @@
             ctx.globalCompositeOperation = "source-over";
             ctx.strokeStyle = state.activeColor;
           }
-        };
+        });
       };
     </script>
 

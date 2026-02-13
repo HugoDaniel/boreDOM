@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Validate Handlers Fixture</title>
+  </head>
+  <body>
+    <script id="initial-state" type="application/json">{}</script>
+
+    <demo-component></demo-component>
+
+    <template data-component="demo-component">
+      <button data-dispatch="foo">Foo</button>
+      <button data-dispatch="bar">Bar</button>
+      <button data-dispatch="baz">Baz</button>
+      <button data-dispatch="qux">Qux</button>
+      <button data-dispatch="quux">Quux</button>
+      <button data-dispatch="opt">Opt</button>
+      <button data-dispatch="opt2">Opt2</button>
+    </template>
+
+    <script type="text/boredom" data-component="demo-component">
+      export default ({ on }) => {
+        const register = on;
+        register("foo", () => {});
+
+        const ctx = { on };
+        ctx.on("bar", () => {});
+
+        const { on: hook } = ctx;
+        hook("baz", () => {});
+
+        const actions = {
+          qux: () => {},
+          "quux": () => {},
+        };
+
+        Object.entries(actions).forEach(([name, fn]) => on(name, fn));
+        Object.keys(actions).forEach((name) => on(name, actions[name]));
+
+        ctx?.on("opt", () => {});
+        on?.("opt2", () => {});
+      };
+    </script>
+
+    <script src="./boreDOM.js" data-state="#initial-state"></script>
+  </body>
+</html>

@@ -82,7 +82,7 @@ test.describe('boredom scaffold', () => {
     const tmpBase = await fs.mkdtemp(path.join(os.tmpdir(), 'boredom-component-template-'));
     await fs.mkdir(path.join(tmpBase, 'components', 'ui'), { recursive: true });
 
-    const result = await runCli(['component', 'my-widget'], undefined, tmpBase);
+    const result = await runCli(['component', 'my-widget', '--experimental-multi'], undefined, tmpBase);
     expect(result.code).toBe(0);
 
     const generatedPath = path.join(tmpBase, 'components', 'ui', 'MyWidget.js');
@@ -93,6 +93,24 @@ test.describe('boredom scaffold', () => {
     );
 
     expect(generated).toBe(componentTemplate.split('__COMPONENT_NAME__').join('my-widget'));
+  });
+
+  test('component command requires explicit experimental flag', async () => {
+    const tmpBase = await fs.mkdtemp(path.join(os.tmpdir(), 'boredom-component-flag-'));
+    await fs.mkdir(path.join(tmpBase, 'components', 'ui'), { recursive: true });
+
+    const result = await runCli(['component', 'my-widget'], undefined, tmpBase);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('--experimental-multi');
+  });
+
+  test('init rejects --vite without explicit experimental flag', async () => {
+    const tmpBase = await fs.mkdtemp(path.join(os.tmpdir(), 'boredom-init-vite-flag-'));
+    const target = path.join(tmpBase, 'project');
+
+    const result = await runCli(['init', target, '--vite', '--no-inline']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('--experimental-multi');
   });
 
   test('default scaffold validates cleanly', async () => {

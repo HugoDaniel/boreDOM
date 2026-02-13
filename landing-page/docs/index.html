@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>boreDOM Docs</title>
+    <link rel="stylesheet" href="../reset.css" />
+    <link rel="stylesheet" href="../index.css" />
+    <link rel="stylesheet" href="../prism.css" />
+    <script src="../prism.js"></script>
+  </head>
+  <body>
+    <div class="header">
+      <h1 class="title"><a href="../index.html">boreDOM</a></h1>
+      <span class="subtitle">Documentation</span>
+    </div>
+
+    <nav id="TOC">
+      <ul>
+        <li><a href="#quickstart">Quickstart</a></li>
+        <li><a href="#structure">Anatomy</a></li>
+        <li><a href="#api">API Reference</a></li>
+        <li><a href="#cli">CLI &amp; Tooling</a></li>
+      </ul>
+    </nav>
+
+    <h2 id="quickstart">Quickstart</h2>
+    <h3 id="alternative-start">As an alternative do it by hand</h3>
+    <p>
+      Copy <code>boreDOM.js</code> to your folder. Create an
+      <code>index.html</code>.
+    </p>
+    <pre><code class="language-html">&lt;script src="./boreDOM.js"&gt;&lt;/script&gt;</code></pre>
+
+    <h2 id="structure">Anatomy of a Component</h2>
+    <p>
+      A boreDOM component is just three HTML tags sharing a
+      <code>data-component</code> name. These are typically a
+      <code>&lt;template&gt;</code>, and optional <code>&lt;style&gt;</code> and
+      <code>&lt;script&gt;</code>
+    </p>
+
+    <h3>1. The Template</h3>
+    <pre><code class="language-html">&lt;template data-component="my-button"&gt;
+  &lt;button data-dispatch="clickMe"&gt;
+    Clicked &lt;span data-text="local.clicks"&gt;0&lt;/span&gt; times
+  &lt;/button&gt;
+&lt;/template&gt;</code></pre>
+
+    <h3>2. The Style (Optional)</h3>
+    <pre><code class="language-html">&lt;style data-component="my-button"&gt;
+  button { background: hotpink; }
+&lt;/style&gt;</code></pre>
+
+    <h3>3. The Logic (Optional)</h3>
+    <pre><code class="language-javascript">&lt;script type="text/boredom" data-component="my-button"&gt;
+  export default ({ on, local }) => {
+    local.clicks = 0;
+    on("clickMe", () => local.clicks++);
+  };
+&lt;/script&gt;</code></pre>
+
+    <h2 id="api">API Reference</h2>
+
+    <h3>Directives</h3>
+    <p>Put these on your HTML elements. They bind things.</p>
+    <ul>
+      <li><code>data-text="path.to.value"</code>: Sets textContent.</li>
+      <li><code>data-show="path.to.bool"</code>: Toggles display.</li>
+      <li>
+        <code>data-value="path.to.value"</code>: Two-way binding for inputs.
+      </li>
+      <li>
+        <code>data-list="path.to.array"</code>: Renders a list (requires
+        <code>&lt;template data-item&gt;</code> inside).
+      </li>
+      <li>
+        <code>data-dispatch="eventName"</code>: Calls an event handler defined
+        in logic.
+      </li>
+    </ul>
+
+    <h3>Logic Arguments</h3>
+    <p>Your exported function receives an object with these tools:</p>
+    <ul>
+      <li>
+        <code>local</code>: Reactive state local to the component instance.
+      </li>
+      <li>
+        <code>state</code>: Global reactive state (if you initialized with
+        <code>data-state</code>).
+      </li>
+      <li>
+        <code>on(event, callback)</code>: Register a handler for
+        <code>data-dispatch</code> events.
+      </li>
+      <li>
+        <code>refs</code>: Access elements marked with <code>data-ref</code>.
+      </li>
+    </ul>
+
+    <h2 id="cli">CLI &amp; Tooling</h2>
+    <p>The CLI is designed to steer LLMs and validate their output.</p>
+
+    <h3>boredom init</h3>
+    <pre><code>npx @mr_hugo/boredom init [directory] [flags]</code></pre>
+    <p>Scaffolds a new project.</p>
+    <ul>
+      <li>Creates <code>index.html</code> with the runtime.</li>
+      <li>
+        Creates <code>AGENTS.md</code>: The instruction manual for your LLM.
+        Feed this to Claude/ChatGPT to ensure they write correct boreDOM code.
+      </li>
+      <li>
+        <code>--inline</code>: Inlines the JS runtime directly into HTML
+        (Single-File Mode).
+      </li>
+      <li>
+        <code>--experimental-multi</code>: Sets up a Vite project (Human Mode).
+      </li>
+    </ul>
+
+    <h3>boredom validate</h3>
+    <pre><code>npx @mr_hugo/boredom validate [file]</code></pre>
+    <p>Validates your single-file application.</p>
+    <ul>
+      <li>Checks for mismatched event handlers and dispatchers.</li>
+      <li>Detects unsafe DOM manipulations.</li>
+      <li>Verifies correct directive usage.</li>
+      <li>Ensures offline-first compatibility (warns on external fonts).</li>
+    </ul>
+
+    <p>
+      <a href="../index.html">← Back to the void</a>
+    </p>
+  </body>
+</html>

@@ -1,11 +1,13 @@
 # @mr_hugo/vite-plugin-boredom
 
-Vite plugin for multi-file boreDOM development with single-file deployment.
+Experimental Vite plugin for multi-file boreDOM authoring with single-file deployment output.
+
+Use this plugin only when you intentionally opt into boreDOM's experimental multi-file workflow. The default boreDOM path is still single-file, zero-build development.
 
 ## Installation
 
 ```bash
-npm install -D @mr_hugo/vite-plugin-boredom
+npm install -D @mr_hugo/vite-plugin-boredom@next
 ```
 
 ## Usage
@@ -101,16 +103,12 @@ export const logic = ({ on, local }) => {
 
 ```js
 // main.js
-import { loadComponent } from '@mr_hugo/vite-plugin-boredom/component-loader';
-
-const appConfig = {
-  appId: 'my-app',
-  root: '#app-root'
-};
+import { loadComponent, registerComponentPath } from '@mr_hugo/vite-plugin-boredom/component-loader';
+import * as Button from './components/ui/Button.js';
 
 async function initApp() {
-  const { Button } = await import('./components/ui/Button.js');
-  await loadComponent(Button, appConfig);
+  registerComponentPath('ui-button', Promise.resolve(Button));
+  await loadComponent(Button);
 }
 
 initApp();
@@ -126,21 +124,14 @@ initApp();
   <title>My App</title>
 </head>
 <body>
-  <main id="app-root">
   <script id="initial-state" type="application/json">
     { "user": { "name": "John" } }
   </script>
 
   <ui-button></ui-button>
-  </main>
 
   <script type="module" src="./main.js"></script>
-  <script
-    src="./boreDOM.js"
-    data-app="my-app"
-    data-root="#app-root"
-    data-state="#initial-state"
-  ></script>
+  <script src="./boreDOM.js" data-state="#initial-state"></script>
 </body>
 </html>
 ```
@@ -180,6 +171,10 @@ The plugin transforms your multi-file development setup into a single HTML file:
 - **Development**: Multi-file with HMR, component reloading
 - **Production**: Single HTML file, fully self-contained
 - **Deployment**: Zero dependencies, works anywhere
+
+## Experimental Status
+
+The plugin and dev-time loader are evolving. Validate generated output (`npx @mr_hugo/boredom validate`) and pin versions if you need repeatable CI behavior.
 
 ## Component Dependencies
 

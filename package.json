@@ -1,11 +1,23 @@
 {
   "name": "@mr_hugo/boredom",
-  "version": "0.26.1",
+  "version": "0.27.1",
   "description": "The LLM-First JavaScript Framework",
   "bin": {
     "boredom": "./bin/boredom.js"
   },
   "main": "src/boreDOM.js",
+  "files": [
+    "bin/boredom.js",
+    "src/boreDOM.js",
+    "src/scaffold.html",
+    "src/component.template.js",
+    "src/validator.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "directories": {
     "test": "tests"
   },
@@ -14,13 +26,15 @@
     "test:boredom": "playwright test e2e/boredom.spec.ts",
     "test:headless": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:ui": "playwright test --ui"
+    "test:ui": "playwright test --ui",
+    "build:cli": "node scripts/build-cli.js",
+    "build:plugin": "cd packages/vite-plugin-boredom && npm run build"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/HugoDaniel/boreDOM.git"
   },
-  "keywords": [],
+  "keywords": ["framework", "llm", "single-file", "web-components", "zero-build"],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
@@ -28,8 +42,16 @@
     "url": "https://github.com/HugoDaniel/boreDOM/issues"
   },
   "homepage": "https://github.com/HugoDaniel/boreDOM#readme",
+  "dependencies": {
+    "acorn": "^8.14.0",
+    "parse5": "^7.1.2"
+  },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "@types/node": "^25.0.9"
-  }
+    "@types/node": "^25.0.9",
+    "esbuild": "^0.24.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }

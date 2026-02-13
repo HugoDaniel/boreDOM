@@ -1,0 +1,2157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RetroBeat MPC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #1a1a1a;
+      --bg-panel: #2d2d2d;
+      --neon-green: #39ff14;
+      --neon-pink: #ff00ff;
+      --neon-cyan: #00ffff;
+      --neon-yellow: #ffff00;
+      --border-light: #4a4a4a;
+      --text-primary: #e0e0e0;
+      --text-dim: #888;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Main App Container */
+    .app-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .app-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .app-title {
+      font-size: 24px;
+      color: var(--neon-green);
+      text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
+      letter-spacing: 2px;
+      margin-bottom: 5px;
+    }
+
+    .app-subtitle {
+      font-size: 10px;
+      color: var(--neon-pink);
+      letter-spacing: 4px;
+    }
+
+    /* Main Control Panel */
+    .control-panel {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .panel-section {
+      background: var(--bg-panel);
+      border: 3px solid var(--border-light);
+      padding: 15px;
+      border-radius: 4px;
+      box-shadow:
+        inset 0 0 20px rgba(0,0,0,0.5),
+        0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .panel-title {
+      font-size: 8px;
+      color: var(--neon-cyan);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    /* Transport Controls */
+    .transport-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .transport-btn {
+      width: 60px;
+      height: 40px;
+      border: 2px solid var(--border-light);
+      background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.1s;
+      text-transform: uppercase;
+    }
+
+    .transport-btn:hover {
+      background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+      border-color: var(--neon-cyan);
+    }
+
+    .transport-btn:active {
+      transform: translateY(2px);
+    }
+
+    .transport-btn.recording {
+      background: linear-gradient(180deg, #8b0000 0%, #5a0000 100%);
+      border-color: var(--neon-pink);
+      color: var(--neon-pink);
+      animation: pulse-rec 0.5s infinite;
+    }
+
+    .transport-btn.playing {
+      background: linear-gradient(180deg, #004400 0%, #002200 100%);
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+    }
+
+    @keyframes pulse-rec {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* BPM Control */
+    .bpm-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .bpm-input {
+      width: 80px;
+      padding: 8px;
+      background: #1a1a1a;
+      border: 2px solid var(--border-light);
+      color: var(--neon-green);
+      font-family: inherit;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .bpm-input:focus {
+      outline: none;
+      border-color: var(--neon-green);
+    }
+
+    /* Preset Select */
+    .preset-select {
+      padding: 8px 12px;
+      background: #1a1a1a;
+      border: 2px solid var(--border-light);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    .preset-select:focus {
+      outline: none;
+      border-color: var(--neon-cyan);
+    }
+
+    /* Main Grid Area */
+    .main-grid {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* MPC Pad Grid */
+    .pad-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 80px);
+      grid-template-rows: repeat(4, 80px);
+      gap: 10px;
+      padding: 20px;
+      background: var(--bg-panel);
+      border: 3px solid var(--border-light);
+      border-radius: 8px;
+      box-shadow:
+        inset 0 0 30px rgba(0,0,0,0.5),
+        0 8px 16px rgba(0,0,0,0.4);
+    }
+
+    .mpc-pad {
+      width: 80px;
+      height: 80px;
+      border: 3px solid var(--border-light);
+      background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.08s;
+      position: relative;
+      font-size: 8px;
+    }
+
+    .mpc-pad:hover {
+      border-color: var(--neon-cyan);
+    }
+
+    .mpc-pad.pad-active {
+      background: linear-gradient(180deg, var(--neon-green) 0%, #2a8a0a 100%);
+      border-color: var(--neon-green);
+      box-shadow:
+        0 0 20px var(--neon-green),
+        inset 0 0 20px rgba(255,255,255,0.3);
+      transform: scale(0.95);
+    }
+
+    .mpc-pad .pad-key {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .mpc-pad .pad-note {
+      font-size: 7px;
+      color: var(--neon-pink);
+    }
+
+    .mpc-pad.pad-active .pad-key,
+    .mpc-pad.pad-active .pad-note {
+      color: #1a1a1a;
+    }
+
+    /* Side Controls */
+    .side-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      min-width: 200px;
+    }
+
+    /* Volume Slider */
+    .volume-control {
+      padding: 15px;
+    }
+
+    .volume-slider {
+      width: 100%;
+      height: 8px;
+      -webkit-appearance: none;
+      background: #1a1a1a;
+      border: 2px solid var(--border-light);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--neon-cyan);
+      border: 2px solid var(--neon-cyan);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    /* File Button */
+    .file-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(180deg, var(--neon-pink) 0%, #aa00aa 100%);
+      border: 2px solid var(--neon-pink);
+      color: #1a1a1a;
+      font-family: inherit;
+      font-size: 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.1s;
+    }
+
+    .file-btn:hover {
+      box-shadow: 0 0 15px var(--neon-pink);
+    }
+
+    /* Timeline */
+    .timeline-container {
+      margin-top: 30px;
+      padding: 20px;
+      background: var(--bg-panel);
+      border: 3px solid var(--border-light);
+      border-radius: 4px;
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .timeline-title {
+      font-size: 10px;
+      color: var(--neon-cyan);
+    }
+
+    .timeline-instructions {
+      font-size: 7px;
+      color: var(--text-dim);
+    }
+
+    .timeline-track {
+      position: relative;
+      height: 60px;
+      background: #1a1a1a;
+      border: 2px solid var(--border-light);
+      overflow: hidden;
+    }
+
+    .timeline-slots {
+      display: flex;
+      height: 100%;
+    }
+
+    .timeline-slot {
+      flex: 1;
+      border-right: 1px solid #333;
+    }
+
+    .timeline-slot.beat-1 {
+      background: rgba(57, 255, 20, 0.05);
+    }
+
+    .timeline-note {
+      position: absolute;
+      height: 24px;
+      min-width: 20px;
+      padding: 0 6px;
+      background: linear-gradient(180deg, var(--neon-green) 0%, #2a8a0a 100%);
+      border: 1px solid var(--neon-green);
+      border-radius: 2px;
+      font-size: 6px;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      z-index: 2;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .timeline-note:hover {
+      background: linear-gradient(180deg, var(--neon-pink) 0%, #aa00aa 100%);
+      border-color: var(--neon-pink);
+    }
+
+    .timeline-note.selected {
+      background: linear-gradient(180deg, var(--neon-cyan) 0%, #00aaaa 100%);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan);
+    }
+
+    .timeline-note-row-0 { top: 4px; }
+    .timeline-note-row-1 { top: 32px; }
+
+    .timeline-playhead {
+      position: absolute;
+      top: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--neon-pink);
+      box-shadow: 0 0 10px var(--neon-pink);
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--bg-panel);
+      border: 3px solid var(--neon-cyan);
+      padding: 20px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 0 30px var(--neon-cyan);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--border-light);
+    }
+
+    .modal-title {
+      font-size: 12px;
+      color: var(--neon-cyan);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--neon-pink);
+      font-size: 20px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .project-name-input {
+      width: 100%;
+      padding: 12px;
+      background: #1a1a1a;
+      border: 2px solid var(--border-light);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 10px;
+      margin-bottom: 15px;
+    }
+
+    .project-name-input:focus {
+      outline: none;
+      border-color: var(--neon-green);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .modal-btn {
+      flex: 1;
+      min-width: 80px;
+      padding: 12px 8px;
+      border: 2px solid var(--border-light);
+      background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.1s;
+    }
+
+    .modal-btn:hover {
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+    }
+
+    .modal-btn.save:hover {
+      border-color: var(--neon-green);
+    }
+
+    .modal-btn.delete:hover {
+      border-color: var(--neon-pink);
+      color: var(--neon-pink);
+    }
+
+    .modal-btn.download:hover {
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+    }
+
+    .projects-list {
+      border: 2px solid var(--border-light);
+      background: #1a1a1a;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .project-item {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .project-item:hover {
+      background: #2a2a2a;
+    }
+
+    .project-item.selected {
+      background: rgba(57, 255, 20, 0.1);
+      border-left: 3px solid var(--neon-green);
+    }
+
+    .project-item-name {
+      font-size: 10px;
+      color: var(--text-primary);
+    }
+
+    .project-item-meta {
+      font-size: 7px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .project-item-delete {
+      background: none;
+      border: none;
+      color: var(--neon-pink);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .empty-state {
+      padding: 30px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 10px;
+    }
+
+    /* Keyboard Mapping Display */
+    .keyboard-mapping {
+      margin-top: 20px;
+      padding: 15px;
+      background: var(--bg-panel);
+      border: 3px solid var(--border-light);
+    }
+
+    .keyboard-title {
+      font-size: 8px;
+      color: var(--neon-yellow);
+      margin-bottom: 10px;
+    }
+
+    .keyboard-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      font-size: 7px;
+    }
+
+    .key-mapping {
+      padding: 8px 4px;
+      background: #1a1a1a;
+      border: 1px solid var(--border-light);
+      text-align: center;
+      color: var(--text-dim);
+    }
+
+    .key-mapping span {
+      color: var(--neon-cyan);
+    }
+
+    /* Synth Visual */
+    .synth-visual {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: #1a1a1a;
+      border: 2px solid var(--border-light);
+    }
+
+    .osc-display, .env-display {
+      font-size: 8px;
+      padding: 5px 10px;
+      background: #2a2a2a;
+      border: 1px solid var(--border-light);
+      color: var(--neon-green);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .main-grid {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .pad-grid {
+        grid-template-columns: repeat(4, 60px);
+        grid-template-rows: repeat(4, 60px);
+      }
+
+      .mpc-pad {
+        width: 60px;
+        height: 60px;
+      }
+
+      .control-panel {
+        justify-content: center;
+      }
+    }
+  </style>
+
+  <!-- Initial Global State -->
+  <script id="initial-state" type="application/json">
+    {
+      "project": {
+        "id": null,
+        "name": "Untitled Project",
+        "bpm": 120,
+        "events": []
+      },
+      "isPlaying": false,
+      "isRecording": false,
+      "isLooping": true,
+      "currentPreset": "Retro Lead",
+      "currentStep": 0,
+      "selectedNoteId": null,
+      "volume": 0.7
+    }
+  </script>
+
+  <!-- Main App Component -->
+  <template data-component="retro-beat-mpc">
+    <div class="app-container">
+      <header class="app-header">
+        <h1 class="app-title">RETROBEAT MPC</h1>
+        <p class="app-subtitle">// WEB AUDIO SAMPLER //</p>
+      </header>
+
+      <div class="control-panel">
+        <div class="panel-section">
+          <div class="panel-title">Transport</div>
+          <div class="transport-controls">
+            <button class="transport-btn" data-action="play" data-class="state.isPlaying:playing">PLAY</button>
+            <button class="transport-btn" data-action="stop">STOP</button>
+            <button class="transport-btn" data-action="record" data-class="state.isRecording:recording">REC</button>
+            <button class="transport-btn" data-action="loop" data-class="state.isLooping:playing">LOOP</button>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title">Tempo</div>
+          <div class="bpm-control">
+            <input type="number" class="bpm-input" data-action="bpm-input" data-value="state.project.bpm" min="40" max="240">
+            <span style="font-size: 8px; color: var(--text-dim);">BPM</span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-title">Synth</div>
+          <select class="preset-select" data-action="preset-select" data-value="state.currentPreset">
+            <option value="Retro Lead">Retro Lead</option>
+            <option value="Deep Bass">Deep Bass</option>
+            <option value="Chiptune">Chiptune</option>
+          </select>
+        </div>
+
+        <div class="panel-section volume-control">
+          <div class="panel-title">Volume</div>
+          <input type="range" class="volume-slider" data-action="volume" min="0" max="1" step="0.01" data-value="state.volume">
+        </div>
+      </div>
+
+      <div class="main-grid">
+        <div class="pad-grid" data-ref="padGrid">
+          <!-- Pads generated by JS -->
+        </div>
+
+        <div class="side-controls">
+          <button class="file-btn" data-action="open-file-modal">FILE MENU</button>
+
+          <div class="panel-section">
+            <div class="panel-title">Keyboard Map</div>
+            <div class="keyboard-grid">
+              <div class="key-mapping"><span>1-4</span><br>Row 1</div>
+              <div class="key-mapping"><span>Q-R</span><br>Row 2</div>
+              <div class="key-mapping"><span>A-F</span><br>Row 3</div>
+              <div class="key-mapping"><span>Z-V</span><br>Row 4</div>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <div class="panel-title">Synth</div>
+            <div class="synth-visual">
+              <div data-ref="oscillatorType" class="osc-display">SAW</div>
+              <div data-ref="envelopeDisplay" class="env-display">ADSR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-container">
+        <div class="timeline-header">
+          <span class="timeline-title">SEQUENCE TIMELINE</span>
+          <span class="timeline-instructions">Click to select notes | BACKSPACE to delete</span>
+        </div>
+        <div class="timeline-track" data-ref="timelineTrack">
+          <div class="timeline-slots">
+            <div data-list="Array(16)" class="timeline-slot" data-class="index:0?beat-1"></div>
+          </div>
+          <div data-ref="notesContainer"></div>
+          <div data-ref="playhead" class="timeline-playhead"></div>
+        </div>
+      </div>
+
+      <!-- File Modal -->
+      <div data-ref="fileModal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <span class="modal-title">PROJECT FILES</span>
+            <button class="modal-close" data-action="close-modal">&times;</button>
+          </div>
+          <input type="text" class="project-name-input" data-ref="projectName" data-value="state.project.name" placeholder="Project Name">
+          <div class="modal-actions">
+            <button class="modal-btn save" data-action="save">SAVE</button>
+            <button class="modal-btn" data-action="load">LOAD</button>
+            <button class="modal-btn delete" data-action="delete">DEL</button>
+            <button class="modal-btn download" data-action="download">DOWN</button>
+          </div>
+          <div class="projects-list" data-ref="projectsList"></div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script type="text/boredom" data-component="retro-beat-mpc">
+    export default ({ on, onMount, refs, local, state }) => {
+      // Pad configuration
+      const padConfig = [
+        { key: '1', note: 'C4', freq: 261.63, row: 0 },
+        { key: '2', note: 'D4', freq: 293.66, row: 0 },
+        { key: '3', note: 'E4', freq: 329.63, row: 0 },
+        { key: '4', note: 'F4', freq: 349.23, row: 0 },
+        { key: 'q', note: 'G4', freq: 392.00, row: 0 },
+        { key: 'w', note: 'A4', freq: 440.00, row: 0 },
+        { key: 'e', note: 'B4', freq: 493.88, row: 0 },
+        { key: 'r', note: 'C5', freq: 523.25, row: 0 },
+        { key: 'a', note: 'C3', freq: 130.81, row: 1 },
+        { key: 's', note: 'D3', freq: 146.83, row: 1 },
+        { key: 'd', note: 'E3', freq: 164.81, row: 1 },
+        { key: 'f', note: 'F3', freq: 174.61, row: 1 },
+        { key: 'z', note: 'C2', freq: 65.41, row: 1 },
+        { key: 'x', note: 'D2', freq: 73.42, row: 1 },
+        { key: 'c', note: 'E2', freq: 82.41, row: 1 },
+        { key: 'v', note: 'F2', freq: 87.31, row: 1 },
+      ];
+
+      // Presets configuration
+      const presets = {
+        'Retro Lead': { type: 'sawtooth', attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.2 },
+        'Deep Bass': { type: 'square', attack: 0.02, decay: 0.2, sustain: 0.5, release: 0.3 },
+        'Chiptune': { type: 'pulse', attack: 0.001, decay: 0.05, sustain: 0.8, release: 0.1 }
+      };
+
+      // Initialize state
+      state.project.id = state.project.id || null;
+      local.selectedProjectId = null;
+
+      // Audio Engine
+      const audioEngine = {
+        ctx: null,
+        masterGain: null,
+        activeOscillators: new Map(),
+
+        init() {
+          if (this.ctx) return;
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.value = state.volume;
+          this.masterGain.connect(this.ctx.destination);
+        },
+
+        resume() {
+          if (this.ctx?.state === 'suspended') {
+            this.ctx.resume();
+          }
+        },
+
+        playNote(freq, presetName) {
+          this.init();
+          this.resume();
+
+          const preset = presets[presetName];
+          const now = this.ctx.currentTime;
+
+          // Create oscillator
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = preset.type;
+          osc.frequency.value = freq;
+
+          // Pulse width for chiptune
+          if (preset.type === 'pulse') {
+            osc.width = 0.25;
+          }
+
+          // ADSR Envelope
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(1, now + preset.attack);
+          gain.gain.linearRampToValueAtTime(preset.sustain, now + preset.attack + preset.decay);
+
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+
+          osc.start(now);
+
+          // Store for later release
+          const noteId = `${freq}-${now}`;
+          this.activeOscillators.set(noteId, { osc, gain, now, freq, presetName });
+
+          // Schedule release
+          const noteLength = 0.3;
+          gain.gain.setValueAtTime(preset.sustain, now + preset.attack + preset.decay);
+          gain.gain.linearRampToValueAtTime(0, now + preset.attack + preset.decay + preset.release);
+          osc.stop(now + preset.attack + preset.decay + preset.release + 0.1);
+
+          // Cleanup after release
+          setTimeout(() => {
+            this.activeOscillators.delete(noteId);
+          }, (preset.attack + preset.decay + preset.release + 0.2) * 1000);
+
+          return { id: noteId, freq, startTime: now, duration: noteLength };
+        },
+
+        setVolume(vol) {
+          if (this.masterGain) {
+            this.masterGain.gain.setTargetAtTime(vol, this.ctx?.currentTime || 0, 0.01);
+          }
+        }
+      };
+
+      // Sequencer
+      const sequencer = {
+        interval: null,
+        startTime: 0,
+
+        start() {
+          if (state.isPlaying) return;
+
+          state.isPlaying = true;
+          state.currentStep = 0;
+          this.startTime = audioEngine.ctx?.currentTime || 0;
+
+          const scheduleNext = () => {
+            if (!state.isPlaying) return;
+
+            const stepDuration = (60 / state.project.bpm) / 4;
+
+            // Schedule notes for this step
+            state.project.events.forEach(event => {
+              const eventStep = Math.floor((event.startTime - this.startTime) / stepDuration) % 16;
+              if (eventStep === state.currentStep) {
+                setTimeout(() => {
+                  const pad = padConfig.find(p => p.note === event.note);
+                  if (pad) {
+                    triggerPadVisual(pad.key);
+                    audioEngine.playNote(pad.freq, event.preset);
+                  }
+                }, 10);
+              }
+            });
+
+            state.currentStep++;
+
+            if (state.isLooping && state.currentStep >= 16) {
+              state.currentStep = 0;
+            }
+
+            if (!state.isLooping && state.currentStep >= 16) {
+              this.stop();
+              return;
+            }
+
+            const delay = stepDuration * 1000;
+            this.interval = setTimeout(scheduleNext, delay);
+          };
+
+          scheduleNext();
+        },
+
+        stop() {
+          state.isPlaying = false;
+          if (this.interval) {
+            clearTimeout(this.interval);
+            this.interval = null;
+          }
+          state.currentStep = 0;
+        },
+
+        startRecording() {
+          state.isRecording = true;
+          audioEngine.init();
+          audioEngine.resume();
+          this.startTime = audioEngine.ctx?.currentTime || 0;
+        },
+
+        stopRecording() {
+          state.isRecording = false;
+        },
+
+        recordNote(note) {
+          if (!state.isRecording) return;
+
+          const now = audioEngine.ctx?.currentTime || 0;
+          const relativeTime = now - this.startTime;
+          const stepDuration = (60 / state.project.bpm) / 4;
+          const step = Math.floor(relativeTime / stepDuration) % 16;
+
+          // Check if this exact note at this step already exists
+          const existingIndex = state.project.events.findIndex(
+            e => e.note === note && Math.floor((e.startTime - this.startTime) / stepDuration) % 16 === step
+          );
+
+          if (existingIndex >= 0) {
+            // Update existing note
+            state.project.events[existingIndex].preset = state.currentPreset;
+          } else {
+            // Add new note
+            state.project.events.push({
+              id: Date.now() + Math.random(),
+              note: note,
+              startTime: this.startTime + (step * stepDuration),
+              duration: 0.25,
+              preset: state.currentPreset
+            });
+          }
+
+          renderTimeline();
+        }
+      };
+
+      // Visual feedback
+      const triggerPadVisual = (key) => {
+        const pad = document.querySelector(`[data-pad-key="${key}"]`);
+        if (pad) {
+          pad.classList.add('pad-active');
+          setTimeout(() => pad.classList.remove('pad-active'), 100);
+        }
+      };
+
+      // Timeline rendering
+      const renderTimeline = () => {
+        if (!refs.notesContainer) return;
+
+        refs.notesContainer.innerHTML = '';
+
+        const stepDuration = (60 / state.project.bpm) / 4;
+
+        state.project.events.forEach((event, index) => {
+          const step = Math.floor((event.startTime - sequencer.startTime) / stepDuration) % 16;
+          const pad = padConfig.find(p => p.note === event.note);
+          if (pad && step >= 0 && step < 16) {
+            const noteEl = document.createElement('div');
+            noteEl.className = `timeline-note timeline-note-row-${pad.row}`;
+            noteEl.style.left = `${(step / 16) * 100}%`;
+            noteEl.textContent = event.note;
+            noteEl.dataset.timelineNoteId = event.id;
+
+            if (state.selectedNoteId === event.id) {
+              noteEl.classList.add('selected');
+            }
+
+            refs.notesContainer.appendChild(noteEl);
+          }
+        });
+      };
+
+      // Create pads
+      const createPads = () => {
+        if (!refs.padGrid) return;
+
+        refs.padGrid.innerHTML = padConfig.map((pad, i) => `
+          <div class="mpc-pad" data-pad-index="${i}" data-pad-key="${pad.key}" data-action="triggerPad">
+            <span class="pad-key">${pad.key.toUpperCase()}</span>
+            <span class="pad-note">${pad.note}</span>
+          </div>
+        `).join('');
+      };
+
+      // File modal functions
+      const openFileModal = () => {
+        if (refs.fileModal) {
+          refs.fileModal.classList.add('active');
+          renderProjectsList();
+        }
+      };
+
+      const closeFileModal = () => {
+        if (refs.fileModal) {
+          refs.fileModal.classList.remove('active');
+        }
+      };
+
+      const renderProjectsList = () => {
+        if (!refs.projectsList) return;
+
+        const projects = JSON.parse(localStorage.getItem('retrobeat_projects') || '[]');
+
+        if (projects.length === 0) {
+          refs.projectsList.innerHTML = '<div class="empty-state">NO PROJECTS SAVED</div>';
+        } else {
+          refs.projectsList.innerHTML = projects.map(p => `
+            <div class="project-item ${local.selectedProjectId === p.id ? 'selected' : ''}" data-id="${p.id}">
+              <div>
+                <div class="project-item-name">${p.name}</div>
+                <div class="project-item-meta">${p.events.length} notes | ${p.bpm} BPM</div>
+              </div>
+              <button class="project-item-delete" data-delete="${p.id}">&times;</button>
+            </div>
+          `).join('');
+        }
+      };
+
+      const saveProject = () => {
+        const name = refs.projectName?.value || state.project.name;
+        const projects = JSON.parse(localStorage.getItem('retrobeat_projects') || '[]');
+
+        const existingIndex = projects.findIndex(p => p.id === state.project.id);
+        const projectData = {
+          id: state.project.id || Date.now(),
+          name: name,
+          bpm: state.project.bpm,
+          events: [...state.project.events],
+          savedAt: Date.now()
+        };
+
+        if (existingIndex >= 0) {
+          projects[existingIndex] = projectData;
+        } else {
+          projects.push(projectData);
+        }
+
+        localStorage.setItem('retrobeat_projects', JSON.stringify(projects));
+        state.project.id = projectData.id;
+        state.project.name = projectData.name;
+        renderProjectsList();
+      };
+
+      const loadProject = () => {
+        if (!local.selectedProjectId) return;
+
+        const projects = JSON.parse(localStorage.getItem('retrobeat_projects') || '[]');
+        const project = projects.find(p => p.id === local.selectedProjectId);
+
+        if (project) {
+          state.project.id = project.id;
+          state.project.name = project.name;
+          state.project.bpm = project.bpm;
+          state.project.events = [...project.events];
+          closeFileModal();
+          renderTimeline();
+        }
+      };
+
+      const deleteProject = () => {
+        if (!local.selectedProjectId) return;
+
+        const projects = JSON.parse(localStorage.getItem('retrobeat_projects') || '[]');
+        const filtered = projects.filter(p => p.id !== local.selectedProjectId);
+        localStorage.setItem('retrobeat_projects', JSON.stringify(filtered));
+
+        local.selectedProjectId = null;
+        renderProjectsList();
+      };
+
+      const downloadProject = () => {
+        const data = {
+          name: state.project.name,
+          bpm: state.project.bpm,
+          events: state.project.events
+        };
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${state.project.name.replace(/[^a-z0-9]/gi, '_')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      // Transport actions
+      on("play", () => {
+        sequencer.start();
+      });
+
+      on("stop", () => {
+        sequencer.stop();
+      });
+
+      on("record", () => {
+        if (state.isRecording) {
+          sequencer.stopRecording();
+        } else {
+          if (state.isPlaying) sequencer.stop();
+          sequencer.startRecording();
+        }
+      });
+
+      on("loop", () => {
+        state.isLooping = !state.isLooping;
+      });
+
+      on("triggerPad", ({ e }) => {
+        const padEl = e.event.target.closest('.mpc-pad');
+        if (!padEl) return;
+
+        const key = padEl.dataset.padKey;
+        const pad = padConfig.find(p => p.key === key);
+        if (!pad) return;
+
+        triggerPadVisual(key);
+        audioEngine.playNote(pad.freq, state.currentPreset);
+        sequencer.recordNote(pad.note);
+      });
+
+      on("open-file-modal", () => {
+        openFileModal();
+      });
+
+      on("close-modal", () => {
+        closeFileModal();
+      });
+
+      on("save", () => {
+        saveProject();
+      });
+
+      on("load", () => {
+        loadProject();
+      });
+
+      on("delete", () => {
+        deleteProject();
+      });
+
+      on("download", () => {
+        downloadProject();
+      });
+
+      // Lifecycle
+      onMount(() => {
+        createPads();
+        renderTimeline();
+
+        // Update synth display
+        if (refs.oscillatorType) {
+          const preset = presets[state.currentPreset];
+          refs.oscillatorType.textContent = preset.type.toUpperCase().slice(0, 3);
+        }
+
+        // Keyboard events
+        document.addEventListener('keydown', (e) => {
+          const key = e.key.toLowerCase();
+
+          // Ignore if typing in input
+          if (e.target.tagName === 'INPUT') return;
+
+          const pad = padConfig.find(p => p.key === key);
+          if (pad) {
+            e.preventDefault();
+            triggerPadVisual(key);
+            audioEngine.playNote(pad.freq, state.currentPreset);
+            sequencer.recordNote(pad.note);
+          }
+
+          // Space for play/stop
+          if (e.code === 'Space') {
+            e.preventDefault();
+            if (state.isPlaying) {
+              sequencer.stop();
+            } else {
+              sequencer.start();
+            }
+          }
+
+          // R for record
+          if (key === 'r' && !e.ctrlKey && !e.metaKey) {
+            if (state.isRecording) {
+              sequencer.stopRecording();
+            } else {
+              if (state.isPlaying) sequencer.stop();
+              sequencer.startRecording();
+            }
+          }
+
+          // Backspace to delete selected note
+          if (e.code === 'Backspace' && state.selectedNoteId) {
+            state.project.events = state.project.events.filter(ev => ev.id !== state.selectedNoteId);
+            state.selectedNoteId = null;
+            renderTimeline();
+          }
+        });
+
+        // Timeline click handling
+        refs.timelineTrack?.addEventListener('click', (e) => {
+          const noteEl = e.target.closest('.timeline-note');
+          if (noteEl) {
+            const noteId = parseFloat(noteEl.dataset.timelineNoteId);
+            state.selectedNoteId = state.selectedNoteId === noteId ? null : noteId;
+            renderTimeline();
+          }
+        });
+
+        // Project list click handling
+        refs.projectsList?.addEventListener('click', (e) => {
+          const item = e.target.closest('.project-item');
+          const deleteBtn = e.target.closest('.project-item-delete');
+
+          if (deleteBtn) {
+            const id = parseInt(deleteBtn.dataset.delete);
+            const projects = JSON.parse(localStorage.getItem('retrobeat_projects') || '[]');
+            const filtered = projects.filter(p => p.id !== id);
+            localStorage.setItem('retrobeat_projects', JSON.stringify(filtered));
+            renderProjectsList();
+          } else if (item) {
+            local.selectedProjectId = parseInt(item.dataset.id);
+            renderProjectsList();
+          }
+        });
+
+        // Expose app state globally for testing
+        window.appState = state;
+        window.audioContext = audioEngine.ctx;
+      });
+
+      // Update loop for playhead
+      const updatePlayhead = () => {
+        if (refs.playhead && state.isPlaying) {
+          const percent = state.currentStep / 16;
+          refs.playhead.style.left = `${percent * 100}%`;
+        }
+        requestAnimationFrame(updatePlayhead);
+      };
+      requestAnimationFrame(updatePlayhead);
+    };
+  </script>
+
+  <!-- boreDOM Runtime -->
+  <script data-state="#initial-state">
+/**
+ * @file boreDOM.js
+ * @description A minimalist, reactivity-driven JavaScript framework optimized for LLM readability and generation.
+ * @version 2.0.0
+ */
+
+/**
+ * Runtime pipeline (high level):
+ * 1) Init global state
+ * 2) Register component resources (style/template/script)
+ * 3) Hydrate components (Shadow DOM + logic)
+ * 4) Apply bindings
+ * 5) Run hooks
+ * 6) Dispatch events
+ */
+
+/**
+ * Quick walkthrough for LLMs:
+ * - init(): scans for <style>/<template>/<script data-component>, registers components, and sets global state.
+ * - ReactiveComponent: builds Shadow DOM, wires events, runs component logic, then applies bindings + hooks.
+ * - createReactiveState(): wraps state in a proxy, schedules updates only on actual changes.
+ * - processBindings(): runs list bindings first, then attribute bindings.
+ */
+
+// --- 1. CONSTANTS & CONFIGURATION ---
+
+const CONSTANTS = {
+  Attributes: {
+    COMPONENT: 'data-component',
+    STATE: 'data-state',
+    LIST: 'data-list',
+    ITEM_TEMPLATE: 'data-item',
+    LIST_KEY: 'data-list-key',
+    LIST_ONCE: 'data-list-once',
+    LIST_STATIC: 'data-list-static',
+    TEXT: 'data-text',
+    SHOW: 'data-show',
+    VALUE: 'data-value',
+    CHECKED: 'data-checked',
+    CLASS: 'data-class',
+    REF: 'data-ref',
+    DISPATCH: 'data-dispatch',
+    INPUT: 'data-input',
+    CHANGE: 'data-change',
+    PROP_PREFIX: 'data-prop-',
+  },
+  // Supported events - names will be dynamically mapped to data-dispatch attributes
+  Events: [
+    'click',
+    'input',
+    'change',
+    'pointerdown',
+    'pointermove',
+    'pointerup',
+    'pointerout',
+    'keydown',
+    'keyup',
+    'focus',
+    'blur',
+  ],
+};
+
+// Global Registries
+/** @type {Set<ShadowRoot>} */
+const activeShadowRoots = new Set();
+
+/** @type {Map<string, CSSStyleSheet[]>} */
+const componentStyles = new Map();
+
+/** @type {Record<string, Promise<any>>} */
+const loadedScripts = {};
+
+/** @type {WeakMap<object, number>} */
+const objectVersions = new WeakMap();
+
+/** @type {WeakMap<object, object>} */
+const proxyTargets = new WeakMap();
+
+/** @type {WeakMap<Element, { itemsRef: any, version: number, rendered: boolean, keyExpr: string | null, keyMap: Map<any, Element> }>} */
+const listCache = new WeakMap();
+
+/** @type {Set<ReactiveComponent>} */
+const pendingComponentUpdates = new Set();
+
+let updatesScheduled = false;
+
+// --- 1.5 DEVTOOLS & TELEMETRY ---
+
+const DevTools = {
+  log: (type, data) => {
+    console.log(`[BOREDOM:${type}]`, JSON.stringify(data));
+  },
+
+  error: (component, error, context = {}) => {
+    console.error(`[BOREDOM:ERROR]`, JSON.stringify({
+      component,
+      message: error.message,
+      stack: error.stack,
+      context
+    }));
+  },
+
+  // Shadow-piercing query selector
+  query: (selector, root = document.body) => {
+    let result = root.querySelector(selector);
+    if (result) return result;
+
+    // Depth-first search through Shadow DOMs
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.shadowRoot) {
+        result = DevTools.query(selector, node.shadowRoot);
+        if (result) return result;
+      }
+    }
+    return null;
+  }
+};
+
+// --- 2. UPDATE SCHEDULING (COALESCED UPDATES) ---
+
+const scheduleMicrotask = (fn) => {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(fn);
+  } else {
+    Promise.resolve().then(fn);
+  }
+};
+
+const getObjectVersion = (obj) => {
+  if (!obj || typeof obj !== 'object') return 0;
+  const target = proxyTargets.get(obj) || obj;
+  return objectVersions.get(target) || 0;
+};
+
+const bumpObjectVersion = (obj) => {
+  if (!obj || typeof obj !== 'object') return 0;
+  const target = proxyTargets.get(obj) || obj;
+  const next = getObjectVersion(target) + 1;
+  objectVersions.set(target, next);
+  return next;
+};
+
+const scheduleComponentUpdate = (component) => {
+  if (!component) return;
+  pendingComponentUpdates.add(component);
+  if (!updatesScheduled) {
+    updatesScheduled = true;
+    scheduleMicrotask(flushComponentUpdates);
+  }
+};
+
+const flushComponentUpdates = () => {
+  updatesScheduled = false;
+  const queue = Array.from(pendingComponentUpdates);
+  pendingComponentUpdates.clear();
+  queue.forEach((component) => {
+    if (!component) return;
+    if (component.isConnected === false) return;
+    component._update();
+  });
+};
+
+// --- 3. REACTIVITY SYSTEM ---
+
+/**
+ * Creates a reactive proxy for state management.
+ * @template T
+ * @param {T} target - The state object to observe.
+ * @param {Function} callback - The function to call on mutation.
+ * @param {string} [path=''] - Path for debugging/logging.
+ * @returns {T} - The reactive proxy.
+ */
+const createReactiveState = (target, callback, path = 'root', cache = new WeakMap()) => {
+  if (typeof target !== 'object' || target === null) return target;
+  if (cache.has(target)) return cache.get(target);
+
+  const proxy = new Proxy(target, {
+    set(obj, prop, value) {
+      const oldValue = obj[prop];
+      if (Object.is(oldValue, value)) return true;
+      obj[prop] = value;
+
+      bumpObjectVersion(obj);
+      DevTools.log('STATE', { path: `${path}.${String(prop)}`, prev: oldValue, next: value });
+
+      callback();
+      return true;
+    },
+    get(obj, prop) {
+      // Lazy recursion for deep reactivity
+      return createReactiveState(obj[prop], callback, `${path}.${String(prop)}`, cache);
+    },
+    deleteProperty(obj, prop) {
+      const hadKey = Object.prototype.hasOwnProperty.call(obj, prop);
+      if (!hadKey) return true;
+      DevTools.log('STATE', { path: `${path}.${String(prop)}`, action: 'delete' });
+      delete obj[prop];
+      bumpObjectVersion(obj);
+      callback();
+      return true;
+    },
+  });
+
+  cache.set(target, proxy);
+  proxyTargets.set(proxy, target);
+  return proxy;
+};
+
+const initGlobalState = (stateSelector) => {
+  const stateElement = document.querySelector(stateSelector);
+  const initialState = stateElement ? JSON.parse(stateElement.textContent) : {};
+  window.globalState = createReactiveState(initialState, scheduleGlobalUpdate, 'global');
+  // @ts-ignore
+  globalState = window.globalState;
+  return stateElement;
+};
+
+const collectComponentNodes = () => ([
+  ...document.querySelectorAll('style[data-component]'),
+  ...document.querySelectorAll('script[data-component]'),
+  ...document.querySelectorAll('template[data-component]'),
+]);
+
+const registerComponents = (componentNodes) => {
+  componentNodes.forEach((node) => {
+    // @ts-ignore
+    const name = node.dataset.component;
+    const tagName = node.tagName;
+
+    if (ResourceProcessors[tagName]) {
+      ResourceProcessors[tagName](node, name);
+    }
+  });
+};
+
+const exposeDevTools = (stateElement) => {
+  // @ts-ignore
+  window.__BOREDOM__ = {
+    getState: () => JSON.parse(JSON.stringify(globalState)),
+    getComponents: (tagName) => {
+      // @ts-ignore
+      return Array.from(document.querySelectorAll(tagName)).map(el => ({
+        local: el.localState,
+        refs: el.refs,
+        slots: el.slots
+      }));
+    },
+    inspect: (el) => {
+      // @ts-ignore
+      return { local: el.localState, refs: el.refs, slots: el.slots, state: globalState };
+    },
+    query: DevTools.query,
+    reset: () => {
+      // Soft reset to initial state
+      const newState = JSON.parse(stateElement.textContent);
+      Object.keys(globalState).forEach(key => delete globalState[key]);
+      Object.assign(globalState, newState);
+      DevTools.log('SYSTEM', { message: 'App Reset' });
+    }
+  };
+
+  // @ts-ignore
+  window.__RESET_APP__ = window.__BOREDOM__.reset;
+};
+
+/**
+ * Triggers a DOM update across all active components.
+ */
+const scheduleGlobalUpdate = () => {
+  activeShadowRoots.forEach((root) => {
+    // @ts-ignore - 'host' property exists on ShadowRoot
+    scheduleComponentUpdate(root.host);
+  });
+};
+
+// --- 4. EXPRESSION EVALUATION ---
+
+/**
+ * Evaluates a string expression within a specific scope.
+ * @param {string} expr - The JavaScript expression to evaluate.
+ * @param {Object} scope - The variables available to the expression.
+ * @returns {any} - The result of the evaluation.
+ */
+const evaluate = (expr, scope) => {
+  try {
+    const keys = Object.keys(scope);
+    const values = Object.values(scope);
+    // Function constructor allows evaluation without 'eval()' and strict scoping
+    return new Function(...keys, `return ${expr}`)(...values);
+  } catch (e) {
+    // Fail silently to prevent UI crashes during intermediate states
+    return undefined;
+  }
+};
+
+// --- 5. CONTEXT HELPERS ---
+
+const createComponentContext = (component) => ({
+  state: globalState,
+  local: component.localState,
+  detail: component.slots,
+  refs: component.refs,
+});
+
+const withItemContext = (context, item, index) => ({
+  ...context,
+  item,
+  index,
+});
+
+const withEventContext = (context, event, dispatcher) => ({
+  ...context,
+  e: { event, dispatcher },
+});
+
+const createInitContext = (component) => ({
+  on: (name, fn) => registerAction(component.eventHandlers, name, fn),
+  onMount: (fn) => registerHook(component.mountHooks, fn),
+  onUpdate: (fn) => registerHook(component.updateHooks, fn),
+  onCleanup: (fn) => registerHook(component.cleanupHooks, fn),
+  self: component.shadowRoot,
+  ...createComponentContext(component),
+});
+
+const getDispatchAttribute = (eventName) =>
+  eventName === 'click'
+    ? 'dispatch'
+    : `dispatch${eventName[0].toUpperCase()}${eventName.slice(1)}`;
+
+const shouldUseCapture = (eventName) => ['focus', 'blur'].includes(eventName);
+
+const createDispatcherProxy = (dispatcher, componentDataset) => new Proxy(dispatcher, {
+  get: (target, prop) => {
+    if (prop === 'dataset') return { ...dispatcher.dataset, ...componentDataset };
+    const val = target[prop];
+    return typeof val === 'function' ? val.bind(target) : val;
+  },
+});
+
+const getElementsInRoot = (root) => {
+  const elements = root.querySelectorAll ? Array.from(root.querySelectorAll('*')) : [];
+  if (root && root.nodeType === Node.ELEMENT_NODE) {
+    elements.unshift(root);
+  }
+  return elements;
+};
+
+const registerHook = (hooks, fn) => {
+  hooks.push(fn);
+  return () => {
+    const index = hooks.indexOf(fn);
+    if (index >= 0) hooks.splice(index, 1);
+  };
+};
+
+const registerAction = (handlersMap, name, fn) => {
+  if (!handlersMap.has(name)) {
+    handlersMap.set(name, []);
+  }
+  const handlers = handlersMap.get(name);
+  handlers.push(fn);
+  return () => {
+    const index = handlers.indexOf(fn);
+    if (index >= 0) handlers.splice(index, 1);
+  };
+};
+
+const runHooks = (component, hooks, context, source) => {
+  hooks.forEach((hook) => {
+    try {
+      hook(context);
+    } catch (err) {
+      DevTools.error(component.tagName.toLowerCase(), err, { source });
+    }
+  });
+};
+
+const findDispatcher = (event, actionType) =>
+  event.composedPath().find((el) => el.dataset && el.dataset[actionType]);
+
+const runActionHandlers = (component, actionName, dispatcher, event) => {
+  const handlers = component.eventHandlers.get(actionName);
+  if (!handlers || !handlers.length) return;
+
+  const proxyDispatcher = createDispatcherProxy(dispatcher, component.dataset);
+  const context = withEventContext(component._createContext(), event, proxyDispatcher);
+
+  DevTools.log('ACTION', { component: component.tagName.toLowerCase(), action: actionName });
+
+  handlers.forEach((handler) => {
+    try {
+      handler(context);
+    } catch (err) {
+      DevTools.error(component.tagName.toLowerCase(), err, { action: actionName });
+    }
+  });
+
+  event.stopPropagation();
+};
+
+const dispatchComponentEvent = (component, event, actionType) => {
+  const dispatcher = findDispatcher(event, actionType);
+  if (!dispatcher) return;
+  const actionName = dispatcher.dataset[actionType];
+  if (!actionName) return;
+  runActionHandlers(component, actionName, dispatcher, event);
+};
+
+// --- 6. DOM DIRECTIVES & BINDINGS ---
+
+/**
+ * Directives map dataset keys (camelCase of data-attributes) to DOM manipulations.
+ * Receives: element, raw expression string, and current context.
+ */
+const Directives = {
+  text: (el, raw, ctx) => {
+    const val = evaluate(raw, ctx);
+    el.textContent = val !== undefined && val !== null ? val : '';
+  },
+  show: (el, raw, ctx) => {
+    el.style.display = evaluate(raw, ctx) ? '' : 'none';
+  },
+  value: (el, raw, ctx) => {
+    if ('value' in el) el.value = evaluate(raw, ctx) || '';
+  },
+  checked: (el, raw, ctx) => {
+    if ('checked' in el) el.checked = !!evaluate(raw, ctx);
+  },
+  class: (el, raw, ctx) => {
+    // Format: "className:condition"
+    const parts = raw.split(':');
+    if (parts.length === 2) {
+      const [cls, conditionExpr] = parts;
+      el.classList.toggle(cls, !!evaluate(conditionExpr, ctx));
+    }
+  },
+  ref: (el, raw, ctx) => {
+    // data-ref="myInput" -> ctx.refs.myInput = el
+    if (ctx.refs) {
+      ctx.refs[raw] = el;
+    }
+  }
+};
+
+/**
+ * Determines if an element is owned by the current ShadowRoot or a nested list.
+ * @param {Element} el
+ * @param {ShadowRoot} root
+ * @returns {boolean}
+ */
+const isElementInScope = (el, root) => {
+  let cur = el.parentElement;
+  const rootList =
+    root && root.nodeType === Node.ELEMENT_NODE && typeof root.closest === 'function'
+      ? root.closest(`[${CONSTANTS.Attributes.LIST}]`)
+      : null;
+  while (cur && cur !== root) {
+    if (cur.dataset && cur.dataset.list && cur !== rootList) return false;
+    cur = cur.parentElement;
+  }
+  return true;
+};
+
+// List rendering pipeline helpers: config -> cache -> render/update.
+const getListCacheEntry = (listEl) => {
+  const cached = listCache.get(listEl);
+  if (cached) return cached;
+  const entry = {
+    itemsRef: null,
+    version: -1,
+    rendered: false,
+    keyExpr: null,
+    keyMap: new Map(),
+  };
+  listCache.set(listEl, entry);
+  return entry;
+};
+
+const getListItems = (value) => (Array.isArray(value) ? value : []);
+
+const getListConfig = (listEl, context) => {
+  const itemsExpr = listEl.getAttribute(CONSTANTS.Attributes.LIST);
+  const rawItems = evaluate(itemsExpr, context);
+  return {
+    rawItems,
+    items: getListItems(rawItems),
+    itemsVersion: getObjectVersion(rawItems),
+    template: listEl.querySelector(`template[${CONSTANTS.Attributes.ITEM_TEMPLATE}]`),
+    cache: getListCacheEntry(listEl),
+    listOnce:
+      listEl.hasAttribute(CONSTANTS.Attributes.LIST_ONCE) ||
+      listEl.hasAttribute(CONSTANTS.Attributes.LIST_STATIC),
+    keyExpr: listEl.getAttribute(CONSTANTS.Attributes.LIST_KEY),
+  };
+};
+
+const getListStrategy = (listEl, context) => {
+  const config = getListConfig(listEl, context);
+  if (!config.template) {
+    return { type: 'missing-template', ...config };
+  }
+  if (config.listOnce && config.cache.rendered) {
+    return { type: 'skip', ...config };
+  }
+  if (isSameListInput(config.cache, config.rawItems, config.itemsVersion, config.keyExpr)) {
+    return { type: 'update', ...config };
+  }
+  if (config.keyExpr && hasSingleTemplateRoot(config.template)) {
+    return { type: 'keyed', ...config };
+  }
+  return { type: 'naive', ...config };
+};
+
+const isSameListInput = (cache, rawItems, itemsVersion, keyExpr) =>
+  cache.itemsRef === rawItems &&
+  cache.version === itemsVersion &&
+  cache.keyExpr === keyExpr;
+
+const commitListCache = (cache, rawItems, itemsVersion, keyExpr) => {
+  cache.itemsRef = rawItems;
+  cache.version = itemsVersion;
+  cache.keyExpr = keyExpr;
+  cache.rendered = true;
+};
+
+const hasSingleTemplateRoot = (template) => {
+  const nodes = Array.from(template.content.childNodes);
+  const elementNodes = nodes.filter((node) => node.nodeType === Node.ELEMENT_NODE);
+  const nonEmptyText = nodes.filter(
+    (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '',
+  );
+  return elementNodes.length === 1 && nonEmptyText.length === 0;
+};
+
+const renderListNaive = (listEl, template, items, context) => {
+  Array.from(listEl.children).forEach((child) => {
+    if (child !== template) child.remove();
+  });
+
+  items.forEach((item, index) => {
+    // @ts-ignore
+    const clone = template.content.cloneNode(true);
+    processBindings(clone, withItemContext(context, item, index));
+    listEl.appendChild(clone);
+  });
+};
+
+const renderListKeyed = (listEl, template, items, context, keyExpr, cache) => {
+  const keyMap = cache.keyMap || new Map();
+  const nextKeys = new Set();
+  const nodesInOrder = [];
+
+  items.forEach((item, index) => {
+    const key = evaluate(keyExpr, withItemContext(context, item, index));
+    const resolvedKey = key !== undefined && key !== null ? key : index;
+    nextKeys.add(resolvedKey);
+
+    let node = keyMap.get(resolvedKey);
+    if (!node) {
+      // @ts-ignore
+      const fragment = template.content.cloneNode(true);
+      processBindings(fragment, withItemContext(context, item, index));
+      node = fragment.firstElementChild;
+      if (!node) return;
+      listEl.appendChild(fragment);
+    } else {
+      processBindings(node, withItemContext(context, item, index));
+    }
+
+    keyMap.set(resolvedKey, node);
+    nodesInOrder.push(node);
+  });
+
+  keyMap.forEach((node, key) => {
+    if (!nextKeys.has(key)) {
+      if (node && node.parentNode === listEl) node.remove();
+      keyMap.delete(key);
+    }
+  });
+
+  nodesInOrder.forEach((node) => {
+    if (node && node.parentNode === listEl) {
+      listEl.appendChild(node);
+    }
+  });
+
+  cache.keyMap = keyMap;
+};
+
+const updateListBindings = (listEl, template, items, context, keyExpr, cache) => {
+  if (keyExpr && cache.keyMap && cache.keyMap.size > 0) {
+    let missingKeys = false;
+    const nextKeys = new Set();
+    const orderedNodes = [];
+
+    items.forEach((item, index) => {
+      const key = evaluate(keyExpr, withItemContext(context, item, index));
+      const resolvedKey = key !== undefined && key !== null ? key : index;
+      if (nextKeys.has(resolvedKey)) missingKeys = true;
+      nextKeys.add(resolvedKey);
+      const node = cache.keyMap.get(resolvedKey);
+      if (!node) {
+        missingKeys = true;
+        return;
+      }
+      processBindings(node, withItemContext(context, item, index));
+      orderedNodes.push(node);
+    });
+
+    if (missingKeys || nextKeys.size !== cache.keyMap.size) {
+      renderListKeyed(listEl, template, items, context, keyExpr, cache);
+      return;
+    }
+
+    orderedNodes.forEach((node) => {
+      if (node && node.parentNode === listEl) {
+        listEl.appendChild(node);
+      }
+    });
+    return;
+  }
+
+  const children = Array.from(listEl.children).filter((child) => child !== template);
+  children.forEach((child, index) => {
+    if (index >= items.length) return;
+    processBindings(child, withItemContext(context, items[index], index));
+  });
+};
+
+/**
+ * Processes 'data-list' attributes for rendering lists.
+ * @param {ShadowRoot|Element} root
+ * @param {Object} context
+ */
+const processListBindings = (root, context) => {
+  const lists = root.querySelectorAll(`[${CONSTANTS.Attributes.LIST}]`);
+
+  lists.forEach((listEl) => {
+    if (!isElementInScope(listEl, root)) return;
+
+    const strategy = getListStrategy(listEl, context);
+    const { template, items, keyExpr, cache, rawItems, itemsVersion } = strategy;
+
+    if (strategy.type === 'missing-template' || strategy.type === 'skip') return;
+
+    if (strategy.type === 'update') {
+      updateListBindings(listEl, template, items, context, keyExpr, cache);
+      return;
+    }
+
+    if (strategy.type === 'keyed') {
+      renderListKeyed(listEl, template, items, context, keyExpr, cache);
+    } else {
+      renderListNaive(listEl, template, items, context);
+      cache.keyMap = new Map();
+    }
+
+    commitListCache(cache, rawItems, itemsVersion, keyExpr);
+  });
+};
+
+/**
+ * Applies all Directives to elements within the root using generic loop.
+ * @param {ShadowRoot|Element} root
+ * @param {Object} context
+ */
+const processAttributeBindings = (root, context) => {
+  const elements = getElementsInRoot(root);
+
+  elements.forEach((el) => {
+    if (!isElementInScope(el, root)) return;
+
+    Object.keys(el.dataset).forEach((key) => {
+      const rawValue = el.dataset[key];
+
+      // 1. Standard Directives (data-text, data-show, etc.)
+      if (Directives[key]) {
+        Directives[key](el, rawValue, context);
+      }
+
+      // 2. Dynamic Props (data-prop-*)
+      // Maps data-prop-user-id (dataset.propUserId) -> dataset.userId
+      else if (key.startsWith('prop') && key.length > 4) {
+        // 'propUserId' -> 'UserId' -> 'userId'
+        const propName = key.slice(4)[0].toLowerCase() + key.slice(5);
+        const val = evaluate(rawValue, context);
+        if (val !== undefined) {
+          el.dataset[propName] = val;
+        }
+      }
+    });
+  });
+};
+
+/**
+ * Binding Strategies Registry.
+ * Defines the order and type of bindings to apply.
+ */
+const BindingStrategies = [
+  processListBindings,      // Structural bindings first (modifies DOM tree)
+  processAttributeBindings, // Attribute bindings second (modifies properties)
+];
+
+const processBindings = (root, context) => {
+  BindingStrategies.forEach(strategy => strategy(root, context));
+};
+
+// --- 7. COMPONENT SYSTEM ---
+
+/**
+ * The base class for all boreDOM components.
+ * Encapsulates Shadow DOM creation, style application, and event delegation.
+ */
+class ReactiveComponent extends HTMLElement {
+  constructor(templateContent, styles) {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot.appendChild(templateContent.cloneNode(true));
+    this.shadowRoot.adoptedStyleSheets = styles;
+
+    // Instance-level state and refs
+    this.localState = createReactiveState({}, () => scheduleComponentUpdate(this));
+    this.refs = {};
+    this.eventHandlers = new Map();
+    this.mountHooks = [];
+    this.updateHooks = [];
+    this.cleanupHooks = [];
+    this._initialized = false;
+    this._eventDelegationReady = false;
+
+    // Initialize Slots Proxy
+    this.slots = new Proxy({}, {
+      set: (target, prop, value) => {
+        target[prop] = value;
+        scheduleComponentUpdate(this);
+        return true;
+      },
+    });
+
+    this._setupPropMirroring();
+    this._overrideQuerySelector();
+  }
+
+  /**
+   * Internal update method.
+   * Merges global state, local state, and props (detail/slots) into the context.
+   */
+  _update() {
+    try {
+      const context = this._createContext();
+
+      processBindings(this.shadowRoot, context);
+      runHooks(this, this.updateHooks, context, 'update_hook');
+    } catch (err) {
+      DevTools.error(this.tagName.toLowerCase(), err, { source: '_update' });
+    }
+  }
+
+  _createContext() {
+    return createComponentContext(this);
+  }
+
+  /**
+   * Mirrors data-prop-* attributes to standard data-* attributes
+   * for easier CSS targeting.
+   */
+  _setupPropMirroring() {
+    for (const attr of this.attributes) {
+      if (attr.name.startsWith(CONSTANTS.Attributes.PROP_PREFIX)) {
+        const newName = attr.name.replace(CONSTANTS.Attributes.PROP_PREFIX, 'data-');
+        if (!this.hasAttribute(newName)) {
+          this.setAttribute(newName, attr.value);
+        }
+      }
+    }
+  }
+
+  /**
+   * Convenience method to default querySelector to shadowRoot.
+   */
+  _overrideQuerySelector() {
+    const originalQuerySelector = this.querySelector.bind(this);
+    this.querySelector = (selector) => {
+      return originalQuerySelector(selector) || this.shadowRoot.querySelector(selector);
+    };
+  }
+
+  async connectedCallback() {
+    // Step 3: Hydrate component (Shadow DOM + logic)
+    activeShadowRoots.add(this.shadowRoot);
+    this._setupEventDelegation();
+    await this._loadScriptLogic();
+    // Step 4: Apply bindings + Step 5: Run hooks
+    this._update();
+    runHooks(this, this.mountHooks, this._createContext(), 'mount_hook');
+  }
+
+  disconnectedCallback() {
+    activeShadowRoots.delete(this.shadowRoot);
+    const hooks = [...this.cleanupHooks].reverse();
+    runHooks(this, hooks, this._createContext(), 'cleanup_hook');
+  }
+
+  _setupEventDelegation() {
+    if (this._eventDelegationReady) return;
+    this._eventDelegationReady = true;
+
+    // Register all supported event listeners with dynamic attribute mapping
+    CONSTANTS.Events.forEach((event) => {
+      // Rule: click -> dispatch, others -> dispatchName
+      const actionType = getDispatchAttribute(event);
+      const useCapture = shouldUseCapture(event);
+      this.shadowRoot.addEventListener(
+        event,
+        (e) => dispatchComponentEvent(this, e, actionType),
+        { capture: useCapture },
+      );
+    });
+  }
+
+  async _loadScriptLogic() {
+    if (this._initialized) return;
+    const componentName = this.tagName.toLowerCase();
+    if (loadedScripts[componentName]) {
+      try {
+        const module = await loadedScripts[componentName];
+        if (module && module.default) {
+          const initFn = module.default;
+          // Inject lifecycle hooks and context into initialization
+          initFn(createInitContext(this));
+        }
+      } catch (err) {
+        DevTools.error(componentName, err, { source: 'script_load' });
+      }
+    }
+    this._initialized = true;
+  }
+}
+
+// --- 8. INITIALIZATION ---
+
+/**
+ * Resource Processors handle different component definition tags.
+ */
+const ResourceProcessors = {
+  STYLE: (node, name) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(node.textContent);
+    if (!componentStyles.has(name)) componentStyles.set(name, []);
+    componentStyles.get(name).push(sheet);
+    node.remove();
+  },
+  SCRIPT: (node, name) => {
+    const blob = new Blob([node.textContent], { type: 'text/javascript' });
+    const url = URL.createObjectURL(blob);
+    loadedScripts[name] = import(url).then(m => {
+      URL.revokeObjectURL(url);
+      return m;
+    });
+    node.remove();
+  },
+  TEMPLATE: (node, name) => {
+    // @ts-ignore
+    const templateContent = node.content;
+    if (!customElements.get(name)) {
+      customElements.define(name, class extends ReactiveComponent {
+        constructor() {
+          super(templateContent, componentStyles.get(name) || []);
+        }
+      });
+    }
+  }
+};
+
+const init = () => {
+  // Step 1: Initialize Global State
+  const currentScript = document.currentScript;
+  // @ts-ignore
+  const stateSelector = currentScript.dataset.state;
+  const stateElement = initGlobalState(stateSelector);
+
+  // Step 2: Discover and Register Components
+  registerComponents(collectComponentNodes());
+
+  // Step 6: Expose DevTools API
+  exposeDevTools(stateElement);
+};
+
+// Variable declaration for internal usage
+var globalState;
+
+// Boot
+init();
+
+  </script>
+</body>
+</html>

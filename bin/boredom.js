@@ -29,10 +29,12 @@ async function main() {
   const command = args[0];
 
   if (!["init", "validate", "component"].includes(command)) {
-    console.log("Usage: npx boredom init [directory]");
-    console.log("       options: --inline | --no-inline, --vite | --no-vite");
-    console.log("       npx boredom validate [index.html]");
-    console.log("       npx boredom component <name>");
+    console.log("Usage: npx @mr_hugo/boredom init [directory]");
+    console.log("       options: --inline | --no-inline");
+    console.log("                --experimental-multi (enables Vite multi-file scaffold; experimental)");
+    console.log("                --vite | --no-vite (legacy flags, require --experimental-multi)");
+    console.log("       npx @mr_hugo/boredom validate [index.html]");
+    console.log("       npx @mr_hugo/boredom component <name> --experimental-multi");
     process.exit(1);
   }
 
@@ -67,9 +69,19 @@ async function main() {
   }
 
   if (command === "component") {
-    const componentName = args[1];
+    const componentArgs = args.slice(1);
+    const componentName = componentArgs.find((arg) => !arg.startsWith("--"));
+    const experimentalMulti = componentArgs.includes("--experimental-multi");
+
     if (!componentName) {
-      console.error("Usage: npx boredom component <name>");
+      console.error("Usage: npx @mr_hugo/boredom component <name> --experimental-multi");
+      process.exit(1);
+    }
+
+    if (!experimentalMulti) {
+      console.error(
+        "The component command is for the experimental multi-file workflow. Re-run with --experimental-multi.",
+      );
       process.exit(1);
     }
     
@@ -81,6 +93,19 @@ async function main() {
   const initArgs = args.slice(1);
   const inlineFlag = resolveBooleanFlag(initArgs, "--inline", "--no-inline");
   const viteFlag = resolveBooleanFlag(initArgs, "--vite", "--no-vite");
+  const experimentalMulti = initArgs.includes("--experimental-multi");
+
+  if (viteFlag === true && !experimentalMulti) {
+    console.error(
+      "The Vite scaffold is experimental. Re-run with --experimental-multi (or omit --vite for single-file).",
+    );
+    process.exit(1);
+  }
+
+  if (viteFlag === false && experimentalMulti) {
+    console.error("Conflicting flags: --experimental-multi cannot be combined with --no-vite.");
+    process.exit(1);
+  }
 
   let targetDir = initArgs.find((arg) => !arg.startsWith("--"));
 
@@ -91,7 +116,6 @@ async function main() {
   }
 
   const root = path.resolve(process.cwd(), targetDir);
-  const boreDomSrc = path.resolve(__dirname, "../src/boreDOM.js");
 
   if (fs.existsSync(root)) {
     const overwrite = await question(
@@ -112,11 +136,7 @@ async function main() {
       await question("Inline boreDOM runtime into index.html? (y/N): ")
     ).toLowerCase() === "y";
 
-  const useVite =
-    viteFlag ??
-    (
-      await question("Use Vite for multi-file development? (y/N): ")
-    ).toLowerCase() === "y";
+  const useVite = experimentalMulti || viteFlag === true;
 
   console.log(`\n🏗️  Scaffolding boreDOM project in ${root}...`);
 
@@ -130,6 +150,7 @@ async function main() {
   console.log(`\n  cd ${targetDir}`);
   
   if (useVite) {
+    console.log("  # Experimental multi-file development workflow");
     console.log("  npm install");
     console.log("  npm run dev");
   } else {
@@ -141,7 +162,7 @@ async function main() {
 }
 
 async function setupViteProject(root, doInline) {
-  console.log("📦 Setting up Vite multi-file project...");
+  console.log("📦 Setting up experimental Vite multi-file project...");
   
   // Create directory structure
   fs.mkdirSync(path.join(root, "components", "ui"), { recursive: true });
@@ -162,7 +183,7 @@ async function setupViteProject(root, doInline) {
       preview: "vite preview"
     },
     devDependencies: {
-      "@mr_hugo/vite-plugin-boredom": "^1.0.0",
+      "@mr_hugo/vite-plugin-boredom": "^0.1.0",
       vite: "^5.0.0"
     }
   };
@@ -260,7 +281,7 @@ export const logic = ({ on, local }) => {
   const mainJs = `import { loadComponent } from '@mr_hugo/vite-plugin-boredom/component-loader';
 
 async function initApp() {
-  const { Button } = await import('./components/ui/Button.js');
+  const Button = await import('./components/ui/Button.js');
   await loadComponent(Button);
   console.log('Multi-file boreDOM app initialized');
 }
@@ -371,7 +392,7 @@ async function setupSingleFileProject(root, doInline) {
     "",
     "## Validation Loop (CLI)",
     "",
-    "- Run: `npx boredom validate index.html`.",
+    "- Run: `npx @mr_hugo/boredom validate index.html`.",
     "- Fix issues, then re-run until clean.",
     "- Warnings are guidance; do not sacrifice semantics/UX to silence them.",
     "",
@@ -470,7 +491,9 @@ async function generateComponent(componentName) {
   const componentDir = path.join(process.cwd(), "components");
   
   if (!fs.existsSync(componentDir)) {
-    console.error("No components directory found. Are you in a multi-file boreDOM project?");
+    console.error(
+      "No components directory found. The component command only works in an experimental multi-file project.",
+    );
     process.exit(1);
   }
 
@@ -507,7 +530,7 @@ async function generateComponent(componentName) {
   
   console.log(`✅ Component created: ${filePath}`);
   console.log(`\nTo use it:`);
-  console.log(`1. Import: const { ${fileName} } = await import('./components/ui/${fileName}.js');`);
+  console.log(`1. Import: const ${fileName} = await import('./components/ui/${fileName}.js');`);
   console.log(`2. Load: await loadComponent(${fileName});`);
   console.log(`3. Use: <${componentName}></${componentName}>`);
 }

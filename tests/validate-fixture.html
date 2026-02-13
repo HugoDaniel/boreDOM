@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" />
+  <title>Validate Fixture</title>
+</head>
+<body>
+  <template data-component="demo">
+    <div data-action="doThing"></div>
+
+    <div data-class="state.isPlaying:active"></div>
+    <div data-class="active"></div>
+
+    <div data-show="local.show" style="display:none"></div>
+
+    <div data-list="state.items"></div>
+
+    <div data-list="state.moreItems">
+      <template data-item>
+        <span data-text="item.name"></span>
+        <div data-list="item.sublist"></div>
+      </template>
+      <template data-item><span data-text="item.label"></span></template>
+    </div>
+
+    <div data-list="state.ordered" data-list-key="index">
+      <template data-item><span data-text="item"></span></template>
+    </div>
+
+    <div data-list="state.random" data-list-key="Math.random()">
+      <template data-item><span data-text="item"></span></template>
+    </div>
+
+    <div data-list="state.pads" data-list-once>
+      <template data-item>
+        <span data-text="item.label"></span>
+        <div data-class="active:item.triggered"></div>
+      </template>
+    </div>
+
+    <div data-list="state.notes" data-list-key="item.startTime">
+      <template data-item>
+        <div data-class="selected:item.selected"></div>
+      </template>
+    </div>
+
+    <input data-value="state.name" />
+
+    <div data-class="active:state.ui.activePads.1"></div>
+
+    <div data-dispatch-keydown="handleKey"></div>
+
+    <div data-dispatch-mousedown="unknownEvent"></div>
+    <div data-dispatch-input="onInput"></div>
+    <div data-dispatch-pointerout="scrubEnd"></div>
+
+    <div data-ref="dup"></div>
+    <div data-ref="dup"></div>
+
+    <div data-text="state.foo..bar"></div>
+    <div data-prop-foo=""></div>
+    <button data-dispatch="doThing" data-arg-id=""></button>
+    <div data-attr-aria-label="state..name"></div>
+
+    <button data-dispatch="missingHandler">Missing handler</button>
+  </template>
+
+  <template data-component="demo">
+    <div>Second template</div>
+  </template>
+
+  <script type="text/boredom" data-component="demo">
+    export default ({ onMount, on, self }) => {
+      onMount(() => {
+        requestAnimationFrame(() => {});
+        document.querySelector(".demo");
+        const active = document.activeElement;
+        if (active) {
+          console.log(active.tagName);
+        }
+        const audio = new AudioContext();
+        audio.close();
+        const el = document.createElement("div");
+        el.innerHTML = "<span>hi</span>";
+        window.addEventListener("resize", () => {});
+        window.addEventListener("keydown", () => {});
+        document.querySelectorAll(".note").forEach((node) => {
+          node.style.left = "0px";
+        });
+        for (const node of document.getElementsByClassName("note")) {
+          node.style.top = "0px";
+        }
+        const list = Array.from(document.querySelectorAll(".note"));
+        list.forEach((node) => {
+          node.style.width = "10px";
+        });
+        const nodes = document.getElementsByTagName("div");
+        for (let i = 0; i < nodes.length; i += 1) {
+          nodes[i].style.height = "10px";
+        }
+      });
+
+      const handler = (e) => {
+        if (e.event.type === "keyup") {
+          return;
+        }
+      };
+      handler();
+
+      on("unusedHandler", () => {});
+    };
+  </script>
+
+  <script type="text/boredom" data-component="demo">
+    export default () => {};
+  </script>
+
+  <!-- ${scriptTag} -->
+</body>
+</html>

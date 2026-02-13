@@ -23,82 +23,83 @@
     </style>
 
     <style type="boredom" data-component="game-board">
-      .game-shell {
-        max-width: 500px;
-        margin: 0 auto;
-        background: #ffffff;
-        border-radius: 16px;
-        padding: 2rem;
-        box-shadow: 0 12px 30px rgba(16, 24, 40, 0.08);
-        display: grid;
-        gap: 1.5rem;
-      }
-      .game-header {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-      .game-status {
-        font-size: 1.25rem;
-        font-weight: 600;
-        text-align: center;
-        color: #1d4ed8;
-      }
-      .game-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.5rem;
-        margin: 1rem 0;
-      }
-      .game-controls {
-        display: flex;
-        justify-content: center;
-      }
-      button {
-        border: none;
-        border-radius: 999px;
-        padding: 0.75rem 1.5rem;
-        background: #1d4ed8;
-        color: #fff;
-        cursor: pointer;
-        font-weight: 600;
-      }
-      button.secondary {
-        background: #e2e8f0;
-        color: #1d1b1a;
-      }
-    </style>
-
-    <style data-component="game-button">
-      .game-button {
-        aspect-ratio: 1;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        background: #ffffff;
-        font-size: 2rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      .game-button:hover {
-        background: #f9fafb;
-      }
-      .game-button.x {
-        color: #dc2626;
-      }
-      .game-button.o {
-        color: #1d4ed8;
+      @layer components.game-board {
+        game-board .game-shell {
+          max-width: 500px;
+          margin: 0 auto;
+          background: #ffffff;
+          border-radius: 16px;
+          padding: 2rem;
+          box-shadow: 0 12px 30px rgba(16, 24, 40, 0.08);
+          display: grid;
+          gap: 1.5rem;
+        }
+        game-board .game-header {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        game-board .game-status {
+          font-size: 1.25rem;
+          font-weight: 600;
+          text-align: center;
+          color: #1d4ed8;
+        }
+        game-board .game-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0.5rem;
+          margin: 1rem 0;
+        }
+        game-board .game-controls {
+          display: flex;
+          justify-content: center;
+        }
+        game-board .game-button {
+          aspect-ratio: 1;
+          border: 2px solid #e5e7eb;
+          border-radius: 8px;
+          background: #ffffff;
+          font-size: 2rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        game-board .game-button:hover {
+          background: #f9fafb;
+        }
+        game-board .game-button.x {
+          color: #dc2626;
+        }
+        game-board .game-button.o {
+          color: #1d4ed8;
+        }
+        game-board button {
+          border: none;
+          border-radius: 999px;
+          padding: 0.75rem 1.5rem;
+          background: #1d4ed8;
+          color: #fff;
+          cursor: pointer;
+          font-weight: 600;
+        }
+        game-board button.secondary {
+          background: #e2e8f0;
+          color: #1d1b1a;
+        }
       }
     </style>
 
     <style data-component="game-turn">
-      .game-turn {
-        text-align: center;
-        font-size: 1.1rem;
-        color: #52606d;
+      @layer components.game-turn {
+        game-turn .game-turn {
+          text-align: center;
+          font-size: 1.1rem;
+          color: #52606d;
+        }
       }
     </style>
   </head>
@@ -119,12 +120,6 @@
     <game-board></game-board>
 
     <!-- TEMPLATES -->
-    <template data-component="game-button">
-      <button class="game-button" data-dispatch="play">
-        <span data-text="detail.value"></span>
-      </button>
-    </template>
-
     <template data-component="game-board">
       <div class="game-shell">
         <div class="game-header">
@@ -135,16 +130,21 @@
           ></p>
         </div>
 
-        <div class="game-grid" data-ref="grid">
-          <game-button data-prop-index="0"></game-button>
-          <game-button data-prop-index="1"></game-button>
-          <game-button data-prop-index="2"></game-button>
-          <game-button data-prop-index="3"></game-button>
-          <game-button data-prop-index="4"></game-button>
-          <game-button data-prop-index="5"></game-button>
-          <game-button data-prop-index="6"></game-button>
-          <game-button data-prop-index="7"></game-button>
-          <game-button data-prop-index="8"></game-button>
+        <div
+          class="game-grid"
+          data-list="state.gameState.board.map((value, index) => ({ id: index, value }))"
+          data-list-key="item.id"
+        >
+          <template data-item>
+            <button
+              class="game-button"
+              data-dispatch="play"
+              data-arg-index="item.id"
+              data-class="x:item.value === 'X';o:item.value === 'O'"
+            >
+              <span data-text="item.value ?? ''"></span>
+            </button>
+          </template>
         </div>
 
         <div class="game-controls">
@@ -186,10 +186,9 @@
         return null;
       }
 
-      export default ({ on, self }) => {
+      export default ({ on }) => {
         on("play", ({ state, e }) => {
-          // Notice the "e.dispatcher" that includes useful things
-          const index = Number(e.dispatcher.dataset.index);
+          const index = Number(e.args.index);
           const { gameState } = state;
 
           const isGameWon = gameState.winner !== null;
@@ -207,29 +206,11 @@
           state.gameState.nextToPlay = "O";
           state.gameState.winner = null;
         });
-
-        return ({ state, refs }) => {
-          if (!refs.grid) return;
-          for (const child of refs.grid.querySelectorAll("game-button")) {
-            const index = Number(child.dataset.index);
-            const boardValue = state.gameState.board[index];
-
-            if (boardValue && child.slots) {
-              child.slots.value = boardValue;
-              child.querySelector("button").classList.add(boardValue.toLowerCase());
-            } else if (!boardValue && child.slots) {
-              child.slots.value = "";
-              child.querySelector("button").classList.remove("x", "o");
-            }
-          }
-        };
       };
     </script>
 
     <script type="text/boredom" data-component="game-turn">
-      export default () => {
-        return () => {};
-      };
+      export default () => {};
     </script>
 
     <!-- RUNTIME -->
