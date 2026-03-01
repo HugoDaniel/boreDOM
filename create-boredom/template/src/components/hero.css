@@ -1,0 +1,18 @@
+z-hero div {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+z-hero h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.5rem;
+    background: linear-gradient(135deg, #bd34fe, #41d1ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+z-hero p {
+    color: #888;
+    font-size: 1.1rem;
+    margin: 0.25rem 0;
+}

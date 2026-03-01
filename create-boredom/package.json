@@ -1,0 +1,14 @@
+{
+  "name": "create-boredom",
+  "version": "1.0.0",
+  "description": "Scaffold a new boreDOM project",
+  "bin": {
+    "create-boredom": "./index.js"
+  },
+  "files": ["index.js", "template/"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AskBigStudio/boreDOM.git"
+  }
+}

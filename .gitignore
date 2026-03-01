@@ -1,29 +1,12 @@
-node_modules
-tests/dist
-boreDOMCLI/build/boreDOM.js
-boreDOMCLI/generated_cli.js
-boreDOMCLI/boreDOM.js
-build/boreDOM.js
-build
-components
+# Zig
+zig-out/
+.zig-cache/
 
-# Local work files
-ANALYSIS.md
-COMMUNICATION.md
-DEVELOPER_EXPERIENCE.md
-LLM_EXAMPLES_PLAN.md
-LLM_SCAFFOLD_ISSUES.md
-MULTI_FILE_PLAN.md
-PLAN*.md
-REDDIT_RUBY_VIBECODE_APPROACH.md
-wt1/
+# Build output
+web/
 
-# Local MCP config (created by boredom init or manually)
+# npm
+node_modules/
+
+# Local MCP config
 .mcp.json
-
-# Playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/

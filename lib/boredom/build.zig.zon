@@ -1,0 +1,13 @@
+.{
+    .name = .boredom,
+    .version = "0.1.0",
+    .fingerprint = 0x69b582d2100e0001,
+    .minimum_zig_version = "0.16.0-dev.2623+27eec9bd6",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "web",
+    },
+}

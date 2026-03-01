@@ -1,0 +1,3 @@
+z-scroll-tracker { display: block; }
+z-scroll-tracker div { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100vw; height: 100vh; font-size: 3rem; font-family: system-ui, monospace; gap: 1rem; }
+z-scroll-tracker span { min-width: 6ch; text-align: center; }

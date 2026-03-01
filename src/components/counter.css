@@ -1,0 +1,4 @@
+z-counter { display: block; }
+z-counter div { display: flex; gap: 1rem; align-items: center; font-size: 2rem; }
+z-counter button { font-size: 2rem; padding: 0.5rem 1.5rem; cursor: pointer; }
+z-counter span { min-width: 3ch; text-align: center; }

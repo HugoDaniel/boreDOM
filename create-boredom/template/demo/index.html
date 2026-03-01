@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>boreDOM App</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #0f0f1a;
+            color: #eee;
+            padding: 2rem;
+        }
+        .counters {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .controls button {
+            background: none;
+            border: 1px solid #555;
+            border-radius: 8px;
+            color: #eee;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            transition: border-color 0.3s;
+        }
+        .controls button:hover { border-color: #41d1ff; }
+        .cards {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 640px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Static component — template mode, no interactivity -->
+    <z-hero></z-hero>
+
+    <!-- Multi-instance: each <z-counter> has independent state -->
+    <div class="controls">
+        <button onclick="addCounter()">Add counter</button>
+        <button onclick="removeCounter()">Remove counter</button>
+    </div>
+    <div class="counters">
+        <z-counter></z-counter>
+        <z-counter></z-counter>
+        <z-counter></z-counter>
+    </div>
+
+    <!-- Imperative mode component -->
+    <div class="cards">
+        <z-card></z-card>
+    </div>
+
+    <script src="../web/boredom.js"></script>
+    <script>
+        function addCounter() {
+            document.querySelector('.counters').appendChild(
+                document.createElement('z-counter')
+            );
+        }
+        function removeCounter() {
+            const last = document.querySelector('.counters z-counter:last-child');
+            if (last) last.remove();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>boreDOM — Counter Demo (Multi-Instance)</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            min-height: 100vh;
+            margin: 0;
+            background: #1a1a2e;
+            color: #eee;
+        }
+    </style>
+</head>
+<body>
+    <!-- Three independent counter instances -->
+    <z-counter></z-counter>
+    <z-counter></z-counter>
+    <z-counter></z-counter>
+    <script src="../web/boredom.js"></script>
+</body>
+</html>

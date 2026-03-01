@@ -1,0 +1,39 @@
+z-card {
+    display: block;
+}
+z-card div {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: border-color 0.3s;
+}
+z-card div:hover {
+    border-color: #bd34fe;
+}
+z-card h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+    color: #eee;
+}
+z-card p {
+    color: #888;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0 0 1.25rem;
+}
+z-card button {
+    background: #1a1a2e;
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: #eee;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.6rem 1.2rem;
+    transition: border-color 0.3s;
+}
+z-card button:hover {
+    border-color: #bd34fe;
+}
