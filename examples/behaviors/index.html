@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>boreUI behaviors</title>
+<style>
+  :root { color-scheme: light dark; --edge: light-dark(#d4d4d4, #3a3a3a); --accent: light-dark(#2f5fd0, #7aa2f7); }
+  body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 44rem; padding: 0 1rem; line-height: 1.5; }
+  h2 { margin-top: 2.5rem; font-size: 1.1rem; }
+  p { color: light-dark(#444, #bbb); }
+  section { border-top: 1px solid var(--edge); padding-top: .5rem; }
+  .row { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin: 1rem 0; }
+  code { font-family: ui-monospace, monospace; font-size: .8rem; color: light-dark(#666, #999); }
+
+  /* Every rule below reads a state attribute a behavior wrote. No JavaScript
+     runs to change an appearance, and nothing here is in the library. */
+  .button {
+    font: inherit; padding: .4rem .9rem; border-radius: 6px; cursor: default;
+    border: 1px solid var(--edge); background: light-dark(#fff, #222); color: inherit;
+  }
+  .button[data-hovered]:not(:disabled, [aria-disabled="true"]) { border-color: var(--accent); }
+  .button[data-pressed] { transform: translateY(1px); background: light-dark(#eef2fb, #2a3040); }
+  .button[data-focus-visible] { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .button:disabled, .button[aria-disabled="true"] { opacity: .5; }
+  .button[data-pending] { color: transparent; position: relative; }
+  .button[data-pending]::after { content: "working"; position: absolute; inset: 0; display: grid; place-items: center; color: light-dark(#444, #bbb); }
+
+  input { font: inherit; padding: .3rem .5rem; border: 1px solid var(--edge); border-radius: 4px; background: light-dark(#fff, #222); color: inherit; }
+  input:user-invalid { border-color: light-dark(#c22, #f66); }
+  .error { color: light-dark(#c22, #f66); }
+  .heard { margin: 0; padding: .5rem .75rem; background: light-dark(#f4f4f4, #232323); border-radius: 4px; min-height: 1.5rem; }
+</style>
+</head>
+<body>
+
+<h1>boreUI behaviors</h1>
+<p>
+  This page loads <code>boreui/behaviors/</code> and nothing else. No boreDOM, no kit, no
+  stylesheet from the library. Every appearance below comes from the <code>&lt;style&gt;</code>
+  block in this file, reading state attributes the behaviors wrote.
+</p>
+
+<section>
+  <h2>A button that is a div</h2>
+  <p>
+    Both controls get the same three behaviors. The div carries <code>role</code> and
+    <code>tabindex</code> in the markup, because saying what an element is stays the page's
+    job: a behavior only reports what is happening to it.
+  </p>
+  <div class="row">
+    <div class="button" id="custom" role="button" tabindex="0">Save</div>
+    <code id="custom-state"></code>
+  </div>
+  <div class="row">
+    <button class="button" id="native">Save</button>
+    <code id="native-state"></code>
+  </div>
+  <p>Pressed <output id="count">0</output> times, by mouse, touch, Enter, Space, or a screen reader.</p>
+</section>
+
+<section>
+  <h2>A press that takes a while</h2>
+  <p>
+    Returning a promise from <code>onPress</code> holds <code>data-pending</code> until it
+    settles, and further presses are refused while it runs.
+  </p>
+  <div class="row">
+    <button class="button" id="publish">Publish</button>
+    <code id="publish-state"></code>
+  </div>
+</section>
+
+<section>
+  <h2>A control that refuses</h2>
+  <p>
+    <code>aria-disabled</code> is the only way a div can say this. The behaviors read it at
+    the moment of each event, so nothing has to be kept in sync.
+  </p>
+  <div class="row">
+    <div class="button" id="blocked" role="button" tabindex="0" aria-disabled="true">Delete</div>
+    <code id="blocked-state"></code>
+  </div>
+</section>
+
+<section>
+  <h2>Pointing one element at another</h2>
+  <p>
+    The label is a real <code>&lt;label for&gt;</code>, because the platform already does
+    that one. The hint and the error are a list that grows and shrinks, which it does not.
+  </p>
+  <div class="row">
+    <label for="email">Email</label>
+    <input id="email" type="email" value="not an address">
+    <button class="button" id="check">Check</button>
+  </div>
+  <p id="hint">Only used for receipts.</p>
+  <p id="oops" class="error" hidden>That does not look like an email address.</p>
+  <p><code id="email-state"></code></p>
+</section>
+
+<section>
+  <h2>Saying something out loud</h2>
+  <p>
+    Live regions are invisible by design, so this page mirrors what went into them. A
+    screen reader reads the same text.
+  </p>
+  <div class="row">
+    <button class="button" id="polite">Announce politely</button>
+    <button class="button" id="urgent">Interrupt</button>
+  </div>
+  <p class="heard" id="heard"></p>
+</section>
+
+<script type="module">
+import {
+  announce, focusRing, hover, idFor, installAnnouncer, press, relate, unrelate,
+} from "../../boreui/behaviors/index.js";
+
+const $ = (id) => document.getElementById(id);
+
+/** Shows which state attributes a control carries, so the contract is visible. */
+function readout(el, out) {
+  const show = () => {
+    const names = Array.from(el.attributes, (a) => a.name).filter((n) => n.startsWith("data-"));
+    out.textContent = names.length ? names.join(" ") : "no state";
+  };
+  new MutationObserver(show).observe(el, { attributes: true });
+  show();
+}
+
+let presses = 0;
+for (const [el, out] of [[$("custom"), $("custom-state")], [$("native"), $("native-state")]]) {
+  press(el, { onPress: () => { $("count").textContent = ++presses; } });
+  hover(el);
+  focusRing(el);
+  readout(el, out);
+}
+
+press($("publish"), { onPress: () => new Promise((done) => setTimeout(done, 1500)) });
+hover($("publish"));
+focusRing($("publish"));
+readout($("publish"), $("publish-state"));
+
+press($("blocked"), { onPress: () => { throw new Error("a disabled control never gets here"); } });
+hover($("blocked"));
+focusRing($("blocked"));
+readout($("blocked"), $("blocked-state"));
+
+const email = $("email");
+const oops = $("oops");
+relate(email, "aria-describedby", $("hint"));
+const showWiring = () => { $("email-state").textContent = `aria-describedby="${email.getAttribute("aria-describedby")}"`; };
+showWiring();
+
+press($("check"), {
+  onPress: () => {
+    const bad = !email.checkValidity();
+    oops.hidden = !bad;
+    email.toggleAttribute("data-invalid", bad);
+    if (bad) relate(email, "aria-describedby", oops);
+    else unrelate(email, "aria-describedby", oops);
+    showWiring();
+    announce(bad ? "Check the email address" : "Email address looks fine", { assertive: bad });
+  },
+});
+
+installAnnouncer().then(() => {
+  const region = document.querySelector("[data-boreui-announcer]");
+  const mirror = () => { $("heard").textContent = region.textContent; };
+  new MutationObserver(mirror).observe(region, { childList: true, subtree: true, characterData: true });
+});
+
+press($("polite"), { onPress: () => announce(`Saved at ${new Date().toLocaleTimeString()}`) });
+press($("urgent"), { onPress: () => announce("Connection lost", { assertive: true }) });
+for (const id of ["check", "polite", "urgent"]) {
+  hover($(id));
+  focusRing($(id));
+}
+</script>
+</body>
+</html>

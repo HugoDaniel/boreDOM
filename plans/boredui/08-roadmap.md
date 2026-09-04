@@ -7,7 +7,7 @@ not calendar time.
 ## Milestone 0: core support. Done.
 
 `data-slot` with named slots and fallback content, `defined()`, the `has` trap on refs, and
-`kit/helpers.js` with `observeAttributes()` and `props()`. Covered by
+`boreui/kit/helpers.js` with `observeAttributes()` and `props()`. Covered by
 `tests/browser/kit.test.ts` and documented in the README. `05-core-support.md` records what
 shipped.
 
@@ -24,7 +24,19 @@ the plans depended on the old shape, and the kit inherits the wins.
 4. A demo page that styles a plain `<div>` into a working button using behaviors alone,
    with no kit and no CSS file.
 
-Done when `boreui.behaviors.js` is under 3 KB gzip and the press matrix is green.
+Done. `press`, `hover`, the focus module, `announce` and the id helpers are written, 447
+lines of code across six files against roughly 2000 in the react-aria equivalents, with 45
+tests in `tests/browser/boreui/`. The demo page is `examples/behaviors/`, driven by
+`tests/browser/examples.test.ts`.
+
+Two things the milestone found that the plan had wrong. There is no `data-disabled`,
+because being disabled is already in the DOM as `disabled` and `aria-disabled` and a third
+copy could only go stale. And a headless page has no window focus, so focus events never
+fired and anything listening for them was passing for the wrong reason until
+`scripts/test-headless.mjs` turned focus emulation on.
+
+The bundle size gate still has to be measured, which needs the build entry that milestone 2
+adds.
 
 ## Milestone 2: tokens, layers, and tier 1. Four to five days.
 
@@ -38,6 +50,19 @@ Done when `boreui.behaviors.js` is under 3 KB gzip and the press matrix is green
 Most of these are native elements with a drawn appearance and no behavior, so the count is
 larger than the effort. Done when the form example passes `axe-core` and works with the CSS
 file removed.
+
+Under way. `boreui.css` is written: four layers, twenty five registered tokens, and the
+state selectors, 2.9 KB gzip minified against a 4 KB budget. `ui-button` and `ui-checkbox`
+are done, with `adoptTemplate()`, `mirrorAttributes()` and `forward()` added to
+`boreui/kit/helpers.js` to support them.
+
+Three things the stylesheet found that the plan had wrong. A registered property cannot
+take `rem` in its `initial-value`, because an initial value has to be computationally
+independent, so `--ui-space` was silently dropped until it was registered in px and set in
+`:root`. Colour transitions are legal after all, as long as the control paints from a
+registered custom property and that is what transitions, which is why `--ui-control-bg` and
+`--ui-control-border` exist and do not inherit. And a disabled checkbox needs its label
+dimmed rather than its input, because the input a checkbox draws over is invisible already.
 
 ## Milestone 3: overlays. Two to three days.
 

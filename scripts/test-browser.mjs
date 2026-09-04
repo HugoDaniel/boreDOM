@@ -3,15 +3,9 @@
 // window.__boredomTests to { passed, failed, results } when it finishes.
 import { context } from "esbuild";
 import { spawn } from "node:child_process";
+import { bundle } from "./bundle.mjs";
 
-const ctx = await context({
-  entryPoints: ["tests/browser/runner.ts"],
-  bundle: true,
-  target: "es2022",
-  format: "esm",
-  outfile: "tests/browser/dist/runner.js",
-  sourcemap: "inline",
-});
+const ctx = await context(bundle);
 await ctx.watch();
 
 const server = spawn(process.execPath, ["bin/serve.js", "."], { stdio: "inherit" });

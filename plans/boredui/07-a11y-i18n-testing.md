@@ -73,6 +73,12 @@ its `fixture()` and `assert` harness. A render that throws no longer reaches `co
 it surfaces as an uncaught rejection or from `nextTick()`, so a test that expects a failing
 render asserts by awaiting `nextTick()` and catching.
 
+A headless page has no window focus, so `document.hasFocus()` is false, and `el.focus()`
+moves `document.activeElement` without firing a focus event. Anything listening for focus
+silently never runs and its tests pass for the wrong reason. `scripts/test-headless.mjs`
+turns this off with `Emulation.setFocusEmulationEnabled` before navigating, and any new
+driver has to do the same.
+
 **Behavior tests** drive one behavior on a bare element and assert attributes and callbacks.
 `press` gets the full matrix: mouse, touch, pen, keyboard Space, keyboard Enter, virtual
 click, cancellation by scroll, cancellation by `pointercancel`, and disabled mid-press.

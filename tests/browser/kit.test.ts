@@ -1,6 +1,6 @@
 import { assert, fixture, test } from "./harness.ts";
 import { define, defined, nextTick, webComponent } from "../../src/index.ts";
-import { observeAttributes, props } from "../../kit/helpers.js";
+import { observeAttributes, props } from "../../boreui/kit/helpers.js";
 
 let counter = 0;
 const uid = (suffix: string) => `k${++counter}-${suffix}`;

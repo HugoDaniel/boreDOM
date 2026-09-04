@@ -187,6 +187,16 @@ be real and tested, not a comment promising one.
 Animate `transform`, `opacity`, and registered custom properties. Nothing else, and never
 `transition: all`.
 
+Guard every interaction state against disabled:
+`[data-hovered]:not(:disabled, [aria-disabled="true"])`, never bare `[data-hovered]`. A
+behavior cannot see a property change, so an element disabled while it is hovered keeps the
+attribute, and the guard makes that invisible instead of buying a `MutationObserver` per
+element to avoid it.
+
+Read the disabled state itself from `:disabled` and `[aria-disabled="true"]`. No behavior
+writes a `data-disabled`, because the fact is already in the DOM twice over and a third
+copy could only disagree with the other two.
+
 Use `outline` for focus rings, never `box-shadow`. Outlines follow `border-radius`, do not
 affect layout, and survive forced-colors mode.
 

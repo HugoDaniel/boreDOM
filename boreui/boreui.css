@@ -1,0 +1,722 @@
+/**
+ * boreui.css: structure, no personality.
+ *
+ * One file, four cascade layers, in this order:
+ *
+ *   reset   box-sizing, color-scheme, and the browser defaults the kit removes
+ *           from the controls it owns. Nothing else on the page is touched.
+ *   tokens  every custom property, registered with @property so it has a type,
+ *           a fallback, and the ability to transition.
+ *   base    structure: layout, spacing, hit areas, and the focus outline.
+ *   state   the data-* attributes the behaviors write, in one screen.
+ *
+ * Your own CSS is written with no layer at all, which beats every layer here
+ * however specific the rule inside it is. That is the whole theming story:
+ *
+ *   .sidebar { --ui-accent: oklch(0.6 0.15 150); }
+ *
+ * Nothing in the file uses !important, and nothing needs it.
+ */
+
+@layer boreui.reset, boreui.tokens, boreui.base, boreui.state;
+
+/* ========================================================================== */
+/* reset                                                                      */
+/* ========================================================================== */
+
+@layer boreui.reset {
+  :root {
+    color-scheme: light dark;
+    /* Makes block-size: auto transition, which is what a disclosure needs.
+       A browser without it opens instantly, which is the right fallback. */
+    interpolate-size: allow-keywords;
+  }
+
+  /* The kit owns what is inside a ui-* element and nothing else. Custom
+     elements are inline until told otherwise, so every host says what it is. */
+  :where(ui-accordion, ui-alert-dialog, ui-breadcrumbs, ui-button, ui-checkbox,
+    ui-checkbox-group, ui-dialog, ui-disclosure, ui-field, ui-form, ui-link,
+    ui-meter, ui-progress, ui-radio-group, ui-search-field, ui-separator,
+    ui-switch, ui-text-area, ui-text-field, ui-toggle-button, ui-toolbar) {
+    display: block;
+    box-sizing: border-box;
+    font-family: var(--ui-font);
+    color: var(--ui-text);
+  }
+
+  :where(ui-accordion, ui-alert-dialog, ui-breadcrumbs, ui-button, ui-checkbox,
+    ui-checkbox-group, ui-dialog, ui-disclosure, ui-field, ui-form, ui-link,
+    ui-meter, ui-progress, ui-radio-group, ui-search-field, ui-separator,
+    ui-switch, ui-text-area, ui-text-field, ui-toggle-button, ui-toolbar) * {
+    box-sizing: border-box;
+  }
+
+  /* Fieldsets and lists carry decoration the kit draws itself. */
+  :where(ui-checkbox-group, ui-radio-group) fieldset,
+  :where(ui-breadcrumbs) ol {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    list-style: none;
+  }
+}
+
+/* ========================================================================== */
+/* tokens                                                                     */
+/* ========================================================================== */
+
+@layer boreui.tokens {
+  /* Registration gives each token a type, so a typo falls back to the initial
+     value instead of poisoning the rule, and lets it transition. The values
+     here are the fallback; the :root block below is where they are really set,
+     because an initial-value cannot contain var() or light-dark(). */
+
+  @property --ui-surface { syntax: "<color>"; inherits: true; initial-value: oklch(0.99 0 0); }
+  @property --ui-surface-raised { syntax: "<color>"; inherits: true; initial-value: oklch(1 0 0); }
+  @property --ui-surface-sunken { syntax: "<color>"; inherits: true; initial-value: oklch(0.93 0 0); }
+  @property --ui-surface-hover { syntax: "<color>"; inherits: true; initial-value: oklch(0.95 0 0); }
+  @property --ui-surface-active { syntax: "<color>"; inherits: true; initial-value: oklch(0.91 0 0); }
+  @property --ui-text { syntax: "<color>"; inherits: true; initial-value: oklch(0.25 0 0); }
+  @property --ui-text-muted { syntax: "<color>"; inherits: true; initial-value: oklch(0.52 0 0); }
+  @property --ui-border { syntax: "<color>"; inherits: true; initial-value: oklch(0.85 0 0); }
+  @property --ui-accent { syntax: "<color>"; inherits: true; initial-value: oklch(0.55 0.19 265); }
+  @property --ui-accent-hover { syntax: "<color>"; inherits: true; initial-value: oklch(0.49 0.19 265); }
+  @property --ui-accent-active { syntax: "<color>"; inherits: true; initial-value: oklch(0.44 0.18 265); }
+  @property --ui-on-accent { syntax: "<color>"; inherits: true; initial-value: oklch(0.99 0 0); }
+  @property --ui-danger { syntax: "<color>"; inherits: true; initial-value: oklch(0.53 0.2 27); }
+  @property --ui-focus { syntax: "<color>"; inherits: true; initial-value: oklch(0.55 0.19 265); }
+  @property --ui-scrim { syntax: "<color>"; inherits: true; initial-value: oklch(0 0 0 / 0.35); }
+
+  /* The only two that do not inherit. A control reads its own background and
+     border colour, so marking a card as hovered cannot repaint the buttons
+     inside it. The state layer writes these and nothing else writes colour. */
+  @property --ui-control-bg { syntax: "<color>"; inherits: false; initial-value: transparent; }
+  @property --ui-control-border { syntax: "<color>"; inherits: false; initial-value: transparent; }
+
+  @property --ui-radius { syntax: "<length>"; inherits: true; initial-value: 6px; }
+  /* The two lengths that are really rem are registered in px, because an
+     initial-value has to be computationally independent and rem is not. The
+     :root block sets the value each one is actually meant to have. */
+  @property --ui-space { syntax: "<length>"; inherits: true; initial-value: 8px; }
+  @property --ui-border-width { syntax: "<length>"; inherits: true; initial-value: 1px; }
+  @property --ui-focus-width { syntax: "<length>"; inherits: true; initial-value: 2px; }
+  @property --ui-focus-offset { syntax: "<length>"; inherits: true; initial-value: 2px; }
+  @property --ui-control-size { syntax: "<length>"; inherits: true; initial-value: 36px; }
+  @property --ui-duration { syntax: "<time>"; inherits: true; initial-value: 150ms; }
+  @property --ui-font { syntax: "*"; inherits: true; initial-value: system-ui, sans-serif; }
+
+  :root {
+    /* Light and dark are one declaration each, not a media query block that has
+       to be kept in sync. OKLCH so a hue change keeps its lightness. */
+    --ui-surface: light-dark(oklch(0.99 0 0), oklch(0.21 0 0));
+    --ui-surface-raised: light-dark(oklch(1 0 0), oklch(0.26 0 0));
+    --ui-surface-sunken: light-dark(oklch(0.93 0 0), oklch(0.28 0 0));
+    --ui-text: light-dark(oklch(0.25 0 0), oklch(0.95 0 0));
+    --ui-text-muted: light-dark(oklch(0.52 0 0), oklch(0.73 0 0));
+    --ui-border: light-dark(oklch(0.85 0 0), oklch(0.38 0 0));
+    --ui-accent: oklch(0.55 0.19 265);
+    --ui-on-accent: oklch(0.99 0 0);
+    --ui-danger: light-dark(oklch(0.53 0.2 27), oklch(0.7 0.19 27));
+    --ui-scrim: light-dark(oklch(0 0 0 / 0.32), oklch(0 0 0 / 0.55));
+    --ui-space: 0.5rem;
+    --ui-control-size: 2.25rem;
+
+    /* Derived, so overriding one accent moves its whole ramp. Mixing towards
+       the text colour darkens in light mode and lightens in dark mode, which
+       is the direction a hover wants in both. */
+    --ui-surface-hover: color-mix(in oklch, var(--ui-surface), var(--ui-text) 7%);
+    --ui-surface-active: color-mix(in oklch, var(--ui-surface), var(--ui-text) 14%);
+    --ui-accent-hover: color-mix(in oklch, var(--ui-accent), var(--ui-text) 12%);
+    --ui-accent-active: color-mix(in oklch, var(--ui-accent), var(--ui-text) 22%);
+    --ui-focus: var(--ui-accent);
+  }
+}
+
+/* ========================================================================== */
+/* base                                                                       */
+/* ========================================================================== */
+
+@layer boreui.base {
+  /* -- the control surface ------------------------------------------------ */
+
+  /* Everything you press or type into shares one skin, so overriding
+     --ui-radius or --ui-accent moves all of them together. Colour is read from
+     --ui-control-bg and --ui-control-border, which are registered, so the two
+     transitions below are transitions of custom properties rather than of
+     background-color: the only kind this kit allows besides transform and
+     opacity. */
+  :where(ui-button, ui-toggle-button, ui-search-field) button,
+  :where(ui-text-field, ui-search-field) input,
+  ui-text-area textarea {
+    --ui-control-bg: var(--ui-surface);
+    --ui-control-border: var(--ui-border);
+    appearance: none;
+    font: inherit;
+    color: inherit;
+    margin: 0;
+    background: var(--ui-control-bg);
+    border: var(--ui-border-width) solid var(--ui-control-border);
+    border-radius: var(--ui-radius);
+    min-block-size: var(--ui-control-size);
+    padding-inline: calc(var(--ui-space) * 1.5);
+    transition:
+      --ui-control-bg var(--ui-duration),
+      --ui-control-border var(--ui-duration);
+  }
+
+  :where(ui-button, ui-toggle-button, ui-search-field) button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ui-space);
+    cursor: default;
+    user-select: none;
+  }
+
+  /* Trimming to the cap height makes the optical padding of a label equal
+     without a magic number per font. Without it the symmetric padding above
+     is close enough. */
+  @supports (text-box: trim-both cap alphabetic) {
+    :where(ui-button, ui-toggle-button, ui-search-field) button {
+      text-box: trim-both cap alphabetic;
+    }
+  }
+
+  ui-toggle-button [aria-pressed="true"] {
+    --ui-control-bg: var(--ui-accent);
+    --ui-control-border: var(--ui-accent);
+    color: var(--ui-on-accent);
+  }
+
+  /* The kit's own focusables get the ring the browser already knows when to
+     show. data-focus-visible in the state layer is for the widgets it cannot
+     judge, where DOM focus and visible focus are on different elements. */
+  :where(ui-accordion, ui-alert-dialog, ui-breadcrumbs, ui-button, ui-checkbox,
+    ui-checkbox-group, ui-dialog, ui-disclosure, ui-field, ui-form, ui-link,
+    ui-radio-group, ui-search-field, ui-switch, ui-text-area, ui-text-field,
+    ui-toggle-button, ui-toolbar) :focus-visible {
+    outline: var(--ui-focus-width) solid var(--ui-focus);
+    outline-offset: var(--ui-focus-offset);
+  }
+
+  /* -- link --------------------------------------------------------------- */
+
+  ui-link a,
+  ui-breadcrumbs a {
+    color: var(--ui-accent);
+    border-radius: calc(var(--ui-radius) / 2);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+
+  /* -- checkbox and switch ------------------------------------------------ */
+
+  :where(ui-checkbox, ui-switch) label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space);
+    cursor: default;
+  }
+
+  /* The real input stays in the DOM, focusable and form associated, and CSS
+     draws the sibling from :checked and :indeterminate. The input is invisible
+     rather than hidden, because display: none takes it out of the tab order. */
+  :where(ui-checkbox, ui-switch) input {
+    position: absolute;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ui-checkbox-box,
+  .ui-switch-track {
+    --ui-control-bg: var(--ui-surface);
+    --ui-control-border: var(--ui-border);
+    flex: none;
+    background: var(--ui-control-bg);
+    border: var(--ui-border-width) solid var(--ui-control-border);
+    transition:
+      --ui-control-bg var(--ui-duration),
+      --ui-control-border var(--ui-duration);
+  }
+
+  .ui-checkbox-box {
+    display: grid;
+    place-items: center;
+    inline-size: 1.15em;
+    block-size: 1.15em;
+    border-radius: calc(var(--ui-radius) / 2);
+  }
+
+  /* The tick is drawn from two borders of an empty box, and it scales and fades
+     rather than appearing, so the transition stays on the compositor. */
+  .ui-checkbox-box::after {
+    content: "";
+    inline-size: 0.3em;
+    block-size: 0.55em;
+    border: solid var(--ui-on-accent);
+    border-width: 0 2px 2px 0;
+    opacity: 0;
+    transform: translateY(-0.05em) rotate(45deg) scale(0.5);
+    transition: opacity var(--ui-duration), transform var(--ui-duration);
+  }
+
+  ui-checkbox :where(input:checked, input:indeterminate) + .ui-checkbox-box {
+    --ui-control-bg: var(--ui-accent);
+    --ui-control-border: var(--ui-accent);
+  }
+
+  ui-checkbox input:checked + .ui-checkbox-box::after {
+    opacity: 1;
+    transform: translateY(-0.05em) rotate(45deg) scale(1);
+  }
+
+  ui-checkbox input:indeterminate + .ui-checkbox-box::after {
+    inline-size: 0.55em;
+    block-size: 0;
+    border-width: 0 0 2px 0;
+    opacity: 1;
+    transform: none;
+  }
+
+  .ui-switch-track {
+    --ui-control-bg: var(--ui-surface-sunken);
+    display: flex;
+    align-items: center;
+    inline-size: 2.1em;
+    block-size: 1.2em;
+    padding: 0.15em;
+    border-radius: 1em;
+  }
+
+  .ui-switch-track::after {
+    content: "";
+    inline-size: 0.9em;
+    block-size: 0.9em;
+    border-radius: 50%;
+    background: var(--ui-surface);
+    transition: transform var(--ui-duration);
+  }
+
+  ui-switch input:checked + .ui-switch-track {
+    --ui-control-bg: var(--ui-accent);
+    --ui-control-border: var(--ui-accent);
+  }
+
+  /* Travel is the track minus the thumb, its padding and its two borders. */
+  ui-switch input:checked + .ui-switch-track::after {
+    transform: translateX(calc(0.9em - 2 * var(--ui-border-width)));
+  }
+
+  ui-switch:dir(rtl) input:checked + .ui-switch-track::after {
+    transform: translateX(calc(2 * var(--ui-border-width) - 0.9em));
+  }
+
+  /* The ring belongs on what you can see, not on the invisible input. */
+  :where(ui-checkbox, ui-switch) input:focus-visible + :where(.ui-checkbox-box, .ui-switch-track) {
+    outline: var(--ui-focus-width) solid var(--ui-focus);
+    outline-offset: var(--ui-focus-offset);
+  }
+
+  :where(ui-checkbox, ui-switch) label:not(:has(input:disabled)):hover :where(.ui-checkbox-box, .ui-switch-track) {
+    --ui-control-border: var(--ui-accent);
+  }
+
+  /* -- groups, fields and forms ------------------------------------------- */
+
+  /* Radios are left as the browser draws them. Native radios already do roving
+     focus inside a group, and accent-color is the whole of the theming they
+     need. */
+  ui-radio-group input {
+    accent-color: var(--ui-accent);
+  }
+
+  ui-form,
+  ui-field,
+  ui-checkbox-group fieldset,
+  ui-radio-group fieldset {
+    display: grid;
+    gap: var(--ui-space);
+    justify-items: start;
+  }
+
+  ui-form {
+    gap: calc(var(--ui-space) * 2.5);
+  }
+
+  ui-field {
+    gap: calc(var(--ui-space) * 0.5);
+  }
+
+  :where(ui-field, ui-checkbox-group, ui-radio-group) :where([data-slot="label"], legend) {
+    font-weight: 600;
+    padding: 0;
+  }
+
+  :where(ui-field, ui-form, ui-checkbox-group, ui-radio-group) [data-slot="description"] {
+    margin: 0;
+    color: var(--ui-text-muted);
+    font-size: 0.875em;
+  }
+
+  :where(ui-field, ui-form, ui-checkbox-group, ui-radio-group) [data-slot="error"] {
+    margin: 0;
+    color: var(--ui-danger);
+    font-size: 0.875em;
+  }
+
+  /* An error message with nothing in it is not a gap in the layout. */
+  :where(ui-field, ui-form, ui-checkbox-group, ui-radio-group) [data-slot="error"]:empty {
+    display: none;
+  }
+
+  /* -- text entry --------------------------------------------------------- */
+
+  ui-text-area textarea {
+    padding-block: calc(var(--ui-space) * 0.75);
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  /* Autosizing is one declaration. Every kit that predates it writes to a
+     hidden mirror element and reads its height on every keystroke. */
+  @supports (field-sizing: content) {
+    ui-text-area textarea {
+      field-sizing: content;
+      resize: none;
+    }
+  }
+
+  ui-search-field {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--ui-space) * 0.5);
+  }
+
+  ui-search-field input::-webkit-search-decoration,
+  ui-search-field input::-webkit-search-cancel-button {
+    appearance: none;
+  }
+
+  /* -- meter, progress and separator -------------------------------------- */
+
+  /* An indeterminate <progress> keeps the appearance the platform gives it,
+     animation included, so only the ones carrying a value are redrawn. */
+  ui-meter meter,
+  ui-progress progress[value] {
+    appearance: none;
+    inline-size: 100%;
+    block-size: calc(var(--ui-space) * 1.25);
+    border: 0;
+    border-radius: 1em;
+    background: var(--ui-surface-sunken);
+  }
+
+  ui-progress progress[value]::-webkit-progress-bar,
+  ui-meter meter::-webkit-meter-bar {
+    border-radius: 1em;
+    background: var(--ui-surface-sunken);
+  }
+
+  ui-progress progress[value]::-webkit-progress-value,
+  ui-meter meter::-webkit-meter-optimum-value,
+  ui-meter meter::-webkit-meter-suboptimum-value,
+  ui-meter meter::-webkit-meter-even-less-good-value {
+    border-radius: 1em;
+    background: var(--ui-accent);
+  }
+
+  ui-progress progress[value]::-moz-progress-bar,
+  ui-meter meter::-moz-meter-bar {
+    border-radius: 1em;
+    background: var(--ui-accent);
+  }
+
+  ui-separator hr {
+    margin: 0;
+    border: 0;
+    border-block-start: var(--ui-border-width) solid var(--ui-border);
+  }
+
+  ui-separator hr[aria-orientation="vertical"] {
+    block-size: 100%;
+    border-block-start: 0;
+    border-inline-start: var(--ui-border-width) solid var(--ui-border);
+  }
+
+  /* -- disclosure and accordion ------------------------------------------- */
+
+  ui-accordion {
+    display: grid;
+    gap: var(--ui-space);
+  }
+
+  :where(ui-disclosure, ui-accordion) details {
+    border: var(--ui-border-width) solid var(--ui-border);
+    border-radius: var(--ui-radius);
+    background: var(--ui-surface);
+  }
+
+  :where(ui-disclosure, ui-accordion) summary {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+    padding: calc(var(--ui-space) * 0.75) calc(var(--ui-space) * 1.5);
+    border-radius: inherit;
+    cursor: default;
+    font-weight: 600;
+    list-style: none;
+  }
+
+  :where(ui-disclosure, ui-accordion) summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* The marker is two borders of an empty box, rotated. It turns on transform
+     alone, so an open accordion costs no layout. */
+  :where(ui-disclosure, ui-accordion) summary::after {
+    content: "";
+    margin-inline-start: auto;
+    inline-size: 0.45em;
+    block-size: 0.45em;
+    border: solid var(--ui-text-muted);
+    border-width: 0 2px 2px 0;
+    transform: translateY(-0.15em) rotate(45deg);
+    transition: transform var(--ui-duration);
+  }
+
+  :where(ui-disclosure, ui-accordion) details[open] summary::after {
+    transform: translateY(0.1em) rotate(-135deg);
+  }
+
+  :where(ui-disclosure, ui-accordion) details::details-content {
+    padding-inline: calc(var(--ui-space) * 1.5);
+    padding-block-end: calc(var(--ui-space) * 1.5);
+  }
+
+  /* height: auto animates because of interpolate-size, and the discrete
+     content-visibility change animates because of allow-discrete. Nothing is
+     measured and no element is kept open to be measured. Browsers without
+     either open instantly, which is what they did before. */
+  @supports (interpolate-size: allow-keywords) {
+    :where(ui-disclosure, ui-accordion) details::details-content {
+      block-size: 0;
+      overflow: hidden;
+      transition:
+        block-size var(--ui-duration),
+        content-visibility var(--ui-duration) allow-discrete;
+    }
+
+    :where(ui-disclosure, ui-accordion) details[open]::details-content {
+      block-size: auto;
+    }
+  }
+
+  /* -- dialog ------------------------------------------------------------- */
+
+  /* showModal() is the focus trap, the inert background, the scroll lock, the
+     Escape handler and the focus return. What is left is the look and the
+     transition, and the transition is @starting-style. */
+  :where(ui-dialog, ui-alert-dialog) dialog {
+    margin: auto;
+    max-inline-size: min(92vw, 32rem);
+    padding: calc(var(--ui-space) * 3);
+    border: var(--ui-border-width) solid var(--ui-border);
+    border-radius: calc(var(--ui-radius) * 1.5);
+    background: var(--ui-surface-raised);
+    color: var(--ui-text);
+    opacity: 0;
+    transform: scale(0.97);
+    transition:
+      opacity var(--ui-duration),
+      transform var(--ui-duration),
+      display var(--ui-duration) allow-discrete,
+      overlay var(--ui-duration) allow-discrete;
+  }
+
+  :where(ui-dialog, ui-alert-dialog) dialog[open] {
+    opacity: 1;
+    transform: none;
+  }
+
+  @starting-style {
+    :where(ui-dialog, ui-alert-dialog) dialog[open] {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+
+  :where(ui-dialog, ui-alert-dialog) dialog::backdrop {
+    background: var(--ui-scrim);
+    opacity: 0;
+    transition:
+      opacity var(--ui-duration),
+      display var(--ui-duration) allow-discrete,
+      overlay var(--ui-duration) allow-discrete;
+  }
+
+  :where(ui-dialog, ui-alert-dialog) dialog[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    :where(ui-dialog, ui-alert-dialog) dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /* -- toolbar and breadcrumbs -------------------------------------------- */
+
+  ui-toolbar [role="toolbar"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-space);
+  }
+
+  ui-breadcrumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-space);
+  }
+
+  /* The slash is decoration with an empty alt text, so it is drawn and not
+     read out. */
+  ui-breadcrumbs li + li::before {
+    content: "/" / "";
+    padding-inline-end: var(--ui-space);
+    color: var(--ui-text-muted);
+  }
+
+  ui-breadcrumbs [aria-current="page"] {
+    color: var(--ui-text);
+    text-decoration: none;
+  }
+}
+
+/* ========================================================================== */
+/* state                                                                      */
+/* ========================================================================== */
+
+/* Every rule below reads an attribute from the table in 02-behaviors.md, and
+ * nothing else lives here. The attributes exist only where a behavior put
+ * them, so these rules reach a plain <div> exactly when the page asked a
+ * behavior to watch one.
+ *
+ * Two of the rows have nothing to say. data-open is the fact that a panel is
+ * showing, and showing it is the popover API's job, not this file's.
+ * data-dragging and data-drop-target arrive with tier 3.
+ */
+
+@layer boreui.state {
+  /* Every interaction state is guarded against disabled. A behavior is not
+     told when a property changes, so an element disabled while it is hovered
+     keeps the attribute, and the guard makes that invisible. Disabled itself
+     is read from the DOM, never from a data-disabled the kit would have to
+     keep in sync. */
+  [data-hovered]:not(:disabled, [aria-disabled="true"]) {
+    --ui-control-bg: var(--ui-surface-hover);
+  }
+
+  [data-pressed]:not(:disabled, [aria-disabled="true"]) {
+    --ui-control-bg: var(--ui-surface-active);
+    transform: translateY(1px);
+  }
+
+  [aria-pressed="true"][data-hovered]:not(:disabled, [aria-disabled="true"]) {
+    --ui-control-bg: var(--ui-accent-hover);
+  }
+
+  [aria-pressed="true"][data-pressed]:not(:disabled, [aria-disabled="true"]) {
+    --ui-control-bg: var(--ui-accent-active);
+  }
+
+  /* data-focused is DOM focus and gets no ring of its own: a ring shown for
+     every click is the thing :focus-visible was invented to stop. */
+  [data-focus-visible] {
+    outline: var(--ui-focus-width) solid var(--ui-focus);
+    outline-offset: var(--ui-focus-offset);
+  }
+
+  /* An async press. No spinner, because a spinner is personality. */
+  [data-pending] {
+    cursor: progress;
+    opacity: 0.7;
+  }
+
+  /* The browser's own version of the same fact, kept next to it so the whole
+     invalid surface is one place. :user-invalid waits for the user to have
+     interacted, which is the state machine every other kit hand rolls. */
+  [data-invalid],
+  :where(ui-text-field, ui-search-field, ui-text-area, ui-field) :user-invalid {
+    --ui-control-border: var(--ui-danger);
+  }
+
+  /* Collections arrive in milestone 4. data-current marks the item under
+     aria-activedescendant, where DOM focus is somewhere else entirely. */
+  [data-selected] {
+    --ui-control-bg: var(--ui-surface-active);
+  }
+
+  [data-current] {
+    --ui-control-bg: var(--ui-surface-hover);
+  }
+
+  [data-orientation="vertical"] {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Written by overlay() from the position the browser resolved, so the gap
+     is on the side the panel actually ended up on. */
+  [data-placement^="top"] { margin-block-end: var(--ui-space); }
+  [data-placement^="bottom"] { margin-block-start: var(--ui-space); }
+  [data-placement^="left"] { margin-inline-end: var(--ui-space); }
+  [data-placement^="right"] { margin-inline-start: var(--ui-space); }
+
+  /* The label is dimmed rather than the input, because the input a checkbox
+     draws over is invisible and dimming it would show nothing. */
+  :disabled,
+  [aria-disabled="true"],
+  :where(ui-checkbox, ui-switch) label:has(input:disabled) {
+    opacity: 0.5;
+  }
+
+  /* One rule turns off every animation in the file, because every duration in
+     it is this token. The transitions stay declared, so a state change still
+     lands, it just lands at once. */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --ui-duration: 0s;
+    }
+  }
+
+  /* In forced colours the palette is the user's. Remapping the tokens is the
+     whole of the support, because nothing in this file paints with anything
+     else. forced-color-adjust is left alone on purpose. */
+  @media (forced-colors: active) {
+    :root {
+      --ui-surface: Canvas;
+      --ui-surface-raised: Canvas;
+      --ui-surface-sunken: Canvas;
+      --ui-surface-hover: Canvas;
+      --ui-surface-active: Canvas;
+      --ui-text: CanvasText;
+      --ui-text-muted: GrayText;
+      --ui-border: ButtonText;
+      --ui-accent: Highlight;
+      --ui-accent-hover: Highlight;
+      --ui-accent-active: Highlight;
+      --ui-on-accent: HighlightText;
+      --ui-danger: LinkText;
+      --ui-focus: CanvasText;
+    }
+
+    :disabled,
+    [aria-disabled="true"] {
+      opacity: 1;
+      color: GrayText;
+    }
+  }
+}

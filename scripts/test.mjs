@@ -3,15 +3,9 @@
 import { build } from "esbuild";
 import { spawn } from "node:child_process";
 import { serve } from "./chrome.mjs";
+import { bundle } from "./bundle.mjs";
 
-await build({
-  entryPoints: ["tests/browser/runner.ts"],
-  bundle: true,
-  target: "es2022",
-  format: "esm",
-  outfile: "tests/browser/dist/runner.js",
-  sourcemap: "inline",
-});
+await build(bundle);
 
 const port = 8123;
 const stop = await serve(port);

@@ -17,6 +17,10 @@ chrome.on("Runtime.exceptionThrown", ({ exceptionDetails }) => {
 
 await chrome.send("Runtime.enable");
 await chrome.send("Page.enable");
+// A headless page has no window focus, so document.hasFocus() is false and
+// el.focus() moves activeElement without firing a focus event. Anything that
+// listens for focus would silently never run.
+await chrome.send("Emulation.setFocusEmulationEnabled", { enabled: true });
 await chrome.send("Page.navigate", { url });
 for (let i = 0; i < 100 && loads === 0; i++) await sleep(100);
 

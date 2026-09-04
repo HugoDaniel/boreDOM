@@ -2,7 +2,7 @@
 
 The five gaps are closed. This file records what shipped, where it differs from what was
 proposed, and the three behaviours a kit author has to know about. The code is in
-`src/element.ts`, `src/index.ts`, and `kit/helpers.js`, and the tests are in
+`src/element.ts`, `src/index.ts`, and `boreui/kit/helpers.js`, and the tests are in
 `tests/browser/kit.test.ts`.
 
 ## 1. Slots
@@ -64,7 +64,7 @@ Reading a missing ref still throws, which keeps catching typos.
 
 ## 4. `observeAttributes(self, local, names)`
 
-Shipped as proposed, in `kit/helpers.js`. One `MutationObserver` per element that opts in,
+Shipped as proposed, in `boreui/kit/helpers.js`. One `MutationObserver` per element that opts in,
 `attributeFilter` set to the named attributes, and it returns the disconnect function for
 `onCleanup`.
 
@@ -98,15 +98,17 @@ checks `Object.hasOwn(self, key)`, copies the value into `local`, and deletes th
 property to let the accessor through. Without that, `el.items = [...]` before definition is
 silently lost, which is the classic custom element bug.
 
-**Properties reset when an element leaves the document and comes back.** `detach()` drops
-`local`, `init` runs again on reconnect, and `props` re-applies the defaults, so a value set
-from outside while detached is overwritten. This follows boreDOM's fifth rule, that coming
-back starts fresh, and it is the right default. A parent that owns a child's data either
-sets the property again after reinserting, or keeps the data in `state` and lets the child
-read it, which is what `ui-listbox` does.
+**Properties reset when an element is really torn down.** `detach()` drops `local`, `init`
+runs again on reconnect, and `props` re-applies its defaults, so a value assigned from
+outside while the element was out is overwritten. This follows boreDOM's fifth rule, that
+coming back starts fresh, and it is the right default. A parent that owns a child's data
+either sets the property again after reinserting it, or keeps the data in `state` and lets
+the child read it, which is what `ui-listbox` does.
 
-Note that `keyed()` moves elements with `moveBefore()` where the browser has it, and a move
-is not a detach, so reordering a list does not reset anything.
+Teardown is narrower than it sounds, so most reordering never hits this. Detached elements
+are swept in a microtask and an element put back before that check is never torn down, and
+`keyed()` moves elements with `moveBefore()` where the browser has it, which is not a
+disconnect at all. Reordering a list resets nothing.
 
 ## What else changed underneath
 

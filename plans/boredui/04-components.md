@@ -6,9 +6,9 @@ template with the same name. Paste a component's template into your own HTML and
 uses yours, which is how you fork one component without forking the library.
 
 ```js
-// kit/button.js
-import { define, webComponent } from "../boredom.js";
-import { press } from "../boreui.behaviors.js";
+// boreui/kit/button.js
+import { define, webComponent } from "@mr_hugo/boredom";
+import { press } from "../behaviors/index.js";
 
 export const template = `<button data-ref="button" type="button" data-slot></button>`;
 

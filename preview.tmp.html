@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>tier 1 so far</title>
+<link rel="stylesheet" href="/boreui/boreui.css">
+<script type="importmap">{ "imports": { "@mr_hugo/boredom": "/dist/boredom.js" } }</script>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; display: grid; gap: 1.25rem; justify-items: start; }
+  .row { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+  h2 { font-size: .9rem; margin: .5rem 0 0; color: #666; font-weight: 600; }
+</style>
+</head>
+<body>
+<h2>ui-toggle-button</h2>
+<div class="row">
+  <ui-toggle-button>Bold</ui-toggle-button>
+  <ui-toggle-button selected>Italic</ui-toggle-button>
+  <ui-toggle-button selected id="on-hover">Selected, hovered</ui-toggle-button>
+  <ui-toggle-button selected disabled>Disabled</ui-toggle-button>
+  <ui-toggle-button id="ring">Focus ring</ui-toggle-button>
+</div>
+
+<h2>ui-link</h2>
+<div class="row">
+  <ui-link href="/docs">Documentation</ui-link>
+  <ui-link href="/docs" id="link-ring">Focus ring</ui-link>
+  <ui-link>No href, no link</ui-link>
+</div>
+
+<h2>ui-button and ui-checkbox, for scale</h2>
+<div class="row">
+  <ui-button>Save</ui-button>
+  <ui-button disabled>Disabled</ui-button>
+  <ui-checkbox checked>Checked</ui-checkbox>
+  <ui-checkbox indeterminate>Some</ui-checkbox>
+</div>
+
+<h2>themed with three declarations</h2>
+<div class="row" style="--ui-accent: oklch(0.6 0.15 150); --ui-radius: 14px; --ui-control-size: 2rem">
+  <ui-toggle-button selected>Italic</ui-toggle-button>
+  <ui-link href="/docs">Documentation</ui-link>
+  <ui-checkbox checked>Checked</ui-checkbox>
+</div>
+
+<script type="module">
+import { mount } from "@mr_hugo/boredom";
+import { install } from "/boreui/kit/index.js";
+
+install();
+mount({});
+
+customElements.whenDefined("ui-toggle-button").then(() => {
+  requestAnimationFrame(() => {
+    document.querySelector("#on-hover button").toggleAttribute("data-hovered", true);
+    document.querySelector("#ring button").toggleAttribute("data-focus-visible", true);
+    document.querySelector("#link-ring a").toggleAttribute("data-focus-visible", true);
+    document.title = "ready";
+  });
+});
+</script>
+</body>
+</html>

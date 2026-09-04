@@ -1,14 +1,27 @@
 # The behavior layer
 
-`boreui.behaviors.js` is the whole accessibility and interaction story in one file. Every
-export follows the same signature: it takes an element, wires it, and returns the function
-that unwires it. No custom elements, no CSS, no boreDOM dependency, so the file works in a
-page that never heard of boreDOM.
+`boreui/behaviors/` is the whole accessibility and interaction story, one file per
+behavior. Every export follows the same signature: it takes an element, wires it, and
+returns the function that unwires it. No custom elements, no CSS, no boreDOM dependency, so
+the layer works in a page that never heard of boreDOM.
+
+`dom.js` holds the questions they all ask, `isDisabled()` and `isFocusable()`, because a
+behavior reads the element at event time instead of taking the answer as an option.
 
 ## The state attribute contract
 
 Behaviors communicate with CSS through a fixed set of boolean data attributes. They are
 present or absent, never `="true"`, so every selector is `[data-pressed]`.
+
+A behavior mirrors these into a plain object when given one as `mirror`, so a component
+passes `local` and its render tracks them. Nothing is mirrored by default.
+
+There is deliberately no `data-disabled`. Being disabled is already in the DOM, as the
+`disabled` property on a native control and as `aria-disabled` on everything else, and both
+are things CSS can read. A third copy of the same fact could only go stale. Style it as
+`:disabled, [aria-disabled="true"]`, which is what the behaviors themselves read at event
+time. The plan carried a `data-disabled` row until the demo page showed that nothing wrote
+it.
 
 | attribute | written by | means |
 |---|---|---|
@@ -16,7 +29,6 @@ present or absent, never `="true"`, so every selector is `[data-pressed]`.
 | `data-pressed` | `press` | held down by pointer, or Space/Enter is down |
 | `data-focused` | `focusRing` | has DOM focus |
 | `data-focus-visible` | `focusRing`, `collection` | focus should be shown, including virtual focus |
-| `data-disabled` | any | the element is disabled and interaction is suppressed |
 | `data-selected` | `collection` | selected within its collection |
 | `data-current` | `collection` | the focused item under `aria-activedescendant` |
 | `data-open` | `overlay`, `disclosure` | expanded or shown |
@@ -31,42 +43,71 @@ in this table is application state and belongs in `state` or `local`.
 
 ## Interaction
 
-### `press(el, { onPress, onPressStart, onPressEnd, mirror })`
+### `press(el, { onPress, onPressStart, onPressEnd, mirror, preventFocus })`
 
-The single most valuable thing to port from react-aria, and the one place where writing it
-yourself goes wrong. `usePress` is 1198 lines because the platform's press story is a
-minefield. Port the behaviour, not the code, and target roughly 180 lines by dropping what
-the platform has since fixed.
+Written, in `boreui/behaviors/press.js`, 248 lines against react-aria's 1198. Tested by the
+seventeen cases in `tests/browser/boreui/press.test.ts`.
 
-What it must handle:
+A press starts when a pointer goes down on the element or an activation key goes down while
+it has focus, and it activates only when that input is released on the element, so dragging
+off and letting go does nothing. It writes `data-pressed` while held and `data-pending`
+while an async `onPress` runs, refusing further presses until that settles.
 
-1. Pointer events for mouse, touch and pen through one code path, with `setPointerCapture`
-   so a drag off the element still ends the press on the element that started it.
-2. Keyboard activation on Space and Enter, with the correct split: Enter fires on keydown
-   for links and buttons, Space fires on keyup, and Space scrolls the page unless
-   prevented.
-3. Cancellation on `pointercancel`, on scroll starting inside the press, and on the
-   element being disabled mid-press.
-4. Text selection suppressed for the duration of a touch press, restored after, so a long
-   press does not select the label.
-5. Virtual clicks, which is what a screen reader sends, detected and routed to `onPress`
-   once with no phantom pointer events.
-6. `preventDefault` on the pointerdown of non-native targets so focus does not move, with
-   focus moved explicitly afterwards.
+Three decisions are worth knowing, because each one removed machinery the React version
+carries.
 
-What to drop: every workaround for iOS 12 and Android 6, the synthetic mouse event
-deduplication that pointer events made unnecessary, and the React-specific event pooling
+**A click with no pointer behind it is the only click that activates.** A real click is a
+`PointerEvent` carrying a `pointerType` and a non-zero `detail`; the click the browser makes
+from a key press on a native button, and the one assistive technology sends in place of a
+pointer, carry neither. So the pointer path answers pointer presses, the click handler
+answers everything else, and neither double fires. react-aria needs an
+`ignoreClickAfterPress` flag and a timer for this. The discriminator needs neither.
+
+**Native activation is left to the browser.** On a `<button>`, a `<summary>`, a button-typed
+`<input>`, or an `<a href>` under Enter, the browser turns the key press into a click of its
+own, so the keyboard handler only marks `data-pressed` and gets out of the way. Everything
+else, which means `role="button"` and its relatives, has its activation owned here: Enter
+fires as the key goes down, Space as it comes up, and Space is prevented from scrolling the
+page. Space on a link is left alone, because scrolling is what it is for.
+
+**No pointer capture is taken.** Touch and pen are already captured to the element that
+received `pointerdown`, so their release is only visible in the coordinates, which means one
+`getBoundingClientRect()` read when such a press starts and none after. A mouse is not
+captured, so its release is judged by where the event landed, with no geometry read at all.
+A scroll cancels the press before the cached box can go stale.
+
+Cancellation covers `pointercancel`, a scroll during the press, a `contextmenu` from a long
+touch, focus leaving with a key still held, and the element becoming disabled halfway
+through. Disabled is read at event time from `disabled`, the `disabled` attribute, and
+`aria-disabled`, so a control disabled during a press does not activate.
+
+`preventFocus` opts out of the focus a pointer press takes. The default is to take it,
+because Safari does not focus a button when it is clicked and every other browser does.
+
+What was dropped from the port: the iOS 12 and Android 6 workarounds, the synthetic mouse
+event deduplication that pointer events made unnecessary, and the React event pooling
 defence.
 
-An async `onPress` sets `data-pending` for the life of the returned promise, and further
-presses are ignored until it settles.
+### `hover(el, { onHoverStart, onHoverEnd, mirror })`
 
-### `hover(el, { mirror })`
+Written, in `boreui/behaviors/hover.js`, 76 lines. Writes `data-hovered` while a pointer
+that can hover is over the element, and clears it on the way out or on `pointercancel`.
 
-Writes `data-hovered` on `pointerenter` and clears it on `pointerleave`, but only when
-`e.pointerType === "mouse"`. Touch fires enter events that never get a matching leave, and
-a sticky hover state on a phone is the bug this exists to prevent. Also clears on
-`pointercancel` and on the element becoming disabled. About 30 lines.
+Touch is ignored, because a finger cannot hover and often never sends the matching leave
+event, which leaves a control looking hovered after a tap on a phone. That is the bug this
+exists to prevent. A stylus is not ignored: pen hover above the screen is real hover, which
+is where this differs from what the plan first said.
+
+It listens for pointer events rather than mouse events on purpose. Browsers send
+compatibility mouse events after a tap, which would start a phantom hover, and send no
+compatibility pointer events at all.
+
+An element disabled while it is hovered keeps the attribute, because nothing tells a
+behavior that a property changed and one `MutationObserver` per hoverable element is not a
+price worth paying. Native controls do not raise the question, since a disabled one sends
+no pointer events. For the rest, `boreui.css` styles hover as
+`[data-hovered]:not(:disabled, [aria-disabled="true"])` and the stale attribute is
+invisible.
 
 ### `longPress(el, { onLongPress, threshold = 500 })`
 
@@ -82,30 +123,47 @@ mouse. About 90 lines.
 
 ## Focus
 
-### `focusVisible` module
+### The modality module
 
-One set of document listeners, installed once, tracking the current input modality as
-`keyboard`, `pointer`, or `virtual`. Everything that needs to know whether a focus ring
-should show subscribes to it.
+Written, in `boreui/behaviors/focus.js`, 123 lines of code against react-aria's 432 in
+`useFocusVisible`. Exports `modality()`, `isFocusVisible()`, `onModalityChange()` and
+`focusSafely()`, over one set of page listeners installed on first use.
 
-Port the core of `useFocusVisible` and keep its three subtle parts: a keydown that carries
-no modifier switches to keyboard modality, a focus event arriving with no preceding user
-event means a screen reader moved focus and switches to virtual modality, and a window
-blur followed by a focus does not count as user intent. Drop the `HTMLElement.prototype.focus`
-patch, which exists to make programmatic focus not switch modality; instead expose
-`focusSafely(el)` for the framework's own focus moves and accept that an application
-calling `el.focus()` directly may show a ring.
+The three cases that carry the weight, all kept from react-aria: a key press with no
+modifier means the user is navigating, so a ring belongs on whatever they land on; a focus
+that arrives with no user input before it was moved by assistive technology or by a script,
+so a ring belongs there too; and a window regaining focus restores focus to where it was,
+which the user never asked for, so that focus decides nothing.
 
-Roughly 90 lines against react-aria's 432.
+Three things are deliberately different.
+
+**No `pointermove` listener.** react-aria has one so that a focus following a hover reads
+as pointer modality. It fires on every mouse move on the page, and the worst that happens
+without it is a ring shown where none was needed, which is the safe direction to be wrong
+in. The listeners are `keydown`, `keyup`, `pointerdown` and `click` on the document, plus
+`focus` and `blur` on the window.
+
+**No patch of `HTMLElement.prototype.focus`.** react-aria replaces it so programmatic focus
+does not read as assistive technology. Dropping it means a script that moves focus while
+nothing else is happening shows a ring, which is what a user needs to see anyway. Framework
+code that moves focus during an interaction calls `focusSafely()` instead, one line that
+marks the input as already accounted for, and `press` routes its focus through it.
+
+**Modality is `null` until the first input**, and `isFocusVisible()` is true while it is, so
+an element focused before anything has happened, by `autofocus` for instance, shows a ring.
 
 ### `focusRing(el, { mirror })`
 
-Writes `data-focused` on focus and `data-focus-visible` when the modality says so.
+Written, in the same file. Marks `data-focused` while the element has focus and
+`data-focus-visible` while the modality says a ring belongs there, and it updates in place
+when the modality changes under a focused element, so clicking after tabbing removes the
+ring that is already on screen.
 
-Use it only where you need it. A native `<button>` styled with `:focus-visible` needs
-nothing at all, and the kit's Button uses the CSS pseudo-class. `focusRing` exists for
-composite widgets where DOM focus stays on one element while the visible focus moves
-elsewhere, such as a combobox input driving a listbox.
+It subscribes to modality changes only while focused. One element on the page has focus at
+a time, so the notify loop stays one entry long however many rings exist.
+
+Reach for `:focus-visible` in CSS first. This is for the widgets the browser cannot judge,
+where DOM focus sits on one element and the focus a user sees is somewhere else.
 
 ### `focusScope(el, { contain, restore, autoFocus })`
 
@@ -193,12 +251,28 @@ the render function can show a message. Uses the Constraint Validation API rathe
 reimplementing validation: `el.validity` and `el.setCustomValidity()` already say
 everything, and `:user-invalid` styles the common case with no JavaScript at all.
 
-### `announce(message, { assertive = false })`
+### `announce(message, { assertive, linger })`
 
-One visually hidden live region per document, created on first use. Two nodes, polite and
-assertive, and the message is cleared and re-set on a microtask so identical consecutive
-messages are announced twice. Under 40 lines, and required for selection changes,
-filtering results, and drag and drop.
+Written, in `boreui/behaviors/announce.js`, 72 lines of code. Two visually hidden live
+regions per document, one polite and one assertive, made on first use.
+
+A message is a new child appended to a region, not a replacement of its text, and the
+regions carry `aria-relevant="additions"`. That is what makes a message identical to the
+one before it get announced: it is a new node either way, where replacing text with the
+same text is silently ignored. The plan first said to clear and re-set on a microtask,
+which is the workaround people reach for when the region is a single node. Appending
+removes the need for it.
+
+Each message is taken out again after `linger`, seven seconds by default, so the log does
+not grow for the life of the page.
+
+The regions have to be in the document before a message goes into them or Safari drops the
+first one, so the first announcement of a page waits for them to settle.
+`installAnnouncer()` does that at startup and returns a promise, `announced()` resolves once
+queued messages have landed, `clearAnnouncements()` drops what has not been read yet when
+it stops being true, and `destroyAnnouncer()` takes the regions out again.
+
+Required for selection changes, filtering results, item removal, and drag and drop.
 
 ## Overlays
 

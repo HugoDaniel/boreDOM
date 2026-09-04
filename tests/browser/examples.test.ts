@@ -39,6 +39,31 @@ test("example: todo list", async () => {
   assert.equal(doc.querySelector("todo-item span")!.textContent, "Write docs");
 });
 
+test("example: behaviors", async () => {
+  const doc = await load("/examples/behaviors/?noreload");
+  const el = (id: string) => doc.getElementById(id)!;
+  await until(() => el("custom-state").textContent !== "");
+
+  // A click with no pointer behind it is what a screen reader sends, and it is
+  // the one path that needs no synthetic pointer events to drive.
+  el("custom").click();
+  el("native").click();
+  await until(() => el("count").textContent === "2");
+  assert.equal(el("count").textContent, "2", "a div and a button press the same way");
+
+  el("blocked").click();
+  assert.equal(el("count").textContent, "2", "aria-disabled refuses");
+
+  assert.ok(el("email").getAttribute("aria-describedby")!.includes(el("hint").id), "the hint is wired");
+  el("check").click();
+  await until(() => !el("oops").hidden);
+  assert.ok(el("email").getAttribute("aria-describedby")!.includes(el("oops").id), "the error joins the list");
+
+  el("polite").click();
+  await until(() => el("heard").textContent!.includes("Saved at"));
+  assert.ok(el("heard").textContent!.includes("Saved at"), "it reached the live region");
+});
+
 test("example: tic-tac-toe", async () => {
   const doc = await load("/examples/tic-tac-toe/?noreload");
   const label = () => doc.querySelector("[data-ref=label]")?.textContent;

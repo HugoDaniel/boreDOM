@@ -23,27 +23,54 @@ matches what you are about to build.
 boreUI ships in two layers, mirroring the split between `@react-aria` and
 `react-aria-components`.
 
-**`boreui.behaviors.js`** is the react-aria equivalent. Every export is a plain function
-that takes a DOM element, wires listeners and ARIA attributes onto it, and returns a
-cleanup function. You bring the markup. There is no CSS in this layer and no custom
-elements.
+**`boreui/behaviors/`** is the react-aria equivalent. Every export is a plain function that
+takes a DOM element, wires listeners and ARIA attributes onto it, and returns a cleanup
+function. You bring the markup. There is no CSS in this layer, no custom elements, and no
+import of boreDOM.
 
 ```js
-import { press } from "./boreui.behaviors.js";
+import { press } from "../boreui/behaviors/index.js";
 
 export default webComponent(({ self, onCleanup }) => {
   onCleanup(press(self, { onPress: () => count.value++ }));
 });
 ```
 
-**`boreui.kit.js` and `boreui.css`** are the ready-made layer. Each component is a
+**`boreui/kit/` and `boreui/boreui.css`** are the ready-made layer. Each component is a
 `<template data-component>` plus the `webComponent()` that drives it, with a stylesheet
 that gives it structure and no personality. Paste a component's template into your own
 page and the kit uses yours instead, which is how you fork one piece without forking the
 library.
 
-Both layers are one file each, no build step, no dependency, readable with view source.
-The same rules boreDOM lives by.
+Both layers build to one file each, `dist/boreui.behaviors.js` and `dist/boreui.kit.js`,
+with no dependency and nothing to configure. The same rules boreDOM lives by.
+
+## Where it lives
+
+```
+src/                    boreDOM itself
+boreui/
+  behaviors/            the lower layer. No boreDOM, no CSS, no custom elements
+    index.js            the public API, the way src/index.ts is boreDOM's
+    dom.js              the questions every behavior asks about an element
+    press.js  hover.js  one file per behavior
+  kit/                  the upper layer. Imports boreDOM and behaviors
+    index.js            install(), which defines every component the page has not
+    helpers.js          what a component author needs and the core stays out of
+    button.js  ...      one file per component, template and logic together
+  boreui.css            one file, four cascade layers
+tests/browser/
+  kit.test.ts           the core support the kit depends on
+  boreui/               one test file per behavior and per component
+```
+
+The two layers are directories rather than one folder because the dependency runs one way
+and the layout should say so: `kit/` imports `behaviors/`, and nothing imports `kit/`.
+Putting behaviors inside `kit/` would read as the opposite.
+
+The CSS is one hand written file rather than one per component. At 4 KB gzip for
+everything, splitting it would cost a request per component to save nothing, and a single
+file with a banner per component is still something you can read end to end.
 
 ## What this is not
 
@@ -55,6 +82,27 @@ handles the rest, and the documented ceiling is a few thousand rows.
 
 No server rendering, no hydration, no framework adapters. boreDOM runs in a browser and
 so does this.
+
+## How the kit imports boreDOM. Settled.
+
+Kit modules are written with `import { webComponent } from "@mr_hugo/boredom"`, the
+specifier a user of the package writes. Inside this repository it resolves through one line
+of esbuild configuration in `scripts/bundle.mjs`, which points it at `src/index.ts`.
+
+Pointing it at the source rather than at `dist/boredom.js` is the part that matters. The
+tests import the source directly, and a second copy of the module would mean two component
+registries that cannot see each other, so a component defined by the kit would be invisible
+to a test that mounted the app. A `pnpm-workspace.yaml` would have resolved the specifier
+to the built file and walked into exactly that.
+
+A page with no bundler says the same thing with an import map, which is what a user who
+copies the folder needs regardless:
+
+```html
+<script type="importmap">
+  { "imports": { "@mr_hugo/boredom": "/dist/boredom.js" } }
+</script>
+```
 
 ## Budgets
 
@@ -72,10 +120,13 @@ instead of all of them.
 
 ## Status
 
-The core work these plans depended on is done. `hydrate()` moves author children into
-`[data-slot]`, with named slots and fallback content. `defined(name)` exists, `"name" in
-refs` asks without throwing, and `kit/helpers.js` holds `observeAttributes()` and
-`props()`. `05-core-support.md` records what shipped and where it differs from what was
-proposed.
+Milestones 0 and 1 are done: the core support in `05-core-support.md`, and the behavior
+layer with its 45 tests.
 
-Nothing blocks milestone 1. Start with `press`.
+Milestone 2 is under way. `boreui.css` is written, 722 lines and 2.9 KB gzip minified,
+verified in a browser rather than only read. `ui-button` and `ui-checkbox` are the first
+two components, with 16 tests. `boreui/kit/helpers.js` grew `adoptTemplate()`,
+`mirrorAttributes()` and `forward()`, which is everything a tier 1 wrapper needs.
+
+Next in milestone 2: the rest of tier 1, then the form example, then the build entry that
+makes the bundle budgets measurable.

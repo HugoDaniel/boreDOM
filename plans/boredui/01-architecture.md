@@ -36,9 +36,10 @@ There is nothing to keep in sync, no update method, and no stale closure, which 
 whole class of bug that react-aria spends real code defending against.
 
 **Behaviors own a fixed set of attributes and nothing else.** They write `aria-*` and the
-`data-*` state attributes listed in `02-behaviors.md`. They never write `class`, never
-write inline styles, and never touch a property they did not declare. Appearance is
-yours alone.
+`data-*` state attributes listed in `02-behaviors.md`. They never write `class` and never
+touch a property they did not declare, so appearance is yours alone. The one inline style
+any of them writes is `user-select` for the length of a touch press, saved and restored
+exactly, because holding a finger on a control must not select its label.
 
 **Interaction state that only CSS reads never reaches the render function.** react-aria
 pays a React render for `isHovered` because CSS-in-JS needs it in JavaScript. boreUI
@@ -47,10 +48,12 @@ scheduled, no dependency is tracked, nothing is allocated. A behavior mirrors st
 `local` only when you ask for it:
 
 ```js
-onCleanup(press(self, { mirror: ["pressed"] }));  // now local.pressed exists and renders track it
+onCleanup(press(self, { mirror: local }));  // now local.pressed exists and renders track it
 ```
 
-Default is no mirroring. This is the largest performance difference between the two
+`mirror` is any object whose properties the behavior keeps equal to the attributes it
+writes. Passing `local` is what a component does; passing nothing is the default, and the
+behaviors layer stays ignorant of boreDOM either way. This is the largest performance difference between the two
 libraries and it comes from boreDOM's model, not from cleverness.
 
 ## Isolation without context
@@ -91,13 +94,24 @@ a combobox points at its active option. react-aria has an entire module for this
 server rendering makes id generation hard. boreDOM runs in a browser only, so a counter is
 enough.
 
+Written, in `boreui/behaviors/aria.js`, 44 lines of code.
+
 ```js
-// idFor(el) returns el.id, assigning "boreui-1", "boreui-2"... on first call.
-// relate(field, "aria-describedby", errorEl) appends the error's id to the list.
+idFor(el)                                        // el.id, assigning "boreui-1" if it has none
+relate(field, "aria-describedby", hint, error)   // add to a list, without duplicating
+unrelate(field, "aria-describedby", error)       // take one back out, and the attribute with the last
+point(input, "aria-activedescendant", option)    // exactly one, or none when the target is null
 ```
 
-Two helpers, about thirty lines, and every wiring problem in the kit is solved. Ids are
-assigned during `init`, once per element, and survive as long as the element does.
+The split is what the attributes are. `aria-labelledby` and `aria-describedby` hold a list,
+because a field can be described by a hint and an error at once, so those are added to and
+removed from as parts appear and go. `aria-activedescendant` and `aria-controls` hold one,
+so those are pointed somewhere or nowhere, which is the shape a combobox needs as a user
+arrows through options and the list closes.
+
+An element written with an id keeps it, so a page names what it wants to name. Handing out
+an id checks the document first, because two copies of the library on one page would
+otherwise both start their counter at 1 and collide.
 
 ## Where state lives
 
@@ -145,9 +159,9 @@ revisited with real numbers from the bench in `06-performance.md`.
 your CSS                      you own every visual decision
 ─────────────────────────────────────────────────────────
 boreui.css                    structure, tokens, zero personality      @layer boreui.*
-boreui.kit.js                 templates + webComponents, one per file
+boreui/kit/                   templates + webComponents, one per file
 ─────────────────────────────────────────────────────────
-boreui.behaviors.js           press, hover, focus, selection, typeahead, announce
+boreui/behaviors/             press, hover, focus, selection, typeahead, announce
 ─────────────────────────────────────────────────────────
 boredom                       reactive, element, actions, keyed
 ─────────────────────────────────────────────────────────
