@@ -1,56 +1,29 @@
-import { webComponent } from "./boreDOM.min.js";
+import { webComponent } from "../../dist/boredom.js";
 
-export const GameBoard = webComponent(({ on, self }) => {
-  on("play", ({ state: mutableState, e: { event } }) => {
-    const index = Array.from(self.children).indexOf(
-      event.currentTarget.parentNode,
-    );
-    const isGameWon = mutableState.gameState.winner !== null;
-    const isEmptySquare = mutableState.gameState.board[index] === undefined;
+export default webComponent(({ on, self }) => {
+  const squares = () => Array.from(self.querySelectorAll("game-button"));
 
-    if (!isGameWon && isEmptySquare) {
-      mutableState.gameState.board[index] = mutableState.gameState.nextToPlay;
-      // Update the next to play:
-      mutableState.gameState.nextToPlay =
-        mutableState.gameState.nextToPlay === "O" ? "X" : "O";
-      // Update the winner state
-      mutableState.gameState.winner = calculateWinner(
-        mutableState.gameState.board,
-      );
-    }
+  // `play` is dispatched from inside <game-button>, which has no handler, so it bubbles here.
+  on("play", ({ state, e }) => {
+    const index = squares().indexOf(e.dispatcher.closest("game-button"));
+    if (state.winner || state.board[index]) return;
+    state.board[index] = state.next;
+    state.next = state.next === "O" ? "X" : "O";
+    state.winner = winner(state.board);
   });
 
-  return (({ state }) => {
-    let index = 0;
-    for (const child of self.children) {
-      const boardValue = state.gameState.board[index++];
-
-      if (boardValue) {
-        child.slots.valuePlayed = boardValue;
-      }
-    }
-  });
+  return ({ state }) => {
+    squares().forEach((square, index) => {
+      square.querySelector("button").textContent = state.board[index] ?? "";
+    });
+  };
 });
 
-/**
- * Taken from https://react.dev/learn/tutorial-tic-tac-toe
- */
-function calculateWinner(squares) {
-  const lines = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-  ];
-  for (let i = 0; i < lines.length; i++) {
-    const [a, b, c] = lines[i];
-    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return squares[a];
-    }
+const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+
+function winner(board) {
+  for (const [a, b, c] of lines) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
   }
-  return null;
+  return board.every(Boolean) ? "nobody" : null;
 }

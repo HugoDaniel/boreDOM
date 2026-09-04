@@ -1,8 +1,3 @@
 node_modules
-tests/dist
-boreDOMCLI/build/boreDOM.js
-boreDOMCLI/generated_cli.js
-boreDOMCLI/boreDOM.js
-build/boreDOM.js
-build
-components
+tests/browser/dist
+.DS_Store

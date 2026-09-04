@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>boreDOM todo list</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 30rem; }
+    todo-list form { display: flex; gap: .5rem; }
+    todo-list input[type=text] { flex: 1; }
+    todo-item { display: flex; gap: .5rem; padding: .5rem 0; border-bottom: 1px solid #eee; }
+    todo-item label { flex: 1; }
+    todo-item.completed span { text-decoration: line-through; color: #888; }
+  </style>
+</head>
+<body>
+  <h1>To-do list</h1>
+  <p>The list logic lives in its own file, found through <code>data-src</code>. The item logic is defined inline.</p>
+
+  <todo-list></todo-list>
+
+  <template data-component="todo-list" data-src="./todo-list.js">
+    <form data-dispatch-submit="add">
+      <input type="text" data-ref="input" placeholder="Add a task" autocomplete="off">
+      <button>Add</button>
+    </form>
+    <div data-ref="list" role="list"></div>
+  </template>
+
+  <template data-component="todo-item" data-role="listitem">
+    <label>
+      <input type="checkbox" data-dispatch-change="toggle" data-ref="done">
+      <span data-ref="text"></span>
+    </label>
+    <button data-dispatch="remove" aria-label="Remove">×</button>
+  </template>
+
+  <script type="module">
+    import { define, mount, webComponent } from "../../dist/boredom.js";
+
+    define("todo-item", webComponent(({ on, self }) => {
+      on("toggle", () => { self.todo.done = !self.todo.done; });
+      on("remove", ({ state }) => { state.todos.splice(state.todos.indexOf(self.todo), 1); });
+      return ({ refs }) => {
+        refs.text.textContent = self.todo.text;
+        refs.done.checked = self.todo.done;
+        self.classList.toggle("completed", self.todo.done);
+      };
+    }));
+
+    mount({
+      todos: [{ id: 1, text: "Something to be done", done: false }],
+    });
+  </script>
+</body>
+</html>

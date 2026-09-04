@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>boreDOM tests</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    #results { list-style: none; padding: 0; }
+    #results li { padding: .25rem .5rem; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .85rem; }
+    .pass { color: #1a7f37; }
+    .fail { color: #b3261e; background: #fff1f0; }
+    #sandbox { position: absolute; left: -9999px; top: 0; }
+  </style>
+</head>
+<body>
+  <h1>boreDOM browser tests</h1>
+  <p id="summary">running</p>
+  <ul id="results"></ul>
+  <div id="sandbox"></div>
+  <script type="module" src="./dist/runner.js"></script>
+</body>
+</html>

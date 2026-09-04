@@ -1,31 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>boreDOM Counter</title>
-  <script src="main.js" type="module"></script>
+  <title>boreDOM counter</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    simple-counter { display: inline-flex; gap: .5rem; align-items: center; }
+    simple-counter output { min-width: 2ch; text-align: center; font-size: 1.5rem; }
+  </style>
 </head>
-
 <body>
-  <h1>Simple counter</h1>
+  <h1>Counter</h1>
+  <p>A single file. The runtime is one script tag, the component is one template and one module.</p>
 
   <simple-counter></simple-counter>
 
   <template data-component="simple-counter">
-    <slot name="counter">Some value</slot>
-
-    <button onclick="dispatch('increase')">
-      Increase
-    </button>
-
-    <button onclick="dispatch('decrease')">
-      Decrease
-    </button>
+    <button data-dispatch="decrease">-</button>
+    <output data-ref="value"></output>
+    <button data-dispatch="increase">+</button>
   </template>
-  <script src="./simple-counter.js" type="module"></script>
 
+  <!-- Copy dist/boredom.iife.js into this file to have no external references at all. -->
+  <script src="../../dist/boredom.iife.js"></script>
+  <script type="module">
+    const { define, webComponent, mount } = boreDOM;
+
+    define("simple-counter", webComponent(({ on }) => {
+      on("increase", ({ state }) => { state.value++; });
+      on("decrease", ({ state }) => { state.value--; });
+      return ({ state, refs }) => { refs.value.textContent = state.value; };
+    }));
+
+    mount({ value: 0 });
+  </script>
 </body>
-
 </html>

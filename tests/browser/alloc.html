@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>boreDOM allocation bench</title>
+</head>
+<body>
+  <x-stable></x-stable>
+  <x-item-list></x-item-list>
+  <template data-component="x-stable"><span data-ref="a"></span><span data-ref="b"></span></template>
+  <template data-component="x-row"><span></span></template>
+  <template data-component="x-item-list"><div data-ref="list"></div></template>
+  <script type="module">
+    import { define, mount, webComponent, keyed, nextTick } from "/dist/boredom.js";
+
+    define("x-stable", webComponent(() => ({ state, refs }) => {
+      refs.a.textContent = state.a;
+      refs.b.textContent = state.b.c;
+    }));
+    define("x-row", webComponent(() => ({ self }) => {
+      self.firstElementChild.textContent = self.item.label;
+    }));
+    define("x-item-list", webComponent(() => ({ state, refs }) => {
+      keyed(refs.list, state.items, (i) => i.id, (i) => Object.assign(document.createElement("x-row"), { item: i }));
+    }));
+
+    const state = mount({
+      a: 0,
+      b: { c: 0 },
+      items: Array.from({ length: 100 }, (_, i) => ({ id: i, label: "row " + i })),
+    });
+
+    window.__bench = {
+      async stable(n) { for (let i = 0; i < n; i++) { state.a = i; state.b.c = i; await nextTick(); } },
+      async reorder(n) { for (let i = 0; i < n; i++) { state.items.reverse(); await nextTick(); } },
+      async relabel(n) { for (let i = 0; i < n; i++) { state.items[i % 100].label = "row " + i; await nextTick(); } },
+    };
+  </script>
+</body>
+</html>

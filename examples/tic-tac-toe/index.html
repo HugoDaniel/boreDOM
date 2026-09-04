@@ -1,52 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>boreDOM Tic Tac Toe</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="game-board.css">
-  <link rel="stylesheet" href="game-button.css">
-  <script src="main.js" type="module"></script>
+  <title>boreDOM tic-tac-toe</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    game-board { display: grid; grid-template-columns: repeat(3, 4rem); gap: .25rem; }
+    game-button button { width: 4rem; height: 4rem; font-size: 2rem; }
+    game-turn { display: block; margin: 1rem 0; }
+  </style>
 </head>
-
 <body>
-  <h1>Tic Tac Toe</h1>
+  <h1>Tic-tac-toe</h1>
+  <p>
+    <code>game-button</code> has no logic. Its <code>play</code> action bubbles up to
+    <code>game-board</code>, which owns the rules. <code>game-turn</code> only reads state.
+  </p>
 
   <game-turn></game-turn>
-  <game-board>
-  </game-board>
+  <game-board></game-board>
 
   <template data-component="game-button">
-    <button onclick="dispatch('play')">
-      <slot name="valuePlayed"></slot>
-    </button>
+    <button data-dispatch="play"></button>
   </template>
 
-  
-  <template data-component="game-board">
-    <!-- First row -->
-    <game-button></game-button>
-    <game-button></game-button>
-    <game-button></game-button>
-    <!-- Second row -->
-    <game-button></game-button>
-    <game-button></game-button>
-    <game-button></game-button>
-    <!-- Third row -->
-    <game-button></game-button>
-    <game-button></game-button>
-    <game-button></game-button>
+  <template data-component="game-board" data-src="./game-board.js">
+    <game-button></game-button><game-button></game-button><game-button></game-button>
+    <game-button></game-button><game-button></game-button><game-button></game-button>
+    <game-button></game-button><game-button></game-button><game-button></game-button>
   </template>
-  <script src="./game-board.js" type="module"></script>
 
-  
-  <template data-component="game-turn">
-    <p><slot name="playerTurn"></slot></p>
+  <template data-component="game-turn" data-src="./game-turn.js">
+    <p data-ref="label"></p>
+    <button data-dispatch="reset">Reset</button>
   </template>
-  <script src="./game-turn.js" type="module"></script>
 
+  <script type="module">
+    import { mount } from "../../dist/boredom.js";
+
+    mount({ board: Array(9).fill(null), next: "O", winner: null });
+  </script>
 </body>
-
 </html>
