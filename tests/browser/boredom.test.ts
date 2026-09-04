@@ -251,25 +251,25 @@ test("define() after mount() attaches to elements already in the document", () =
   assert.equal(root.querySelector("[data-ref=out]")!.textContent, "hi");
 });
 
-test("a render that throws is reported and does not stop other components", async () => {
+test("a render that throws surfaces the error and does not stop other components", async () => {
   const bad = uid("bad");
   const good = uid("good");
   const root = fixture(`
     <template data-component="${bad}"></template>
     <template data-component="${good}"><span data-ref="out"></span></template>
     <${bad}></${bad}><${good}></${good}>`);
-  const errors: unknown[] = [];
-  const original = console.error;
-  console.error = (...args: unknown[]) => { errors.push(args); };
+  const errors: string[] = [];
+  const onRejection = (event: PromiseRejectionEvent) => { errors.push(String(event.reason?.message)); event.preventDefault(); };
+  window.addEventListener("unhandledrejection", onRejection);
   try {
     define(bad, webComponent<State>(() => ({ state }) => { if (state.bad.n > 0) throw new Error("boom"); }));
     define(good, webComponent<State>(() => ({ state, refs }) => { refs.out.textContent = String(state.bad.n); }));
     state.bad.n = 1;
-    await nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 20));
     assert.equal(root.querySelector("[data-ref=out]")!.textContent, "1");
-    assert.equal(errors.length, 1);
+    assert.deepEqual(errors, ["boom"]);
   } finally {
-    console.error = original;
+    window.removeEventListener("unhandledrejection", onRejection);
   }
 });
 
@@ -313,19 +313,13 @@ test("keyed() recovers from a duplicate key on the next render", async () => {
   }));
   const ul = root.querySelector("ul")!;
   assert.equal(ul.children.length, 2);
-  const errors: unknown[] = [];
-  const original = console.error;
-  console.error = (...args: unknown[]) => { errors.push(args); };
-  try {
-    state.dup.items.push({ id: 3, text: "c" }, { id: 2, text: "again" });
-    await nextTick();
-    assert.equal(errors.length, 1, "the duplicate is reported");
-    state.dup.items.length = 2;
-    await nextTick();
-    assert.equal(ul.children.length, 2, "the element placed before the throw is gone");
-  } finally {
-    console.error = original;
-  }
+  state.dup.items.push({ id: 3, text: "c" }, { id: 2, text: "again" });
+  let error: unknown;
+  await nextTick().catch((e) => { error = e; });
+  assert.ok(String((error as Error)?.message).includes("duplicate key"), "the duplicate is reported");
+  state.dup.items.length = 2;
+  await nextTick();
+  assert.equal(ul.children.length, 2, "the element placed before the throw is gone");
 });
 
 test("an element put back before its teardown check keeps rendering", async () => {

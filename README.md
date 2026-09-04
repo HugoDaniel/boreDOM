@@ -6,7 +6,7 @@ Another boring JavaScript framework. Components come from `<template data-compon
 
 1. A component re-renders when a property it read during its last render changes.
 2. `state` is the live object returned by `mount()`. Anything can write to it, from anywhere. `local` is the same kind of object, one per element.
-3. `data-dispatch="name"` fires an action that bubbles through ancestor components like a DOM event, because it is one. The nearest `on("name")` handler runs first, and `e.stop()` keeps it there.
+3. `data-dispatch="name"` fires an action that reaches the nearest component first and then each ancestor component, like a DOM event bubbling. `e.stop()` keeps it where it is.
 4. The render function is your code. `refs` gives you the elements marked `data-ref`. `keyed()` reuses list children by key.
 5. Init runs once per element, on first connect. Leaving the document runs the cleanups and drops the subscriptions. Coming back starts fresh.
 
@@ -88,14 +88,14 @@ Makes `state` reactive and returns it. Once the document has finished parsing, i
 |---|---|
 | `state` | the app state |
 | `local` | this element's own reactive object |
-| `refs` | elements marked `data-ref="name"` inside this component. Reading a missing name throws |
+| `refs` | elements marked `data-ref="name"` inside this component. Reading a missing name throws; `"name" in refs` asks without throwing |
 | `self` | the element |
-| `on(name, handler)` | registers an action handler |
-| `onCleanup(fn)` | runs when the element leaves the document |
+| `on(name, handler)` | registers an action handler. Call it during init |
+| `onCleanup(fn)` | runs when the element leaves the document. Call it during init |
 
-`init` may return a render function, which receives `state`, `local`, `refs`, and `self`. Every property read inside it is tracked, and any change to one of them runs it again. Several changes in the same task produce one run, in a microtask. A render that throws is reported with `console.error` and does not stop other components.
+`init` may return a render function, which receives `state`, `local`, `refs`, and `self`. Every property read inside it is tracked, and any change to one of them runs it again. Several changes in the same task produce one run, in a microtask. A render that throws does not stop other components: the error surfaces as an uncaught rejection, or from `nextTick()` when something awaits it.
 
-`define()` runs once per name, before or after `mount()`. Elements already in the document pick the logic up at once. A template with no `define()` still renders its content, and a `define()` with no template still runs its logic.
+`define()` runs once per name, before or after `mount()`. Elements already in the document pick the logic up at once. `defined(name)` tells whether logic exists for a name, so a library can leave a component the page already owns alone. A template with no `define()` still renders its content, and a `define()` with no template still runs its logic.
 
 ### Actions
 
@@ -106,6 +106,8 @@ A handler receives the same fields as render plus `e`: `{ name, event, dispatche
 ### Templates
 
 `data-component` names the element. `data-src` names a module whose default export is a `webComponent()`. Every other `data-*` attribute on the template is mirrored onto the element as an attribute without the prefix, so `data-role="listitem"` becomes `role="listitem"`. The template content is cloned into the element itself, in light DOM, so page CSS applies to it.
+
+Children written inside the element move into the template's `data-slot`: `<ui-button>Save</ui-button>` puts `Save` inside the template's `<button data-slot>`. A child with `slot="icon"` goes to `[data-slot="icon"]`, the rest to the unnamed slot, and whatever the slot held in the template is its fallback, shown only when nothing is written inside the element. A template without a slot leaves the children where they were. A `data-ref` inside those children belongs to the wrapping component.
 
 ### `keyed(parent, items, key, create, update?)`
 
@@ -121,7 +123,7 @@ The package ships declarations. `webComponent<State, Local, Refs, Props>()` type
 
 ## Performance
 
-The runtime batches every write made in one task into one render pass, in a microtask, so all DOM writes land together before the next frame. It never reads layout, so it never forces a reflow. A render whose reads match its previous reads allocates nothing beyond one promise per batch, and `keyed()` allocates nothing for a pass that adds no items. `pnpm run profile` measures this with Chrome's sampling heap profiler and prints bytes per pass by function.
+The runtime batches every write made in one task into one render pass, in a microtask, so all DOM writes land together before the next frame. It never reads layout, so it never forces a reflow. A render whose reads match its previous reads allocates nothing beyond one promise per batch, and `keyed()` allocates nothing for a pass that adds no items. A reactive object costs one Proxy and one WeakMap entry, a subscriber keeps its first dependency inline, and an element with logic allocates its context, its subscriber, and nothing else until it uses `local` or `refs`. `pnpm run profile` measures this with Chrome's sampling heap profiler and prints bytes per pass by function.
 
 Inside a render, write to the DOM and do not read layout: `offsetWidth`, `getBoundingClientRect()`, and `getComputedStyle()` each force the browser to lay out everything written so far. Measure in the action handler before writing, or in `requestAnimationFrame`. When a render runs on every keystroke, compare before writing text, since assigning the same string again still invalidates the node. Keep item objects stable so `keyed()` reuses their elements, and give list items their own component so a change to one item re-renders one element.
 
@@ -132,8 +134,8 @@ Measured with [js-framework-benchmark](https://github.com/krausest/js-framework-
 | framework | geomean of the 9 CPU benchmarks, ms | vs vanillajs | memory after 1,000 rows, MB |
 |---|---|---|---|
 | vanillajs | 22.6 | 1.00 | 1.9 |
+| boreDOM | 23.7 | 1.05 | 2.4 |
 | solid | 24.8 | 1.10 | 2.7 |
-| boreDOM | 25.3 | 1.12 | 2.4 |
 | svelte | 26.3 | 1.16 | 2.9 |
 | lit-html | 27.6 | 1.22 | 2.6 |
 | vue | 28.5 | 1.26 | 3.9 |
@@ -161,8 +163,8 @@ The dev server in `bin/serve.js` has no dependencies and is also the `boredom` c
 
 | file | size | gzip |
 |---|---|---|
-| `dist/boredom.min.js` | 7.7 KB | 3.4 KB |
-| `dist/boredom.iife.min.js` | 8.2 KB | 3.6 KB |
+| `dist/boredom.min.js` | 9.1 KB | 3.8 KB |
+| `dist/boredom.iife.min.js` | 9.6 KB | 4.0 KB |
 
 ## License
 

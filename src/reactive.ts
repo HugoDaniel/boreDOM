@@ -17,32 +17,44 @@
  * their subscribers once, together, after the task ends.
  *
  * Allocation: a render whose reads match its previous reads allocates
- * nothing. Sets and maps are made on first use and dropped when empty, and
- * nothing here is cleared and refilled, which would rebuild hash tables.
+ * nothing. A subscriber keeps its first dependency inline and only makes a
+ * map for the second. A proxy costs one Proxy and one WeakMap entry.
+ * Nothing here is cleared and refilled, which would rebuild hash tables.
  */
 
 /** Key used to mean "anything about this object". */
 const ANY: unique symbol = Symbol("boredom.any");
+/** Asking a proxy for this key yields its raw target. */
+const RAW: unique symbol = Symbol("boredom.raw");
 type Key = PropertyKey | typeof ANY;
 
-/** The subscribers of one (object, key) pair, with a way back to remove itself when empty. */
-type Dep = Set<Subscriber> & { keys: Map<Key, Dep>; key: Key };
+/** The subscribers of one (object, key) pair, with what it needs to remove itself when empty. */
+type Dep = Set<Subscriber> & { target: object; key: Key };
+/** An object's tracked keys: one dependency inline, or a map once a second key is read. */
+type Deps = Dep | Map<Key, Dep>;
 
 /** A unit of work that re-runs when something it read changes. */
 export type Subscriber = {
-  /** The function to run. Reads made inside it are tracked. */
-  run: () => void;
-  /** Every dependency set this subscriber belongs to, with the run that last read it. */
-  deps: Map<Dep, number>;
+  /** The function to run, given `arg`. Reads made inside it are tracked. */
+  run: (arg: any) => void;
+  /** Passed to `run`, so a component's render needs no wrapping closure. */
+  arg: unknown;
+  /** The first dependency and the run that last read it, kept inline. */
+  dep: Dep | null;
+  depEpoch: number;
+  /** Further dependencies, with the run that last read each. Made on the second dependency. */
+  deps: Map<Dep, number> | null;
   /** The number of the current or last run. */
   epoch: number;
   /** True while waiting in the queue. */
   queued: boolean;
+  /** The last (object, key) read in this run, so a repeated read costs two comparisons. */
+  lastTarget: object | null;
+  lastKey: Key;
 };
 
-const targetMap = new WeakMap<object, Map<Key, Dep>>();
+const targetMap = new WeakMap<object, Deps>();
 const proxyOf = new WeakMap<object, object>();
-const rawOf = new WeakMap<object, object>();
 
 let active: Subscriber | null = null;
 let epoch = 0;
@@ -59,26 +71,62 @@ function isPlain(value: unknown): value is object {
   return proto === Object.prototype || proto === null;
 }
 
+const makeDep = (target: object, key: Key): Dep => Object.assign(new Set<Subscriber>(), { target, key });
+
+/** The dependency set for (target, key), made on first use. */
+function depFor(target: object, key: Key): Dep {
+  const entry = targetMap.get(target);
+  if (entry === undefined) {
+    const dep = makeDep(target, key);
+    targetMap.set(target, dep);
+    return dep;
+  }
+  if (entry instanceof Map) {
+    let dep = entry.get(key);
+    if (!dep) entry.set(key, (dep = makeDep(target, key)));
+    return dep;
+  }
+  if (entry.key === key) return entry;
+  const dep = makeDep(target, key);
+  const map = new Map<Key, Dep>();
+  map.set(entry.key, entry);
+  map.set(key, dep);
+  targetMap.set(target, map);
+  return dep;
+}
+
 function track(target: object, key: Key): void {
-  if (!active) return;
-  let keys = targetMap.get(target);
-  if (!keys) targetMap.set(target, (keys = new Map()));
-  let dep = keys.get(key);
-  if (!dep) keys.set(key, (dep = Object.assign(new Set<Subscriber>(), { keys, key })));
-  dep.add(active);
-  active.deps.set(dep, active.epoch);
+  const sub = active;
+  if (!sub || (sub.lastTarget === target && sub.lastKey === key)) return;
+  sub.lastTarget = target;
+  sub.lastKey = key;
+  const dep = depFor(target, key);
+  dep.add(sub);
+  if (sub.dep === null || sub.dep === dep) {
+    sub.dep = dep;
+    sub.depEpoch = sub.epoch;
+  } else {
+    (sub.deps ??= new Map()).set(dep, sub.epoch);
+  }
 }
 
 function trigger(target: object, key: Key): void {
-  const keys = targetMap.get(target);
-  if (!keys) return;
-  keys.get(key)?.forEach(schedule);
-  if (key !== ANY) keys.get(ANY)?.forEach(schedule);
+  const entry = targetMap.get(target);
+  if (entry === undefined) return;
+  if (entry instanceof Map) {
+    entry.get(key)?.forEach(schedule);
+    if (key !== ANY) entry.get(ANY)?.forEach(schedule);
+  } else if (entry.key === key || entry.key === ANY) {
+    entry.forEach(schedule);
+  }
 }
 
 function drop(dep: Dep, sub: Subscriber): void {
   dep.delete(sub);
-  if (!dep.size) dep.keys.delete(dep.key);
+  if (dep.size) return;
+  const entry = targetMap.get(dep.target);
+  if (entry === dep) targetMap.delete(dep.target);
+  else if (entry instanceof Map) entry.delete(dep.key);
 }
 
 /**
@@ -140,7 +188,7 @@ let subject: Subscriber;
 
 function pruneStale(seen: number, dep: Dep): void {
   if (seen !== subject.epoch) {
-    subject.deps.delete(dep);
+    subject.deps!.delete(dep);
     drop(dep, subject);
   }
 }
@@ -155,14 +203,21 @@ function dropEach(_seen: number, dep: Dep): void {
  */
 export function run(sub: Subscriber): void {
   sub.epoch = ++epoch;
+  sub.lastTarget = null;
   const previous = active;
   active = sub;
   try {
-    sub.run();
+    sub.run(sub.arg);
   } finally {
     active = previous;
-    subject = sub;
-    sub.deps.forEach(pruneStale);
+    if (sub.dep && sub.depEpoch !== sub.epoch) {
+      drop(sub.dep, sub);
+      sub.dep = null;
+    }
+    if (sub.deps) {
+      subject = sub;
+      sub.deps.forEach(pruneStale);
+    }
   }
 }
 
@@ -180,15 +235,19 @@ export function resume(previous: Subscriber | null): void {
 
 /** Removes a subscriber from every dependency set and from the queue. */
 export function release(sub: Subscriber): void {
-  subject = sub;
-  sub.deps.forEach(dropEach);
-  sub.deps.clear();
+  if (sub.dep) drop(sub.dep, sub);
+  sub.dep = null;
+  if (sub.deps) {
+    subject = sub;
+    sub.deps.forEach(dropEach);
+    sub.deps = null;
+  }
   sub.queued = false;
 }
 
-/** Makes a subscriber for `fn`. It has not run yet. */
-export function subscriber(fn: () => void): Subscriber {
-  return { run: fn, deps: new Map(), epoch: 0, queued: false };
+/** Makes a subscriber that runs `fn(arg)`. It has not run yet. */
+export function subscriber(fn: (arg: any) => void, arg?: unknown): Subscriber {
+  return { run: fn, arg, dep: null, depEpoch: 0, deps: null, epoch: 0, queued: false, lastTarget: null, lastKey: ANY };
 }
 
 /**
@@ -204,17 +263,18 @@ export function effect(fn: () => void): () => void {
 /** The plain object behind a reactive proxy, or the value itself. Unwraps one level. */
 export function toRaw<T>(value: T): T {
   if (typeof value !== "object" || value === null) return value;
-  return (rawOf.get(value) as T | undefined) ?? value;
+  return ((value as any)[RAW] as T | undefined) ?? value;
 }
 
 /** True when `value` is a proxy made by `reactive()`. */
 export function isReactive(value: unknown): boolean {
-  return typeof value === "object" && value !== null && rawOf.has(value);
+  return typeof value === "object" && value !== null && (value as any)[RAW] !== undefined;
 }
 
 /** One handler for every proxy; the target tells arrays apart. */
 const handler: ProxyHandler<object> = {
   get(t, key, receiver) {
+    if (key === RAW) return t;
     track(t, Array.isArray(t) ? ANY : key);
     const value = Reflect.get(t, key, receiver);
     // A frozen target must yield its own values (a Proxy invariant), and they cannot change anyway.
@@ -252,9 +312,8 @@ const handler: ProxyHandler<object> = {
 export function reactive<T extends object>(target: T): T {
   const known = proxyOf.get(target);
   if (known) return known as T;
-  if (rawOf.has(target) || !isPlain(target)) return target;
+  if ((target as any)[RAW] !== undefined || !isPlain(target)) return target;
   const proxy = new Proxy(target, handler);
   proxyOf.set(target, proxy);
-  rawOf.set(proxy, target);
   return proxy as T;
 }

@@ -31,6 +31,7 @@
     });
 
     window.__bench = {
+      async create(n) { for (let i = 0; i < n; i++) { state.items = Array.from({ length: 100 }, (_, k) => ({ id: i * 100 + k, label: "row " + k })); await nextTick(); } },
       async stable(n) { for (let i = 0; i < n; i++) { state.a = i; state.b.c = i; await nextTick(); } },
       async reorder(n) { for (let i = 0; i < n; i++) { state.items.reverse(); await nextTick(); } },
       async relabel(n) { for (let i = 0; i < n; i++) { state.items[i % 100].label = "row " + i; await nextTick(); } },

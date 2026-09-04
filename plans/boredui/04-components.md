@@ -105,8 +105,11 @@ export default webComponent(({ self, refs, onCleanup }) => {
 });
 ```
 
-`data-slot` marks where the host's own children go, which is the core change described in
-`05-core-gaps.md`. Focus ring is `:focus-visible` in CSS, hover is `:hover` in CSS, and
+`data-slot` marks where the host's own children go. A child carrying `slot="icon"` would go
+to a `[data-slot="icon"]` instead, and anything the template puts inside a slot is fallback
+content, shown only when the author wrote nothing. A `data-dispatch` the author writes
+inside those children reaches this component first, because the children end up inside its
+subtree. Focus ring is `:focus-visible` in CSS, hover is `:hover` in CSS, and
 `press` is here only because a pressed state needs `data-pressed` and an async action needs
 `data-pending`. If you do not need either, `<button>` on its own is the better component,
 and the plan should say so in the docs.

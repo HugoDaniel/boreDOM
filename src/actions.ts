@@ -1,16 +1,14 @@
 /**
- * actions.ts: turns `data-dispatch` attributes into bubbling action events.
+ * actions.ts: turns `data-dispatch` attributes into actions.
  *
  * One listener per event type is installed on the document. When an event
  * fires, the nearest ancestor of the target that carries the matching
- * `data-dispatch` attribute becomes the dispatcher, and a `boredom:action`
- * CustomEvent is fired from it with `bubbles: true`. Components listen for
- * that event on themselves, so an action reaches the nearest component
- * first and then each ancestor component, exactly like a DOM event.
+ * `data-dispatch` attribute becomes the dispatcher, and the action is
+ * delivered to the component hosts above it, nearest first, until one
+ * stops it. That is the shape of DOM bubbling without an event object or
+ * a listener per element.
  */
 import type { ActionEvent } from "./types.ts";
-
-export const ACTION_EVENT = "boredom:action";
 
 /** `data-dispatch` is click. Every other event uses `data-dispatch-<name>`. */
 const EVENT_ATTRIBUTES: Record<string, string> = {
@@ -32,10 +30,23 @@ const EVENT_ATTRIBUTES: Record<string, string> = {
   dragend: "data-dispatch-dragend",
 };
 
+/** What every action shares: `stop()` ends delivery to further ancestors. */
+const actionProto = {
+  stopped: false,
+  stop(this: { stopped: boolean }) {
+    this.stopped = true;
+  },
+};
+
+/** Makes the action object handed to handlers. One allocation per action. */
+export function action(name: string, event: Event, dispatcher: HTMLElement): ActionEvent & { stopped: boolean } {
+  return { __proto__: actionProto, name, event, dispatcher } as unknown as ActionEvent & { stopped: boolean };
+}
+
 let installed = false;
 
-/** Installs the document listeners once. */
-export function ensureDelegation(): void {
+/** Installs the document listeners once. `deliver` routes an action to the components above its dispatcher. */
+export function ensureDelegation(deliver: (dispatcher: HTMLElement, name: string, event: Event) => void): void {
   if (installed) return;
   installed = true;
   for (const [type, attribute] of Object.entries(EVENT_ATTRIBUTES)) {
@@ -45,15 +56,7 @@ export function ensureDelegation(): void {
       const from = target instanceof Element ? target : target?.parentElement;
       const dispatcher = from?.closest<HTMLElement>(selector);
       const name = dispatcher?.getAttribute(attribute);
-      if (dispatcher && name) dispatch(dispatcher, name, event);
+      if (dispatcher && name) deliver(dispatcher, name, event);
     });
   }
-}
-
-/** Fires an action from `dispatcher`. */
-export function dispatch(dispatcher: HTMLElement, name: string, event: Event): void {
-  const detail: ActionEvent = { name, event, dispatcher, stop: () => {} };
-  const action = new CustomEvent<ActionEvent>(ACTION_EVENT, { bubbles: true, detail });
-  detail.stop = () => action.stopPropagation();
-  dispatcher.dispatchEvent(action);
 }

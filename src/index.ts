@@ -67,6 +67,11 @@ export function define(name: string, def: ComponentDef): void {
   attachAll(name);
 }
 
+/** True once `define()` has been called for `name`. Lets a library skip a component the page already owns. */
+export function defined(name: string): boolean {
+  return definitions.has(name);
+}
+
 /**
  * Makes `initial` reactive and returns it as the app state. Once the document
  * has finished parsing, it finds every `<template data-component>`, defines

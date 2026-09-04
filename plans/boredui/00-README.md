@@ -13,7 +13,7 @@ matches what you are about to build.
 | `02-behaviors.md` | the behavior layer: press, hover, focus, selection, typeahead, and the state-attribute contract |
 | `03-styling.md` | CSS layers, tokens, theming, and the platform features that replace positioning and animation code |
 | `04-components.md` | the catalogue, in three tiers, with the anatomy of one component per family |
-| `05-core-gaps.md` | the changes boreDOM itself needs. One of them blocks the kit |
+| `05-core-support.md` | what the core now provides, and the three behaviours kit authors have to know |
 | `06-performance.md` | the rules that keep a 5000 row listbox at 60fps, and the budgets that hold them |
 | `07-a11y-i18n-testing.md` | the accessibility contract, locale handling without dictionaries, and how each is tested |
 | `08-roadmap.md` | six milestones, each shippable on its own |
@@ -66,15 +66,16 @@ These are gates in CI, not aspirations. A pull request that crosses one does not
 | `boreui.kit.min.js` | 8 KB |
 | `boreui.css` | 4 KB |
 
-For comparison, `dist/boredom.min.js` is 3.1 KB gzip today. The whole stack stays under
-25 KB gzip with everything loaded, and a page that uses three components loads three
-kit modules instead of all of them.
+For comparison, `dist/boredom.min.js` is 3.8 KB gzip. The whole stack stays under 22 KB
+gzip with everything loaded, and a page that uses three components loads three kit modules
+instead of all of them.
 
-## The one decision to make first
+## Status
 
-The kit needs boreDOM to move author-provided children into the template when a
-component is hydrated. That is roughly ten lines in `hydrate()`, described in
-`05-core-gaps.md`. Without it, kit components have to build their DOM in JavaScript,
-which throws away the reason to use boreDOM at all.
+The core work these plans depended on is done. `hydrate()` moves author children into
+`[data-slot]`, with named slots and fallback content. `defined(name)` exists, `"name" in
+refs` asks without throwing, and `kit/helpers.js` holds `observeAttributes()` and
+`props()`. `05-core-support.md` records what shipped and where it differs from what was
+proposed.
 
-Decide that one before starting milestone 1.
+Nothing blocks milestone 1. Start with `press`.

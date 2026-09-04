@@ -17,27 +17,36 @@
  * their subscribers once, together, after the task ends.
  *
  * Allocation: a render whose reads match its previous reads allocates
- * nothing. Sets and maps are made on first use and dropped when empty, and
- * nothing here is cleared and refilled, which would rebuild hash tables.
+ * nothing. A subscriber keeps its first dependency inline and only makes a
+ * map for the second. A proxy costs one Proxy and one WeakMap entry.
+ * Nothing here is cleared and refilled, which would rebuild hash tables.
  */
 /** Key used to mean "anything about this object". */
 declare const ANY: unique symbol;
 type Key = PropertyKey | typeof ANY;
-/** The subscribers of one (object, key) pair, with a way back to remove itself when empty. */
+/** The subscribers of one (object, key) pair, with what it needs to remove itself when empty. */
 type Dep = Set<Subscriber> & {
-    keys: Map<Key, Dep>;
+    target: object;
     key: Key;
 };
 /** A unit of work that re-runs when something it read changes. */
 export type Subscriber = {
-    /** The function to run. Reads made inside it are tracked. */
-    run: () => void;
-    /** Every dependency set this subscriber belongs to, with the run that last read it. */
-    deps: Map<Dep, number>;
+    /** The function to run, given `arg`. Reads made inside it are tracked. */
+    run: (arg: any) => void;
+    /** Passed to `run`, so a component's render needs no wrapping closure. */
+    arg: unknown;
+    /** The first dependency and the run that last read it, kept inline. */
+    dep: Dep | null;
+    depEpoch: number;
+    /** Further dependencies, with the run that last read each. Made on the second dependency. */
+    deps: Map<Dep, number> | null;
     /** The number of the current or last run. */
     epoch: number;
     /** True while waiting in the queue. */
     queued: boolean;
+    /** The last (object, key) read in this run, so a repeated read costs two comparisons. */
+    lastTarget: object | null;
+    lastKey: Key;
 };
 /**
  * Queues a subscriber to run in the next microtask. A subscriber is never
@@ -64,8 +73,8 @@ export declare function pause(): Subscriber | null;
 export declare function resume(previous: Subscriber | null): void;
 /** Removes a subscriber from every dependency set and from the queue. */
 export declare function release(sub: Subscriber): void;
-/** Makes a subscriber for `fn`. It has not run yet. */
-export declare function subscriber(fn: () => void): Subscriber;
+/** Makes a subscriber that runs `fn(arg)`. It has not run yet. */
+export declare function subscriber(fn: (arg: any) => void, arg?: unknown): Subscriber;
 /**
  * Runs `fn` now and again whenever something it read changes.
  * Returns a function that stops it.

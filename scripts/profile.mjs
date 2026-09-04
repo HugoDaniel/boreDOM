@@ -45,6 +45,7 @@ async function measure(label, expression, iterations) {
   }
 }
 
+await measure("replace 100 rows", "__bench.create(200)", 200);
 await measure("stable render, two fields", "__bench.stable(2000)", 2000);
 await measure("keyed reverse, 100 rows", "__bench.reorder(300)", 300);
 await measure("relabel one row of 100", "__bench.relabel(2000)", 2000);

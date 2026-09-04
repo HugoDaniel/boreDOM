@@ -12,8 +12,8 @@
  * once and reused by every render.
  */
 import { pause, reactive, release, resume, run, subscriber, type Subscriber } from "./reactive.ts";
-import { ACTION_EVENT, ensureDelegation } from "./actions.ts";
-import type { ActionEvent, ActionHandler, BoredElement, ComponentDef, Refs } from "./types.ts";
+import { action, ensureDelegation } from "./actions.ts";
+import type { ActionContext, ActionEvent, ActionHandler, BoredElement, ComponentDef, InitContext, Refs } from "./types.ts";
 
 /** Registered logic, by tag name. */
 export const definitions = new Map<string, ComponentDef>();
@@ -30,6 +30,31 @@ export function setState(state: object): void {
 abstract class BoredBase extends HTMLElement {
   abstract attach(): void;
   abstract detach(): void;
+  abstract handle(act: ActionEvent & { stopped: boolean }): void;
+}
+type Impl = BoredBase & { addAction(action: string, handler: ActionHandler<any, any, any, any>): void; addCleanup(fn: () => void): void };
+
+/** Hands an action to each component host above the dispatcher, nearest first, until one stops it. */
+function deliver(dispatcher: HTMLElement, name: string, event: Event): void {
+  const act = action(name, event, dispatcher);
+  for (let host = hostOf(dispatcher); host && !act.stopped; host = hostOf(host.parentNode)) host.handle(act);
+}
+
+/** Shared by every element's context, so `local` and `refs` are made on first use without a closure per element. */
+const contextProto = {
+  get local() { return (this as unknown as { self: BoredElement }).self.local; },
+  get refs() { return (this as unknown as { self: BoredElement }).self.refs; },
+};
+
+/** The element whose init is running. `on()` and `onCleanup()` register into it. */
+let initializing: Impl | null = null;
+function on(action: string, handler: ActionHandler<any, any, any, any>): void {
+  if (!initializing) throw new Error("on() must be called during init");
+  initializing.addAction(action, handler);
+}
+function onCleanup(fn: () => void): void {
+  if (!initializing) throw new Error("onCleanup() must be called during init");
+  initializing.addCleanup(fn);
 }
 
 /** Elements that left the document this tick. One microtask checks them all. */
@@ -57,22 +82,31 @@ function hostOf(node: Node | null): BoredBase | null {
 
 /**
  * Elements marked `data-ref` that belong to this host and not to a nested
- * component. Each name is looked up once and kept while it stays inside the host.
+ * component. Each name is looked up once and kept while it stays inside the
+ * host. Reading a missing name throws; `name in refs` asks without throwing.
  */
 function refsOf(host: BoredBase): Refs {
-  const found = new Map<string, HTMLElement>();
+  let found: Map<string, HTMLElement> | undefined;
+  const find = (name: string): HTMLElement | undefined => {
+    const known = found?.get(name);
+    if (known && host.contains(known)) return known;
+    for (const el of host.querySelectorAll<HTMLElement>(`[data-ref="${CSS.escape(name)}"]`)) {
+      if (hostOf(el.parentNode) === host) {
+        (found ??= new Map()).set(name, el);
+        return el;
+      }
+    }
+    return undefined;
+  };
   return new Proxy({} as Refs, {
     get(_, name) {
       if (typeof name !== "string") return undefined;
-      const known = found.get(name);
-      if (known && host.contains(known)) return known;
-      for (const el of host.querySelectorAll<HTMLElement>(`[data-ref="${CSS.escape(name)}"]`)) {
-        if (hostOf(el.parentNode) === host) {
-          found.set(name, el);
-          return el;
-        }
-      }
+      const el = find(name);
+      if (el) return el;
       throw new Error(`Ref "${name}" not found in <${host.tagName.toLowerCase()}>`);
+    },
+    has(_, name) {
+      return typeof name === "string" && find(name) !== undefined;
     },
   });
 }
@@ -87,16 +121,58 @@ function templateFor(name: string): HTMLTemplateElement | undefined {
   return template;
 }
 
-/** Clones the template into the host and mirrors the template's other data-* attributes onto it. */
+/** Counts hydrations, so a slot knows whether it was already emptied for this one. */
+let hydration = 0;
+const FILLED: unique symbol = Symbol("boredom.filled");
+type Slot = HTMLElement & { [FILLED]?: number };
+
+/**
+ * Clones the template into the host and mirrors the template's other data-*
+ * attributes onto it. Children the author wrote inside the host move into the
+ * template's `[data-slot]`: a child with `slot="name"` goes to
+ * `[data-slot="name"]`, the rest to the unnamed one. Whatever the slot held
+ * in the template is its fallback and is replaced. A template without a slot
+ * keeps the author's children where they were.
+ */
 function hydrate(host: BoredBase, name: string): void {
   const template = templateFor(name);
   if (!template) return;
-  for (const { name: attr, value } of template.attributes) {
+  const attributes = template.attributes;
+  for (let i = 0; i < attributes.length; i++) {
+    const { name: attr, value } = attributes[i];
     if (attr === "data-component" || attr === "data-src" || !attr.startsWith("data-")) continue;
     const mirrored = attr.slice("data-".length);
     if (!host.hasAttribute(mirrored)) host.setAttribute(mirrored, value);
   }
+  const last = host.lastChild;
   host.appendChild(template.content.cloneNode(true));
+  if (last === null) return;
+
+  const slots = host.querySelectorAll<Slot>("[data-slot]");
+  if (slots.length === 0) return;
+  hydration++;
+  let node: ChildNode | null = host.firstChild;
+  while (node) {
+    const next: ChildNode | null = node === last ? null : node.nextSibling;
+    const slot = slotFor(host, slots, node instanceof Element ? node.slot : "");
+    if (slot) {
+      if (slot[FILLED] !== hydration) {
+        slot[FILLED] = hydration;
+        slot.textContent = "";
+      }
+      slot.appendChild(node);
+    }
+    node = next;
+  }
+}
+
+/** The host's own slot for `name`, skipping slots that belong to nested components. */
+function slotFor(host: BoredBase, slots: NodeListOf<Slot>, name: string): Slot | null {
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    if (slot.dataset.slot === name && hostOf(slot.parentNode) === host) return slot;
+  }
+  return null;
 }
 
 type Handlers = Map<string, ActionHandler<any, any, any, any>[]>;
@@ -107,14 +183,14 @@ export function register(name: string): void {
   if (!name.includes("-")) {
     throw new Error(`"${name}" is not a valid component name. Custom element names need a dash.`);
   }
-  ensureDelegation();
+  ensureDelegation(deliver);
 
   customElements.define(
     name,
     class extends BoredBase implements BoredElement {
       #local?: Record<string, any>;
       #refs?: Refs;
-      #context?: { state: object; local: Record<string, any>; refs: Refs; self: BoredBase };
+      #context?: { readonly state: object; readonly self: BoredBase };
       #actions?: Handlers;
       #cleanups?: (() => void)[];
       #subscriber: Subscriber | null = null;
@@ -130,16 +206,27 @@ export function register(name: string): void {
         return (this.#refs ??= refsOf(this));
       }
 
+      /** Built once per element; `local` and `refs` come from the shared prototype on first use. */
       #ctx() {
-        return (this.#context ??= { state: appState, local: this.local, refs: this.refs, self: this });
+        return (this.#context ??= { __proto__: contextProto, state: appState, self: this } as { readonly state: object; readonly self: BoredBase });
       }
 
-      /** Receives `boredom:action` events. Registered with `this` so no closure is made per element. */
-      handleEvent(event: Event) {
-        const detail = (event as CustomEvent<ActionEvent>).detail;
-        const handlers = this.#actions?.get(detail.name);
+      addAction(action: string, handler: ActionHandler<any, any, any, any>) {
+        const actions = (this.#actions ??= new Map());
+        const list = actions.get(action) ?? [];
+        list.push(handler);
+        actions.set(action, list);
+      }
+
+      addCleanup(fn: () => void) {
+        (this.#cleanups ??= []).push(fn);
+      }
+
+      /** Runs this component's handlers for an action that reached it. */
+      handle(act: ActionEvent & { stopped: boolean }) {
+        const handlers = this.#actions?.get(act.name);
         if (!handlers) return;
-        const context = { ...this.#ctx(), e: detail };
+        const context = { __proto__: this.#ctx(), e: act } as unknown as ActionContext<any, any, any, any>;
         const paused = pause();
         try {
           for (const handler of handlers) handler(context);
@@ -155,7 +242,6 @@ export function register(name: string): void {
           this.#hydrated = true;
           hydrate(this, name);
         }
-        this.addEventListener(ACTION_EVENT, this);
         this.attach();
       }
 
@@ -170,33 +256,21 @@ export function register(name: string): void {
         this.#attached = true;
 
         // Init runs untracked: a child created during its parent's render must
-        // not add its own reads to the parent's dependencies.
+        // not add its own reads to the parent's dependencies. The init context
+        // inherits from the render context, so `local` and `refs` stay lazy.
         const paused = pause();
+        const outer = initializing;
+        initializing = this;
         let render;
         try {
-          render = def.init({
-            ...this.#ctx(),
-            on: (action, handler) => {
-              const actions = (this.#actions ??= new Map());
-              const list = actions.get(action) ?? [];
-              list.push(handler);
-              actions.set(action, list);
-            },
-            onCleanup: (fn) => (this.#cleanups ??= []).push(fn),
-          });
+          render = def.init({ __proto__: this.#ctx(), on, onCleanup } as unknown as InitContext<any, any, any, any>);
         } finally {
+          initializing = outer;
           resume(paused);
         }
         if (!render) return;
 
-        const context = this.#ctx();
-        this.#subscriber = subscriber(() => {
-          try {
-            render(context);
-          } catch (error) {
-            console.error(`<${name}> render failed`, error);
-          }
-        });
+        this.#subscriber = subscriber(render, this.#ctx());
         run(this.#subscriber);
       }
 
@@ -215,7 +289,6 @@ export function register(name: string): void {
         this.#attached = false;
         if (this.#subscriber) release(this.#subscriber);
         this.#subscriber = null;
-        this.removeEventListener(ACTION_EVENT, this);
         const cleanups = this.#cleanups ?? [];
         for (let i = cleanups.length - 1; i >= 0; i--) cleanups[i]();
         this.#cleanups = this.#actions = this.#local = this.#context = undefined;

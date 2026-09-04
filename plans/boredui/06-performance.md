@@ -22,10 +22,13 @@ listeners regardless of item count. A listbox with five thousand options has thr
 listeners, not fifteen thousand. Any behavior that would be attached per item in a list
 must instead be a container behavior that resolves the target with `closest()`.
 
-**3. Listeners are objects, not closures.** `src/element.ts` already does this: the element
-implements `handleEvent` and registers itself, so no closure is allocated per element per
-event type. Behaviors follow the same pattern. For a behavior with several listeners, one
-object with a `handleEvent` switch beats several bound functions.
+**3. Listeners are objects, not closures.** The core allocates no listener per element at
+all now: one document listener per event type finds the dispatcher and hands the action up
+the host chain. A behavior cannot match that, since it has to listen somewhere, but it can
+register an object with a `handleEvent` method instead of a closure, so a thousand elements
+cost a thousand small objects rather than a thousand closures per event type. For a
+behavior with several listeners, one object with a `handleEvent` switch beats several bound
+functions.
 
 **4. Interaction state goes to attributes, not to reactive state.** Writing `data-hovered`
 costs an attribute mutation and a style recalculation on one element. Writing
@@ -49,6 +52,16 @@ or paint on every frame for every item.
 not affect their siblings' layout, and `content-visibility: auto` with a realistic
 `contain-intrinsic-size` on list items. Top layer elements are unaffected by containment on
 their ancestors, so a popover inside a contained component still positions correctly.
+
+## The baseline the kit must not spoil
+
+boreDOM sits second in js-framework-benchmark, at 23.7ms geomean against vanilla's 22.6,
+using 2.4 MB after a thousand rows. Everything below exists so a component library does not
+turn a 1.05x framework into a 3x one, which is the normal fate of a kit built on a fast
+core.
+
+Re-run the benchmark with a kit component as the row renderer before each release. If the
+number moves past 1.2x, the cause is in this file's rules and one of them was broken.
 
 ## Where the time actually goes
 

@@ -17,6 +17,8 @@ export declare function webComponent<S = any, L = Record<string, any>, R extends
  * Elements already in the document pick the logic up immediately.
  */
 export declare function define(name: string, def: ComponentDef): void;
+/** True once `define()` has been called for `name`. Lets a library skip a component the page already owns. */
+export declare function defined(name: string): boolean;
 /**
  * Makes `initial` reactive and returns it as the app state. Once the document
  * has finished parsing, it finds every `<template data-component>`, defines

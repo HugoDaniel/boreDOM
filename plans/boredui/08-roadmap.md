@@ -4,14 +4,16 @@ Six milestones. Each one ships something usable on its own, and each one ends wi
 demo page in `examples/` that works with view source. Estimates assume focused sessions,
 not calendar time.
 
-## Milestone 0: the blocking decision. Half a day.
+## Milestone 0: core support. Done.
 
-1. Implement `data-slot` in `hydrate()`, plus `defined()` and the `has` trap on refs.
-2. Add a browser test for each, including the case where a component has no `[data-slot]`
-   and must behave exactly as it does today.
-3. Bump boreDOM and note the three additions in the README.
+`data-slot` with named slots and fallback content, `defined()`, the `has` trap on refs, and
+`kit/helpers.js` with `observeAttributes()` and `props()`. Covered by
+`tests/browser/kit.test.ts` and documented in the README. `05-core-support.md` records what
+shipped.
 
-Everything else waits on this. `05-core-gaps.md` has the code.
+Scope grew past the proposal: actions no longer allocate a `CustomEvent` or a listener per
+element, and the reactivity core keeps a subscriber's first dependency inline. Nothing in
+the plans depended on the old shape, and the kit inherits the wins.
 
 ## Milestone 1: the behavior layer. Three to four days.
 

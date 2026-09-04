@@ -60,9 +60,15 @@ react-aria isolates components with React context: a `ListBox` publishes state a
 DOM already carries a tree and boreDOM already carries a bus along it.
 
 **Children speak upward through actions.** An option that was clicked dispatches
-`data-dispatch="select"`. The action bubbles through ancestor component hosts exactly like
-a DOM event, the nearest `on("select")` runs first, and `e.stop()` keeps it there. That is
-context inversion with no API.
+`data-dispatch="select"`. One document listener per event type finds the dispatcher, then
+the action is handed to each component host above it, nearest first, until one calls
+`e.stop()`. That is the shape of DOM bubbling with no event object allocated and no
+listener per element, and it is context inversion with no API.
+
+Slotted content composes with this correctly, which is the property the kit depends on.
+Author children written inside `<ui-dialog>` are moved into the template during hydration,
+so a `data-dispatch="close"` the author wrote lands inside the dialog's own subtree and
+reaches `ui-dialog` before it reaches the page's components.
 
 **Parents speak downward through attributes.** A listbox that decides option 3 is selected
 writes `aria-selected="true"` and `data-selected` on that option's element. The option's

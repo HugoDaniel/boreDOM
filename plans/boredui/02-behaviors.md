@@ -221,10 +221,13 @@ so the common path never pays for it.
 
 ## Allocation discipline
 
-The behaviors follow the same rules `src/element.ts` follows, because a UI kit that
-allocates per element undoes boreDOM's work.
+The behaviors hold the line `src/element.ts` holds, because a UI kit that allocates per
+element undoes boreDOM's work. The core now allocates no listener and no event object per
+action, keeps a subscriber's first dependency inline, and passes the render context as the
+subscriber's argument rather than closing over it. A behavior that allocates a closure per
+element per event type costs more than the framework underneath it.
 
-Listeners are objects with a `handleEvent` method, not closures, so registering a behavior
+So listeners are objects with a `handleEvent` method, not closures: registering a behavior
 on a thousand elements allocates one object each rather than one closure per event type.
 `pointermove`, `wheel` and `touchmove` listeners are passive. Nothing in a behavior reads
 layout, with the single exception of Page Up and Page Down in `collection()`, which needs

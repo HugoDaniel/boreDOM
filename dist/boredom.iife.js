@@ -22,6 +22,7 @@ var boreDOM = (() => {
   var index_exports = {};
   __export(index_exports, {
     define: () => define,
+    defined: () => defined,
     effect: () => effect,
     keyed: () => keyed,
     mount: () => mount,
@@ -33,9 +34,9 @@ var boreDOM = (() => {
 
   // src/reactive.ts
   var ANY = Symbol("boredom.any");
+  var RAW = Symbol("boredom.raw");
   var targetMap = /* @__PURE__ */ new WeakMap();
   var proxyOf = /* @__PURE__ */ new WeakMap();
-  var rawOf = /* @__PURE__ */ new WeakMap();
   var active = null;
   var epoch = 0;
   var queue = [];
@@ -48,24 +49,57 @@ var boreDOM = (() => {
     const proto = Object.getPrototypeOf(value);
     return proto === Object.prototype || proto === null;
   }
+  var makeDep = (target, key) => Object.assign(/* @__PURE__ */ new Set(), { target, key });
+  function depFor(target, key) {
+    const entry = targetMap.get(target);
+    if (entry === void 0) {
+      const dep2 = makeDep(target, key);
+      targetMap.set(target, dep2);
+      return dep2;
+    }
+    if (entry instanceof Map) {
+      let dep2 = entry.get(key);
+      if (!dep2) entry.set(key, dep2 = makeDep(target, key));
+      return dep2;
+    }
+    if (entry.key === key) return entry;
+    const dep = makeDep(target, key);
+    const map = /* @__PURE__ */ new Map();
+    map.set(entry.key, entry);
+    map.set(key, dep);
+    targetMap.set(target, map);
+    return dep;
+  }
   function track(target, key) {
-    if (!active) return;
-    let keys = targetMap.get(target);
-    if (!keys) targetMap.set(target, keys = /* @__PURE__ */ new Map());
-    let dep = keys.get(key);
-    if (!dep) keys.set(key, dep = Object.assign(/* @__PURE__ */ new Set(), { keys, key }));
-    dep.add(active);
-    active.deps.set(dep, active.epoch);
+    const sub = active;
+    if (!sub || sub.lastTarget === target && sub.lastKey === key) return;
+    sub.lastTarget = target;
+    sub.lastKey = key;
+    const dep = depFor(target, key);
+    dep.add(sub);
+    if (sub.dep === null || sub.dep === dep) {
+      sub.dep = dep;
+      sub.depEpoch = sub.epoch;
+    } else {
+      (sub.deps ??= /* @__PURE__ */ new Map()).set(dep, sub.epoch);
+    }
   }
   function trigger(target, key) {
-    const keys = targetMap.get(target);
-    if (!keys) return;
-    keys.get(key)?.forEach(schedule);
-    if (key !== ANY) keys.get(ANY)?.forEach(schedule);
+    const entry = targetMap.get(target);
+    if (entry === void 0) return;
+    if (entry instanceof Map) {
+      entry.get(key)?.forEach(schedule);
+      if (key !== ANY) entry.get(ANY)?.forEach(schedule);
+    } else if (entry.key === key || entry.key === ANY) {
+      entry.forEach(schedule);
+    }
   }
   function drop(dep, sub) {
     dep.delete(sub);
-    if (!dep.size) dep.keys.delete(dep.key);
+    if (dep.size) return;
+    const entry = targetMap.get(dep.target);
+    if (entry === dep) targetMap.delete(dep.target);
+    else if (entry instanceof Map) entry.delete(dep.key);
   }
   function schedule(sub) {
     if (sub.queued || sub === active) return;
@@ -119,14 +153,21 @@ var boreDOM = (() => {
   }
   function run(sub) {
     sub.epoch = ++epoch;
+    sub.lastTarget = null;
     const previous = active;
     active = sub;
     try {
-      sub.run();
+      sub.run(sub.arg);
     } finally {
       active = previous;
-      subject = sub;
-      sub.deps.forEach(pruneStale);
+      if (sub.dep && sub.depEpoch !== sub.epoch) {
+        drop(sub.dep, sub);
+        sub.dep = null;
+      }
+      if (sub.deps) {
+        subject = sub;
+        sub.deps.forEach(pruneStale);
+      }
     }
   }
   function pause() {
@@ -138,13 +179,17 @@ var boreDOM = (() => {
     active = previous;
   }
   function release(sub) {
-    subject = sub;
-    sub.deps.forEach(dropEach);
-    sub.deps.clear();
+    if (sub.dep) drop(sub.dep, sub);
+    sub.dep = null;
+    if (sub.deps) {
+      subject = sub;
+      sub.deps.forEach(dropEach);
+      sub.deps = null;
+    }
     sub.queued = false;
   }
-  function subscriber(fn) {
-    return { run: fn, deps: /* @__PURE__ */ new Map(), epoch: 0, queued: false };
+  function subscriber(fn, arg) {
+    return { run: fn, arg, dep: null, depEpoch: 0, deps: null, epoch: 0, queued: false, lastTarget: null, lastKey: ANY };
   }
   function effect(fn) {
     const sub = subscriber(fn);
@@ -153,13 +198,14 @@ var boreDOM = (() => {
   }
   function toRaw(value) {
     if (typeof value !== "object" || value === null) return value;
-    return rawOf.get(value) ?? value;
+    return value[RAW] ?? value;
   }
   function isReactive(value) {
-    return typeof value === "object" && value !== null && rawOf.has(value);
+    return typeof value === "object" && value !== null && value[RAW] !== void 0;
   }
   var handler = {
     get(t, key, receiver) {
+      if (key === RAW) return t;
       track(t, Array.isArray(t) ? ANY : key);
       const value = Reflect.get(t, key, receiver);
       return isPlain(value) && !Object.isFrozen(t) ? reactive(value) : value;
@@ -190,15 +236,13 @@ var boreDOM = (() => {
   function reactive(target) {
     const known = proxyOf.get(target);
     if (known) return known;
-    if (rawOf.has(target) || !isPlain(target)) return target;
+    if (target[RAW] !== void 0 || !isPlain(target)) return target;
     const proxy = new Proxy(target, handler);
     proxyOf.set(target, proxy);
-    rawOf.set(proxy, target);
     return proxy;
   }
 
   // src/actions.ts
-  var ACTION_EVENT = "boredom:action";
   var EVENT_ATTRIBUTES = {
     click: "data-dispatch",
     dblclick: "data-dispatch-dblclick",
@@ -217,8 +261,17 @@ var boreDOM = (() => {
     drop: "data-dispatch-drop",
     dragend: "data-dispatch-dragend"
   };
+  var actionProto = {
+    stopped: false,
+    stop() {
+      this.stopped = true;
+    }
+  };
+  function action(name, event, dispatcher) {
+    return { __proto__: actionProto, name, event, dispatcher };
+  }
   var installed = false;
-  function ensureDelegation() {
+  function ensureDelegation(deliver2) {
     if (installed) return;
     installed = true;
     for (const [type, attribute] of Object.entries(EVENT_ATTRIBUTES)) {
@@ -228,16 +281,9 @@ var boreDOM = (() => {
         const from = target instanceof Element ? target : target?.parentElement;
         const dispatcher = from?.closest(selector);
         const name = dispatcher?.getAttribute(attribute);
-        if (dispatcher && name) dispatch(dispatcher, name, event);
+        if (dispatcher && name) deliver2(dispatcher, name, event);
       });
     }
-  }
-  function dispatch(dispatcher, name, event) {
-    const detail = { name, event, dispatcher, stop: () => {
-    } };
-    const action = new CustomEvent(ACTION_EVENT, { bubbles: true, detail });
-    detail.stop = () => action.stopPropagation();
-    dispatcher.dispatchEvent(action);
   }
 
   // src/element.ts
@@ -249,6 +295,27 @@ var boreDOM = (() => {
   }
   var BoredBase = class extends HTMLElement {
   };
+  function deliver(dispatcher, name, event) {
+    const act = action(name, event, dispatcher);
+    for (let host = hostOf(dispatcher); host && !act.stopped; host = hostOf(host.parentNode)) host.handle(act);
+  }
+  var contextProto = {
+    get local() {
+      return this.self.local;
+    },
+    get refs() {
+      return this.self.refs;
+    }
+  };
+  var initializing = null;
+  function on(action2, handler2) {
+    if (!initializing) throw new Error("on() must be called during init");
+    initializing.addAction(action2, handler2);
+  }
+  function onCleanup(fn) {
+    if (!initializing) throw new Error("onCleanup() must be called during init");
+    initializing.addCleanup(fn);
+  }
   var detached = /* @__PURE__ */ new Set();
   var sweepQueued = false;
   function sweep() {
@@ -267,19 +334,27 @@ var boreDOM = (() => {
     return current;
   }
   function refsOf(host) {
-    const found = /* @__PURE__ */ new Map();
+    let found;
+    const find = (name) => {
+      const known = found?.get(name);
+      if (known && host.contains(known)) return known;
+      for (const el of host.querySelectorAll(`[data-ref="${CSS.escape(name)}"]`)) {
+        if (hostOf(el.parentNode) === host) {
+          (found ??= /* @__PURE__ */ new Map()).set(name, el);
+          return el;
+        }
+      }
+      return void 0;
+    };
     return new Proxy({}, {
       get(_, name) {
         if (typeof name !== "string") return void 0;
-        const known = found.get(name);
-        if (known && host.contains(known)) return known;
-        for (const el of host.querySelectorAll(`[data-ref="${CSS.escape(name)}"]`)) {
-          if (hostOf(el.parentNode) === host) {
-            found.set(name, el);
-            return el;
-          }
-        }
+        const el = find(name);
+        if (el) return el;
         throw new Error(`Ref "${name}" not found in <${host.tagName.toLowerCase()}>`);
+      },
+      has(_, name) {
+        return typeof name === "string" && find(name) !== void 0;
       }
     });
   }
@@ -291,22 +366,51 @@ var boreDOM = (() => {
     }
     return template;
   }
+  var hydration = 0;
+  var FILLED = Symbol("boredom.filled");
   function hydrate(host, name) {
     const template = templateFor(name);
     if (!template) return;
-    for (const { name: attr, value } of template.attributes) {
+    const attributes = template.attributes;
+    for (let i = 0; i < attributes.length; i++) {
+      const { name: attr, value } = attributes[i];
       if (attr === "data-component" || attr === "data-src" || !attr.startsWith("data-")) continue;
       const mirrored = attr.slice("data-".length);
       if (!host.hasAttribute(mirrored)) host.setAttribute(mirrored, value);
     }
+    const last = host.lastChild;
     host.appendChild(template.content.cloneNode(true));
+    if (last === null) return;
+    const slots = host.querySelectorAll("[data-slot]");
+    if (slots.length === 0) return;
+    hydration++;
+    let node = host.firstChild;
+    while (node) {
+      const next = node === last ? null : node.nextSibling;
+      const slot = slotFor(host, slots, node instanceof Element ? node.slot : "");
+      if (slot) {
+        if (slot[FILLED] !== hydration) {
+          slot[FILLED] = hydration;
+          slot.textContent = "";
+        }
+        slot.appendChild(node);
+      }
+      node = next;
+    }
+  }
+  function slotFor(host, slots, name) {
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      if (slot.dataset.slot === name && hostOf(slot.parentNode) === host) return slot;
+    }
+    return null;
   }
   function register(name) {
     if (customElements.get(name)) return;
     if (!name.includes("-")) {
       throw new Error(`"${name}" is not a valid component name. Custom element names need a dash.`);
     }
-    ensureDelegation();
+    ensureDelegation(deliver);
     customElements.define(
       name,
       class extends BoredBase {
@@ -325,15 +429,24 @@ var boreDOM = (() => {
         get refs() {
           return this.#refs ??= refsOf(this);
         }
+        /** Built once per element; `local` and `refs` come from the shared prototype on first use. */
         #ctx() {
-          return this.#context ??= { state: appState, local: this.local, refs: this.refs, self: this };
+          return this.#context ??= { __proto__: contextProto, state: appState, self: this };
         }
-        /** Receives `boredom:action` events. Registered with `this` so no closure is made per element. */
-        handleEvent(event) {
-          const detail = event.detail;
-          const handlers = this.#actions?.get(detail.name);
+        addAction(action2, handler2) {
+          const actions = this.#actions ??= /* @__PURE__ */ new Map();
+          const list = actions.get(action2) ?? [];
+          list.push(handler2);
+          actions.set(action2, list);
+        }
+        addCleanup(fn) {
+          (this.#cleanups ??= []).push(fn);
+        }
+        /** Runs this component's handlers for an action that reached it. */
+        handle(act) {
+          const handlers = this.#actions?.get(act.name);
           if (!handlers) return;
-          const context = { ...this.#ctx(), e: detail };
+          const context = { __proto__: this.#ctx(), e: act };
           const paused = pause();
           try {
             for (const handler2 of handlers) handler2(context);
@@ -348,7 +461,6 @@ var boreDOM = (() => {
             this.#hydrated = true;
             hydrate(this, name);
           }
-          this.addEventListener(ACTION_EVENT, this);
           this.attach();
         }
         /** A `moveBefore()` keeps the element as it is: no teardown, no re-init. */
@@ -361,30 +473,17 @@ var boreDOM = (() => {
           if (!def) return;
           this.#attached = true;
           const paused = pause();
+          const outer = initializing;
+          initializing = this;
           let render;
           try {
-            render = def.init({
-              ...this.#ctx(),
-              on: (action, handler2) => {
-                const actions = this.#actions ??= /* @__PURE__ */ new Map();
-                const list = actions.get(action) ?? [];
-                list.push(handler2);
-                actions.set(action, list);
-              },
-              onCleanup: (fn) => (this.#cleanups ??= []).push(fn)
-            });
+            render = def.init({ __proto__: this.#ctx(), on, onCleanup });
           } finally {
+            initializing = outer;
             resume(paused);
           }
           if (!render) return;
-          const context = this.#ctx();
-          this.#subscriber = subscriber(() => {
-            try {
-              render(context);
-            } catch (error) {
-              console.error(`<${name}> render failed`, error);
-            }
-          });
+          this.#subscriber = subscriber(render, this.#ctx());
           run(this.#subscriber);
         }
         disconnectedCallback() {
@@ -401,7 +500,6 @@ var boreDOM = (() => {
           this.#attached = false;
           if (this.#subscriber) release(this.#subscriber);
           this.#subscriber = null;
-          this.removeEventListener(ACTION_EVENT, this);
           const cleanups = this.#cleanups ?? [];
           for (let i = cleanups.length - 1; i >= 0; i--) cleanups[i]();
           this.#cleanups = this.#actions = this.#local = this.#context = void 0;
@@ -529,6 +627,9 @@ var boreDOM = (() => {
     if (!scanned) return;
     register(name);
     attachAll(name);
+  }
+  function defined(name) {
+    return definitions.has(name);
   }
   function mount(initial) {
     if (mounted) throw new Error("mount() was already called. There is one app state per page.");

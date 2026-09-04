@@ -68,6 +68,11 @@ The existing setup is the right one: `tests/unit` under `node --test` for anythi
 a DOM, and `tests/browser` under headless Chrome for everything else. The kit adds four
 kinds of test and one harness.
 
+Kit tests live in `tests/browser/kit.test.ts` alongside the core's browser tests and share
+its `fixture()` and `assert` harness. A render that throws no longer reaches `console.error`;
+it surfaces as an uncaught rejection or from `nextTick()`, so a test that expects a failing
+render asserts by awaiting `nextTick()` and catching.
+
 **Behavior tests** drive one behavior on a bare element and assert attributes and callbacks.
 `press` gets the full matrix: mouse, touch, pen, keyboard Space, keyboard Enter, virtual
 click, cancellation by scroll, cancellation by `pointercancel`, and disabled mid-press.
