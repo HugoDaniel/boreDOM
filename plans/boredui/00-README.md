@@ -123,10 +123,14 @@ instead of all of them.
 Milestones 0 and 1 are done: the core support in `05-core-support.md`, and the behavior
 layer with its 45 tests.
 
-Milestone 2 is under way. `boreui.css` is written, 722 lines and 2.9 KB gzip minified,
-verified in a browser rather than only read. `ui-button` and `ui-checkbox` are the first
-two components, with 16 tests. `boreui/kit/helpers.js` grew `adoptTemplate()`,
-`mirrorAttributes()` and `forward()`, which is everything a tier 1 wrapper needs.
+Milestone 2 is under way. `boreui.css` is written, 798 lines and 3.1 KB gzip minified,
+verified in a browser rather than only read. Twelve components are done, `ui-button`,
+`ui-toggle-button`, `ui-link`, `ui-checkbox`, `ui-switch`, `ui-separator`, `ui-meter`,
+`ui-progress`, `ui-field`, `ui-text-field`, `ui-text-area` and `ui-search-field`, with 66
+tests. The `field` behavior is written, and `boreui/kit/helpers.js` holds the five helpers
+a tier 1 wrapper needs: `adoptTemplate()`, `mirrorAttributes()`, `forward()`, `reflect()`
+and `expose()`.
 
-Next in milestone 2: the rest of tier 1, then the form example, then the build entry that
-makes the bundle budgets measurable.
+Next in milestone 2: the groups, disclosure, accordion, dialog, toolbar and breadcrumbs;
+then `ui-form`, which is the last of tier 1 and the one that ties `field` to `announce`;
+then the form example, and the build entry that makes the bundle budgets measurable.

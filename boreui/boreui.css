@@ -173,6 +173,14 @@
     user-select: none;
   }
 
+  /* Any display declaration beats the browser's own rule for the hidden
+     attribute, so a component that lays a button out with flex would keep
+     showing it after hiding it. This puts that back, and its higher
+     specificity means it wins wherever the kit sets display. */
+  [hidden] {
+    display: none;
+  }
+
   /* Trimming to the cap height makes the optical padding of a label equal
      without a magic number per font. Without it the symmetric padding above
      is close enough. */
@@ -201,8 +209,11 @@
 
   /* -- link --------------------------------------------------------------- */
 
-  ui-link a,
-  ui-breadcrumbs a {
+  /* Only an anchor that goes somewhere is painted like one. An <a> with no
+     href is inert, and colouring it would be the stylesheet telling a lie the
+     pointer corrects a click too late. */
+  ui-link a[href],
+  ui-breadcrumbs a[href] {
     color: var(--ui-accent);
     border-radius: calc(var(--ui-radius) / 2);
     text-decoration-thickness: 1px;
@@ -333,6 +344,9 @@
 
   ui-form,
   ui-field,
+  ui-text-field,
+  ui-text-area,
+  ui-search-field,
   ui-checkbox-group fieldset,
   ui-radio-group fieldset {
     display: grid;
@@ -344,29 +358,46 @@
     gap: calc(var(--ui-space) * 2.5);
   }
 
-  ui-field {
+  /* A field is a label, a control, a hint and a message, stacked closer to
+     each other than fields are to their neighbours. */
+  :where(ui-field, ui-text-field, ui-text-area, ui-search-field) {
     gap: calc(var(--ui-space) * 0.5);
   }
 
-  :where(ui-field, ui-checkbox-group, ui-radio-group) :where([data-slot="label"], legend) {
+  /* The control fills the field, so a page sets the width on the component. */
+  :where(ui-text-field, ui-text-area, ui-search-field) :where(input, textarea, .ui-input-row) {
+    justify-self: stretch;
+    inline-size: 100%;
+  }
+
+  :where(ui-field, ui-text-field, ui-text-area, ui-search-field, ui-checkbox-group, ui-radio-group)
+    :where([data-slot="label"], label, legend) {
     font-weight: 600;
     padding: 0;
   }
 
-  :where(ui-field, ui-form, ui-checkbox-group, ui-radio-group) [data-slot="description"] {
+  :where(ui-field, ui-form, ui-text-field, ui-text-area, ui-search-field, ui-checkbox-group, ui-radio-group)
+    [data-slot="description"] {
     margin: 0;
     color: var(--ui-text-muted);
     font-size: 0.875em;
   }
 
-  :where(ui-field, ui-form, ui-checkbox-group, ui-radio-group) [data-slot="error"] {
+  :where(ui-field, ui-form, ui-text-field, ui-text-area, ui-search-field, ui-checkbox-group, ui-radio-group)
+    [data-slot="error"] {
     margin: 0;
     color: var(--ui-danger);
     font-size: 0.875em;
   }
 
+  /* A label or an error with nothing in it is not a gap in the layout. */
+  :where(ui-field, ui-text-field, ui-text-area, ui-search-field) label:empty {
+    display: none;
+  }
+
   /* An error message with nothing in it is not a gap in the layout. */
-  :where(ui-field, ui-form, ui-checkbox-group, ui-radio-group) [data-slot="error"]:empty {
+  :where(ui-field, ui-form, ui-text-field, ui-text-area, ui-search-field, ui-checkbox-group, ui-radio-group)
+    [data-slot="error"]:empty {
     display: none;
   }
 
@@ -387,10 +418,22 @@
     }
   }
 
-  ui-search-field {
+  /* The input and the button that empties it sit on one line, and the browser's
+     own clear button is taken off so there are not two of them. */
+  ui-search-field .ui-input-row {
     display: flex;
     align-items: center;
     gap: calc(var(--ui-space) * 0.5);
+  }
+
+  ui-search-field .ui-input-row input {
+    flex: 1;
+  }
+
+  ui-search-field button {
+    flex: none;
+    inline-size: var(--ui-control-size);
+    padding-inline: 0;
   }
 
   ui-search-field input::-webkit-search-decoration,
@@ -419,11 +462,34 @@
   }
 
   ui-progress progress[value]::-webkit-progress-value,
-  ui-meter meter::-webkit-meter-optimum-value,
-  ui-meter meter::-webkit-meter-suboptimum-value,
-  ui-meter meter::-webkit-meter-even-less-good-value {
+  ui-meter meter::-webkit-meter-optimum-value {
     border-radius: 1em;
     background: var(--ui-accent);
+  }
+
+  /* A meter given low, high and optimum is asking the browser to say whether
+     the value is good, and these are the two answers that are not. Painting
+     all three the same colour would take the meaning away and leave the
+     attributes doing nothing. */
+  ui-meter meter::-webkit-meter-suboptimum-value {
+    border-radius: 1em;
+    background: color-mix(in oklch, var(--ui-danger), transparent 45%);
+  }
+
+  ui-meter meter::-webkit-meter-even-less-good-value {
+    border-radius: 1em;
+    background: var(--ui-danger);
+  }
+
+  /* Firefox says the same thing with a pseudo-class on the meter itself. Each
+     one is its own rule, because an unknown selector invalidates the whole
+     list it is written in. */
+  ui-meter meter:-moz-meter-sub-optimum::-moz-meter-bar {
+    background: color-mix(in oklch, var(--ui-danger), transparent 45%);
+  }
+
+  ui-meter meter:-moz-meter-sub-sub-optimum::-moz-meter-bar {
+    background: var(--ui-danger);
   }
 
   ui-progress progress[value]::-moz-progress-bar,
@@ -438,8 +504,18 @@
     border-block-start: var(--ui-border-width) solid var(--ui-border);
   }
 
-  ui-separator hr[aria-orientation="vertical"] {
-    block-size: 100%;
+  /* A vertical rule has no height of its own, so the host takes the height of
+     the line it sits in and the hr stretches inside it. Keyed on the attribute
+     the author wrote rather than on the `aria-orientation` the render adds,
+     because layout should not wait for a render. */
+  ui-separator[orientation="vertical"] {
+    display: flex;
+    align-self: stretch;
+  }
+
+  ui-separator[orientation="vertical"] hr {
+    align-self: stretch;
+    inline-size: 0;
     border-block-start: 0;
     border-inline-start: var(--ui-border-width) solid var(--ui-border);
   }

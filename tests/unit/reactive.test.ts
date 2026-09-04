@@ -127,13 +127,15 @@ test("readers inside a running subscriber are not disturbed by writes from other
   assert.deepEqual(seen, [0, 2]);
 });
 
-test("frozen objects inside state can be read and are left alone", () => {
+test("frozen objects inside state are handed out as they are", () => {
   const frozen = Object.freeze({ nested: Object.freeze({ x: 1 }), n: 2 });
-  const s = reactive({ config: frozen, list: Object.freeze([1, 2]) });
+  const list = Object.freeze([1, 2]);
+  const s = reactive({ config: frozen, list });
   assert.equal(s.config.nested.x, 1);
-  assert.equal(isReactive(s.config), true);
-  assert.equal(isReactive(s.config.nested), false);
-  assert.equal(s.list.length, 2);
+  assert.equal(isReactive(s.config), false);
+  assert.equal(s.config, frozen, "no proxy: a frozen value cannot change");
+  assert.equal(s.list, list);
+  assert.throws(() => { (s.config as { n: number }).n = 3; }, "writing into a frozen value throws");
 });
 
 test("a throwing effect does not stop the others in the batch", async () => {

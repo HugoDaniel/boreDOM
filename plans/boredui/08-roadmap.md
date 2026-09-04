@@ -52,17 +52,53 @@ larger than the effort. Done when the form example passes `axe-core` and works w
 file removed.
 
 Under way. `boreui.css` is written: four layers, twenty five registered tokens, and the
-state selectors, 2.9 KB gzip minified against a 4 KB budget. `ui-button` and `ui-checkbox`
-are done, with `adoptTemplate()`, `mirrorAttributes()` and `forward()` added to
-`boreui/kit/helpers.js` to support them.
+state selectors, 3.1 KB gzip minified against a 4 KB budget. Twelve components are done,
+`ui-button`, `ui-toggle-button`, `ui-link`, `ui-checkbox`, `ui-switch`, `ui-separator`,
+`ui-meter`, `ui-progress`, `ui-field`, `ui-text-field`, `ui-text-area` and
+`ui-search-field`, with 66 tests. `boreui/kit/helpers.js` grew the five helpers a tier 1
+wrapper needs: `adoptTemplate()`, `mirrorAttributes()`, `forward()`, `reflect()` and
+`expose()`.
 
-Three things the stylesheet found that the plan had wrong. A registered property cannot
+`field` is written, in `boreui/behaviors/field.js`, 119 lines against react-aria's roughly
+900 across `useField`, `useFormValidation` and the validation state hooks. The difference
+is entirely in what it refuses to do. Validation is the Constraint Validation API, so the
+rules, the wording and the locale are the browser's. When to show it is `:user-invalid`,
+which is the browser's own record of whether the user has had their turn, so there is no
+"have they touched it yet" flag to keep. And it writes attributes and never text: the
+message reaches the component through `mirror.message` and the component renders it.
+
+Two things that surface came out of the platform rather than the plan. `checkValidity()`
+fires the same `invalid` event a refused submit does, so calling it shows the message;
+`el.validity.valid` is the read that asks without telling, and the docs say so. And a
+`<textarea>` has no `value` attribute, so `<ui-text-area>` puts the author's text where the
+platform keeps it, inside the element.
+
+Half of them have no logic beyond wiring the host to the control inside, which is the tier
+working as the plan said it would. The exceptions are worth naming. `ui-progress` has
+an `indeterminate` property because the platform gives no way back: `value = null` is the
+number zero, not the absence of a value, so removing the attribute is the only way to say
+"still working" again. And a stylesheet cannot draw a vertical separator on its own, since
+an `<hr>` has no height, so the host stretches and the rule stretches inside it.
+
+One convention came out of the first four, and the rest of tier 1 follows it. A boolean
+that belongs to the component is an attribute on the host, reflected by a property and
+copied into ARIA by the render, which is `ui-toggle-button`'s `selected`. A value that
+belongs to the native control is the control's, with the host attribute as its default and
+the host property forwarded to it, which is `ui-checkbox`'s `checked`. Neither ever reads
+the DOM back to decide what to write.
+
+Four things the stylesheet found that the plan had wrong. A registered property cannot
 take `rem` in its `initial-value`, because an initial value has to be computationally
 independent, so `--ui-space` was silently dropped until it was registered in px and set in
 `:root`. Colour transitions are legal after all, as long as the control paints from a
 registered custom property and that is what transitions, which is why `--ui-control-bg` and
-`--ui-control-border` exist and do not inherit. And a disabled checkbox needs its label
-dimmed rather than its input, because the input a checkbox draws over is invisible already.
+`--ui-control-border` exist and do not inherit. A disabled checkbox needs its label dimmed
+rather than its input, because the input a checkbox draws over is invisible already. And
+drawing a `<meter>` means painting its three value pseudo elements separately, because one
+colour for all of them silently takes the meaning out of `low`, `high` and `optimum`.
+
+Every one of those four was found by looking at a screenshot, not by reading the file.
+Milestone 3 onwards keeps that step.
 
 ## Milestone 3: overlays. Two to three days.
 

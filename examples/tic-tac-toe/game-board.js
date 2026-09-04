@@ -7,7 +7,8 @@ export default webComponent(({ on, self }) => {
   on("play", ({ state, e }) => {
     const index = squares().indexOf(e.dispatcher.closest("game-button"));
     if (state.winner || state.board[index]) return;
-    state.board[index] = state.next;
+    // The board is a frozen value: a move is a new board with one square changed.
+    state.board = Object.freeze(state.board.with(index, state.next));
     state.next = state.next === "O" ? "X" : "O";
     state.winner = winner(state.board);
   });

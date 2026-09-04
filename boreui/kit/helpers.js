@@ -127,6 +127,26 @@ export function reflect(self, names) {
   }
 }
 
+/**
+ * Makes `el.control` the control the component is built around, so everything
+ * the platform already put on it is one property away: `focus()`, `select()`,
+ * `validity`, and `setCustomValidity()` for a message the browser could not
+ * have known. Read only, because the control is the component's, not yours.
+ *
+ * @param {HTMLElement} self  the component element
+ * @param {string} ref  the `data-ref` name of the control
+ * @param {string} [name]  what to call it on the host
+ */
+export function expose(self, ref, name = "control") {
+  const proto = Object.getPrototypeOf(self);
+  if (Object.hasOwn(proto, name)) return;
+  Object.defineProperty(proto, name, {
+    get() { return ref in this.refs ? this.refs[ref] : null; },
+    enumerable: true,
+    configurable: true,
+  });
+}
+
 /** Where a forwarded property waits when the control it belongs to is not there yet. */
 const HELD = Symbol("boreui.held");
 
@@ -157,7 +177,9 @@ export function observeAttributes(self, local, names) {
  * a get/set pair on the element's class, backed by `local`, so a render that
  * reads `local.items` re-runs when the property is set from outside. A value
  * assigned before the element was upgraded is kept. Pass fresh defaults on
- * each call: an object default is shared by nothing else.
+ * each call: an object default is shared by nothing else. A property is a
+ * value: to change an array or object, assign a new frozen one. The runtime
+ * never wraps a frozen value, and writing into one throws.
  *
  * @param {HTMLElement} self  the component element
  * @param {Record<string, any>} local  its local state

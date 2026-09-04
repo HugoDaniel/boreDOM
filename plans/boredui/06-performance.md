@@ -55,13 +55,13 @@ their ancestors, so a popover inside a contained component still positions corre
 
 ## The baseline the kit must not spoil
 
-boreDOM sits second in js-framework-benchmark, at 23.7ms geomean against vanilla's 22.6,
-using 2.4 MB after a thousand rows. Everything below exists so a component library does not
-turn a 1.05x framework into a 3x one, which is the normal fate of a kit built on a fast
-core.
+boreDOM sits fourth in js-framework-benchmark, at 21.3ms geomean against vanilla's 17.9,
+within 1.5ms of solid and svelte, using 2.0 MB after a thousand rows. Everything below
+exists so a component library does not turn a 1.2x framework into a 3x one, which is the
+normal fate of a kit built on a fast core.
 
 Re-run the benchmark with a kit component as the row renderer before each release. If the
-number moves past 1.2x, the cause is in this file's rules and one of them was broken.
+number moves past 1.4x, the cause is in this file's rules and one of them was broken.
 
 ## Where the time actually goes
 

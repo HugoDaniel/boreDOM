@@ -5,7 +5,7 @@ Another boring JavaScript framework. Components come from `<template data-compon
 ## The five rules
 
 1. A component re-renders when a property it read during its last render changes.
-2. `state` is the live object returned by `mount()`. Anything can write to it, from anywhere. `local` is the same kind of object, one per element.
+2. `state` is the live object returned by `mount()`. Anything can write to it, from anywhere. `local` is the same kind of object, one per element. What goes in them are values: replace an array or object instead of writing into it, and freeze what you put in, so a stray write throws.
 3. `data-dispatch="name"` fires an action that reaches the nearest component first and then each ancestor component, like a DOM event bubbling. `e.stop()` keeps it where it is.
 4. The render function is your code. `refs` gives you the elements marked `data-ref`. `keyed()` reuses list children by key.
 5. Init runs once per element, on first connect. Leaving the document runs the cleanups and drops the subscriptions. Coming back starts fresh.
@@ -51,7 +51,7 @@ The same runtime is an ES module, and a template can name the file that holds it
 
 <script type="module">
   import { mount } from "@mr_hugo/boredom";
-  mount({ todos: [] });
+  mount({ todos: Object.freeze([]) });
 </script>
 ```
 
@@ -59,18 +59,23 @@ The same runtime is an ES module, and a template can name the file that holds it
 // todo-list.js
 import { keyed, webComponent } from "@mr_hugo/boredom";
 
+const freeze = Object.freeze;
+
 export default webComponent(({ on }) => {
   on("add", ({ state, refs, e }) => {
     e.event.preventDefault();
-    state.todos.push({ id: Date.now(), text: refs.input.value });
+    state.todos = freeze(state.todos.concat(freeze({ id: Date.now(), text: refs.input.value })));
     refs.input.value = "";
   });
   return ({ state, refs }) => {
-    keyed(refs.list, state.todos, (todo) => todo.id, (todo) =>
-      Object.assign(document.createElement("todo-item"), { todo }));
+    keyed(refs.list, state.todos, (todo) => todo.id,
+      (todo) => { const item = document.createElement("todo-item"); item.local.todo = todo; return item; },
+      (item, todo) => { item.local.todo = todo; });
   };
 });
 ```
+
+Todos are values. Adding one replaces the frozen array, and the item that shows a todo gets it through its `local`, so only that item re-renders when its todo is replaced. In `examples/todo-list`, `toggle` and `remove` are dispatched inside an item and bubble up to this list, which owns the data.
 
 Install with `pnpm add @mr_hugo/boredom`, or copy `dist/boredom.js`. The `examples/` folder has this list, the counter, and a tic-tac-toe where a template-only `game-button` dispatches `play` and the `game-board` around it handles it.
 
@@ -111,37 +116,37 @@ Children written inside the element move into the template's `data-slot`: `<ui-b
 
 ### `keyed(parent, items, key, create, update?)`
 
-Keeps `parent`'s children in sync with the array `items`. `key` returns a stable identity and runs without dependency tracking, `create` makes the element for a new item, and `update`, when given, runs for items whose element already exists. A pass over a list whose order did not change touches no DOM. Otherwise order is restored by walking from both ends from the first difference, so a swap costs two moves and a removal none. A pass that reuses no element clears the parent in one call before appending. Elements are moved with `moveBefore()` where the browser has it, so focus and selection survive a reorder and the element is not torn down and set up again. An empty list clears the parent in one call. The parent should hold nothing but the elements `keyed()` manages.
+Keeps `parent`'s children in sync with the array `items`. `key` returns a stable identity and runs without dependency tracking, `create` makes the element for a new item, and `update`, when given, runs for items whose element already exists. A pass over a list whose order did not change touches no DOM. An item that is the same object as in the previous pass, at the same index, is matched without calling `key` or touching the map. Otherwise order is restored by walking from both ends from the first difference, so a swap costs two moves and a removal none. A pass that reuses no element clears the parent in one call before appending. Elements are moved with `moveBefore()` where the browser has it, so focus and selection survive a reorder and the element is not torn down and set up again. An empty list clears the parent in one call. The parent should hold nothing but the elements `keyed()` manages.
 
 ### `reactive(obj)`, `effect(fn)`, `nextTick()`, `toRaw(value)`
 
-The reactivity core, exported for code outside components. `effect(fn)` runs `fn` now and again whenever something it read changes, and returns a function that stops it. `nextTick()` resolves after pending renders. `toRaw()` unwraps one level: a proxy assigned inside another object stays a proxy there, so use `JSON.parse(JSON.stringify(state))` or copy by hand before `structuredClone()` or `postMessage()`. Only plain objects and arrays are made reactive; a `Date`, a `Map`, or a DOM node stored in state is left alone. Arrays are tracked as a whole: any change to an array re-runs everything that read it.
+The reactivity core, exported for code outside components. `effect(fn)` runs `fn` now and again whenever something it read changes, and returns a function that stops it. `nextTick()` resolves after pending renders. `toRaw()` unwraps one level: a proxy assigned inside another object stays a proxy there, so use `JSON.parse(JSON.stringify(state))` or copy by hand before `structuredClone()` or `postMessage()`. Only plain objects and arrays are made reactive; a `Date`, a `Map`, or a DOM node stored in state is left alone. So is a frozen object or array: it cannot change, so it is handed out as it is, and replacing it is the write that re-renders. Arrays are tracked as a whole: any change to an array re-runs everything that read it.
 
 ### Types
 
-The package ships declarations. `webComponent<State, Local, Refs, Props>()` types what the callbacks receive, where `Props` covers properties other code sets on the element, such as the `todo` in the example above.
+The package ships declarations. `webComponent<State, Local, Refs, Props>()` types what the callbacks receive, where `Local` types `local`, such as the `todo` the list puts there in the example above, and `Props` covers properties other code sets on the element.
 
 ## Performance
 
-The runtime batches every write made in one task into one render pass, in a microtask, so all DOM writes land together before the next frame. It never reads layout, so it never forces a reflow. A render whose reads match its previous reads allocates nothing beyond one promise per batch, and `keyed()` allocates nothing for a pass that adds no items. A reactive object costs one Proxy and one WeakMap entry, a subscriber keeps its first dependency inline, and an element with logic allocates its context, its subscriber, and nothing else until it uses `local` or `refs`. `pnpm run profile` measures this with Chrome's sampling heap profiler and prints bytes per pass by function.
+The runtime batches every write made in one task into one render pass, in a microtask, so all DOM writes land together before the next frame. It never reads layout, so it never forces a reflow. A render whose reads match its previous reads allocates nothing beyond one promise per batch, and `keyed()` allocates nothing for a pass that adds no items. A reactive object costs one Proxy and one WeakMap entry, a frozen one costs nothing, a subscriber keeps its first dependency inline, and an element with logic allocates its context, its subscriber, and nothing else until it uses `local` or `refs`. `pnpm run profile` measures this with Chrome's sampling heap profiler and prints bytes per pass by function.
 
-Inside a render, write to the DOM and do not read layout: `offsetWidth`, `getBoundingClientRect()`, and `getComputedStyle()` each force the browser to lay out everything written so far. Measure in the action handler before writing, or in `requestAnimationFrame`. When a render runs on every keystroke, compare before writing text, since assigning the same string again still invalidates the node. Keep item objects stable so `keyed()` reuses their elements, and give list items their own component so a change to one item re-renders one element.
+Inside a render, write to the DOM and do not read layout: `offsetWidth`, `getBoundingClientRect()`, and `getComputedStyle()` each force the browser to lay out everything written so far. Measure in the action handler before writing, or in `requestAnimationFrame`. When a render runs on every keystroke, compare before writing text, since assigning the same string again still invalidates the node. Treat list items as values: replace the array instead of writing into an item, and freeze both. A frozen value is never wrapped, so a list of a thousand rows costs no proxies and no subscribers, `keyed()` matches an unchanged item by identity, and `update` rewrites the one that changed.
 
 ## Benchmark
 
-Measured with [js-framework-benchmark](https://github.com/krausest/js-framework-benchmark) on Chrome 152, headless, with its 4x CPU throttle, 15 iterations per benchmark, medians. The entry lives in that repository under `frameworks/keyed/boredom`: one component, rows as plain `<tr>` elements managed by `keyed()`, one `effect()` per row for its label and one for the selection.
+Measured with [js-framework-benchmark](https://github.com/krausest/js-framework-benchmark) on Chrome 152, headless, with its 4x CPU throttle, 15 iterations per benchmark and 25 for select row, medians, all frameworks in one run. The entry lives in that repository under `frameworks/keyed/boredom`: one component, rows as plain `<tr>` elements managed by `keyed()`, frozen rows in a frozen array, replaced on every action with `with()`, `toSpliced()`, and `map()`, no per-row proxies or effects, and one `effect()` for the selection.
 
 | framework | geomean of the 9 CPU benchmarks, ms | vs vanillajs | memory after 1,000 rows, MB |
 |---|---|---|---|
-| vanillajs | 22.6 | 1.00 | 1.9 |
-| boreDOM | 23.7 | 1.05 | 2.4 |
-| solid | 24.8 | 1.10 | 2.7 |
-| svelte | 26.3 | 1.16 | 2.9 |
-| lit-html | 27.6 | 1.22 | 2.6 |
-| vue | 28.5 | 1.26 | 3.9 |
-| preact-hooks | 35.2 | 1.55 | 3.2 |
-| react-hooks | 38.7 | 1.71 | 4.4 |
-| alpine | 66.1 | 2.92 | 16.6 |
+| vanillajs | 17.9 | 1.00 | 1.9 |
+| solid | 19.9 | 1.11 | 2.7 |
+| svelte | 20.4 | 1.14 | 2.9 |
+| boreDOM | 21.3 | 1.19 | 2.0 |
+| lit-html | 22.0 | 1.23 | 2.6 |
+| vue | 22.4 | 1.25 | 3.9 |
+| preact-hooks | 28.4 | 1.58 | 3.3 |
+| react-hooks | 31.1 | 1.73 | 4.4 |
+| alpine | 54.3 | 3.03 | 16.6 |
 
 The number that matters more is the one this benchmark does not measure: the runtime is one file you can read in a sitting.
 

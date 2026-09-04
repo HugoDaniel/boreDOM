@@ -11,7 +11,9 @@
  *
  * Arrays are tracked coarsely: any read of an array subscribes to the whole
  * array, and any write to it notifies every reader. Objects that are not
- * plain (Date, Map, DOM nodes, class instances) are returned untouched.
+ * plain (Date, Map, DOM nodes, class instances) are returned untouched, and
+ * so are frozen objects and arrays: a value that cannot change needs no
+ * proxy, and replacing it is a write to the key that held it.
  *
  * Scheduling is batched in a microtask. All writes made in one task run
  * their subscribers once, together, after the task ends.
@@ -307,12 +309,13 @@ const handler: ProxyHandler<object> = {
 /**
  * Wraps a plain object or array so that reads are tracked and writes
  * notify. Calling it twice on the same object returns the same proxy.
- * Non-plain values are returned as they are.
+ * Non-plain values are returned as they are, and so is a frozen one: it
+ * cannot change, so the only thing to track is the key that holds it.
  */
 export function reactive<T extends object>(target: T): T {
   const known = proxyOf.get(target);
   if (known) return known as T;
-  if ((target as any)[RAW] !== undefined || !isPlain(target)) return target;
+  if ((target as any)[RAW] !== undefined || !isPlain(target) || Object.isFrozen(target)) return target;
   const proxy = new Proxy(target, handler);
   proxyOf.set(target, proxy);
   return proxy as T;

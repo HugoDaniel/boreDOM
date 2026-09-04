@@ -9,6 +9,13 @@ import "./boreui/button.test.ts";
 import "./boreui/toggle-button.test.ts";
 import "./boreui/link.test.ts";
 import "./boreui/checkbox.test.ts";
+import "./boreui/switch.test.ts";
+import "./boreui/separator.test.ts";
+import "./boreui/meter.test.ts";
+import "./boreui/progress.test.ts";
+import "./boreui/field.test.ts";
+import "./boreui/text-field.test.ts";
+import "./boreui/search-field.test.ts";
 import "./examples.test.ts";
 import { run } from "./harness.ts";
 

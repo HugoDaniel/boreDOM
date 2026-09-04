@@ -39,7 +39,7 @@
   <script type="module">
     import { mount } from "../../dist/boredom.js";
 
-    mount({ board: Array(9).fill(null), next: "O", winner: null });
+    mount({ board: Object.freeze(Array(9).fill(null)), next: "O", winner: null });
   </script>
 </body>
 </html>

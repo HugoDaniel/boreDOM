@@ -236,7 +236,7 @@ var boreDOM = (() => {
   function reactive(target) {
     const known = proxyOf.get(target);
     if (known) return known;
-    if (target[RAW] !== void 0 || !isPlain(target)) return target;
+    if (target[RAW] !== void 0 || !isPlain(target) || Object.isFrozen(target)) return target;
     const proxy = new Proxy(target, handler);
     proxyOf.set(target, proxy);
     return proxy;
@@ -523,20 +523,21 @@ var boreDOM = (() => {
   }
   function keyed(parent, items, key, create, update) {
     let list = managed.get(parent);
-    if (!list) managed.set(parent, list = { pass: 0, byKey: /* @__PURE__ */ new Map() });
-    const { byKey } = list;
+    if (!list) managed.set(parent, list = { pass: 0, byKey: /* @__PURE__ */ new Map(), order: [] });
+    const { byKey, order } = list;
     const before = byKey.size;
     const count = items.length;
     if (count === 0 && before) {
       parent.replaceChildren();
       byKey.clear();
+      order.length = 0;
       return;
     }
     const pass = ++list.pass;
-    const keyOf = (index) => {
+    const keyOf = (item, index) => {
       const paused = pause();
       try {
-        return key(items[index], index);
+        return key(item, index);
       } finally {
         resume(paused);
       }
@@ -545,24 +546,31 @@ var boreDOM = (() => {
     let start = count;
     let cursor = parent.firstChild;
     for (let index = 0; index < count; index++) {
-      const k = keyOf(index);
-      const entry = byKey.get(k);
-      if (entry) {
-        if (entry.seen === pass) {
-          throw new Error(`keyed(): duplicate key ${String(k)} in <${parent.tagName.toLowerCase()}>`);
+      const item = items[index];
+      let entry = order[index];
+      if (entry === void 0 || entry.item !== item) {
+        const k = keyOf(item, index);
+        entry = byKey.get(k);
+        if (entry === void 0) {
+          byKey.set(k, order[index] = { element: create(item, index), item, seen: pass });
+          if (start === count) start = index;
+          continue;
         }
-        entry.seen = pass;
-        seen++;
-        update?.(entry.element, items[index], index);
-        if (start === count) {
-          if (entry.element === cursor) cursor = cursor.nextSibling;
-          else start = index;
-        }
-      } else {
-        byKey.set(k, { element: create(items[index], index), seen: pass });
-        if (start === count) start = index;
+        entry.item = item;
+      }
+      if (entry.seen === pass) {
+        throw new Error(`keyed(): duplicate key ${String(keyOf(item, index))} in <${parent.tagName.toLowerCase()}>`);
+      }
+      entry.seen = pass;
+      seen++;
+      order[index] = entry;
+      update?.(entry.element, item, index);
+      if (start === count) {
+        if (entry.element === cursor) cursor = cursor.nextSibling;
+        else start = index;
       }
     }
+    order.length = count;
     if (seen < before) {
       pruning = list;
       detachPruned = seen > 0;
@@ -570,19 +578,18 @@ var boreDOM = (() => {
       byKey.forEach(removeUnseen);
     }
     if (start === count) return;
-    const elementAt = (index) => byKey.get(keyOf(index)).element;
     let i = start;
     let j = count - 1;
-    let head = start ? elementAt(start - 1).nextSibling : parent.firstChild;
+    let head = start ? order[start - 1].element.nextSibling : parent.firstChild;
     let tail = parent.lastChild;
     while (i <= j) {
-      const first = elementAt(i);
+      const first = order[i].element;
       if (first === head) {
         i++;
         head = head.nextSibling;
         continue;
       }
-      const last = elementAt(j);
+      const last = order[j].element;
       if (last === tail) {
         j--;
         tail = tail.previousSibling;

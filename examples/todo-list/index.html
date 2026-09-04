@@ -15,7 +15,7 @@
 </head>
 <body>
   <h1>To-do list</h1>
-  <p>The list logic lives in its own file, found through <code>data-src</code>. The item logic is defined inline.</p>
+  <p>The list logic lives in its own file, found through <code>data-src</code>. The item logic is defined inline. Todos are frozen values: a change replaces the list.</p>
 
   <todo-list></todo-list>
 
@@ -38,18 +38,16 @@
   <script type="module">
     import { define, mount, webComponent } from "../../dist/boredom.js";
 
-    define("todo-item", webComponent(({ on, self }) => {
-      on("toggle", () => { self.todo.done = !self.todo.done; });
-      on("remove", ({ state }) => { state.todos.splice(state.todos.indexOf(self.todo), 1); });
-      return ({ refs }) => {
-        refs.text.textContent = self.todo.text;
-        refs.done.checked = self.todo.done;
-        self.classList.toggle("completed", self.todo.done);
-      };
+    // The item only shows the todo the list put in its `local`. Its actions
+    // have no handler here, so they bubble up to the list, which owns the data.
+    define("todo-item", webComponent(() => ({ local, refs, self }) => {
+      refs.text.textContent = local.todo.text;
+      refs.done.checked = local.todo.done;
+      self.classList.toggle("completed", local.todo.done);
     }));
 
     mount({
-      todos: [{ id: 1, text: "Something to be done", done: false }],
+      todos: Object.freeze([Object.freeze({ id: 1, text: "Something to be done", done: false })]),
     });
   </script>
 </body>

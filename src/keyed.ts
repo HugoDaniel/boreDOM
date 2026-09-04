@@ -10,15 +10,19 @@
  * It reads only the DOM tree, never layout, so it causes no forced reflow.
  * Each key gets one record for the life of its element, records are marked
  * per pass instead of copied, and the list is walked by index, so a pass
- * over an unchanged list allocates nothing and touches no DOM. Order is
- * restored by walking from both ends, starting where the first difference
- * is, so a swap costs two moves and a removal none. A pass that reuses no
- * element clears the parent in one call before appending.
+ * over an unchanged list allocates nothing and touches no DOM. An item that
+ * is the same object as last pass, at the same index, is matched without
+ * calling `key` or touching the map, so a list built by replacing a few
+ * items costs a few lookups. Order is restored by walking from both ends,
+ * starting where the first difference is, so a swap costs two moves and a
+ * removal none. A pass that reuses no element clears the parent in one call
+ * before appending.
  */
 import { pause, resume } from "./reactive.ts";
 
-type Entry = { element: Element; seen: number };
-type List = { pass: number; byKey: Map<unknown, Entry> };
+type Entry = { element: Element; item: unknown; seen: number };
+/** `order` mirrors the items of the last pass, so it is also the DOM order. */
+type List = { pass: number; byKey: Map<unknown, Entry>; order: Entry[] };
 const managed = new WeakMap<Element, List>();
 
 /** The list being pruned; set right before a forEach so no closure is needed. */
@@ -47,21 +51,22 @@ export function keyed<T>(
   update?: (element: Element, item: T, index: number) => void,
 ): void {
   let list = managed.get(parent);
-  if (!list) managed.set(parent, (list = { pass: 0, byKey: new Map() }));
-  const { byKey } = list;
+  if (!list) managed.set(parent, (list = { pass: 0, byKey: new Map(), order: [] }));
+  const { byKey, order } = list;
   const before = byKey.size;
   const count = items.length;
   if (count === 0 && before) {
     parent.replaceChildren();
     byKey.clear();
+    order.length = 0;
     return;
   }
   const pass = ++list.pass;
 
-  const keyOf = (index: number): unknown => {
+  const keyOf = (item: T, index: number): unknown => {
     const paused = pause();
     try {
-      return key(items[index], index);
+      return key(item, index);
     } finally {
       resume(paused);
     }
@@ -73,24 +78,31 @@ export function keyed<T>(
   let start = count;
   let cursor: ChildNode | null = parent.firstChild;
   for (let index = 0; index < count; index++) {
-    const k = keyOf(index);
-    const entry = byKey.get(k);
-    if (entry) {
-      if (entry.seen === pass) {
-        throw new Error(`keyed(): duplicate key ${String(k)} in <${parent.tagName.toLowerCase()}>`);
+    const item = items[index];
+    let entry: Entry | undefined = order[index];
+    if (entry === undefined || entry.item !== item) {
+      const k = keyOf(item, index);
+      entry = byKey.get(k);
+      if (entry === undefined) {
+        byKey.set(k, (order[index] = { element: create(item, index), item, seen: pass }));
+        if (start === count) start = index;
+        continue;
       }
-      entry.seen = pass;
-      seen++;
-      update?.(entry.element, items[index], index);
-      if (start === count) {
-        if (entry.element === cursor) cursor = cursor.nextSibling;
-        else start = index;
-      }
-    } else {
-      byKey.set(k, { element: create(items[index], index), seen: pass });
-      if (start === count) start = index;
+      entry.item = item;
+    }
+    if (entry.seen === pass) {
+      throw new Error(`keyed(): duplicate key ${String(keyOf(item, index))} in <${parent.tagName.toLowerCase()}>`);
+    }
+    entry.seen = pass;
+    seen++;
+    order[index] = entry;
+    update?.(entry.element, item, index);
+    if (start === count) {
+      if (entry.element === cursor) cursor = cursor.nextSibling;
+      else start = index;
     }
   }
+  order.length = count;
   if (seen < before) {
     pruning = list;
     detachPruned = seen > 0;
@@ -100,19 +112,18 @@ export function keyed<T>(
   if (start === count) return;
 
   // Pass two: from the first difference, walk from both ends and move only what is out of place.
-  const elementAt = (index: number): Element => byKey.get(keyOf(index))!.element;
   let i = start;
   let j = count - 1;
-  let head: ChildNode | null = start ? elementAt(start - 1).nextSibling : parent.firstChild;
+  let head: ChildNode | null = start ? order[start - 1].element.nextSibling : parent.firstChild;
   let tail = parent.lastChild;
   while (i <= j) {
-    const first = elementAt(i);
+    const first = order[i].element;
     if (first === head) {
       i++;
       head = head.nextSibling;
       continue;
     }
-    const last = elementAt(j);
+    const last = order[j].element;
     if (last === tail) {
       j--;
       tail = tail.previousSibling;

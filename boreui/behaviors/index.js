@@ -14,6 +14,7 @@
  * component makes its render track a hover or a press.
  */
 export { press } from "./press.js";
+export { field } from "./field.js";
 export { hover } from "./hover.js";
 export { focusRing, focusSafely, isFocusVisible, modality, onModalityChange } from "./focus.js";
 export { announce, announced, clearAnnouncements, destroyAnnouncer, installAnnouncer } from "./announce.js";

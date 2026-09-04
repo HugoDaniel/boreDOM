@@ -1,5 +1,5 @@
 import { assert, fixture, test } from "./harness.ts";
-import { define, effect, keyed, mount, nextTick, webComponent, type Refs } from "../../src/index.ts";
+import { define, effect, keyed, mount, nextTick, toRaw, webComponent, type Refs } from "../../src/index.ts";
 
 // One app state per page: the first test mounts it, the others use their own slice of it.
 type Todo = { id: number; text: string };
@@ -16,6 +16,8 @@ type State = {
   back: { n: number };
   moves: { rows: { id: number }[] };
   replace: { rows: { id: number }[] };
+  values: { rows: readonly { id: number; label: string }[] };
+  frozen: { point: Readonly<{ x: number; y: number }> };
 };
 let state: State;
 
@@ -56,6 +58,8 @@ test("mount() defines every template, mirrors data-* attributes, and loads data-
     back: { n: 0 },
     moves: { rows: [] },
     replace: { rows: [] },
+    values: { rows: [] },
+    frozen: { point: Object.freeze({ x: 0, y: 0 }) },
   });
 
   const el = root.querySelector(card)!;
@@ -425,4 +429,65 @@ test("keyed() replaces a list with one clear when nothing is reused, and skips t
   state.replace.rows = state.replace.rows.slice();
   await nextTick();
   assert.equal(moves + clears, 0, "same order touches no DOM");
+});
+
+test("keyed() matches an unchanged item by identity and hands out the raw rows of a frozen array", async () => {
+  const item = uid("val");
+  const list = uid("vallist");
+  const root = fixture(`
+    <template data-component="${item}"></template>
+    <template data-component="${list}"><ul data-ref="ul"></ul></template>
+    <${list}></${list}>`);
+  let keys = 0;
+  let raw = true;
+  const updated: string[] = [];
+  define(list, webComponent<State>(() => ({ state, refs }) => {
+    keyed(
+      refs.ul,
+      toRaw(state.values.rows),
+      (r) => { keys++; return r.id; },
+      (r) => { raw &&= toRaw(r) === r; return Object.assign(document.createElement(item), { textContent: r.label }); },
+      (el, r) => { if (el.textContent !== r.label) { updated.push(r.label); el.textContent = r.label; } },
+    );
+  }));
+  const rows = Object.freeze([{ id: 1, label: "a" }, { id: 2, label: "b" }, { id: 3, label: "c" }]);
+  state.values.rows = rows;
+  await nextTick();
+  const ul = root.querySelector("ul")!;
+  const labels = () => Array.from(ul.children, (el) => el.textContent).join(",");
+  assert.equal(labels(), "a,b,c");
+  assert.ok(raw, "rows of a frozen array are handed out raw");
+  assert.equal(keys, 3);
+
+  keys = 0;
+  state.values.rows = Object.freeze(rows.with(1, { id: 2, label: "B" }));
+  await nextTick();
+  assert.equal(labels(), "a,B,c");
+  assert.equal(keys, 1, "only the replaced item is keyed");
+  assert.deepEqual(updated, ["B"]);
+
+  state.values.rows = Object.freeze(state.values.rows.toSpliced(0, 1));
+  await nextTick();
+  assert.equal(labels(), "B,c");
+
+  state.values.rows = Object.freeze([]);
+  await nextTick();
+  assert.equal(ul.children.length, 0);
+});
+
+test("a frozen value is handed out as it is, and replacing it re-renders", async () => {
+  const name = uid("frozen");
+  const root = fixture(`<template data-component="${name}"><span data-ref="out"></span></template><${name}></${name}>`);
+  let seen: unknown;
+  define(name, webComponent<State>(() => ({ state, refs }) => {
+    seen = state.frozen.point;
+    refs.out.textContent = `${state.frozen.point.x},${state.frozen.point.y}`;
+  }));
+  const out = root.querySelector("[data-ref=out]")!;
+  assert.equal(out.textContent, "0,0");
+  assert.ok(seen === toRaw(state.frozen.point) && Object.isFrozen(seen), "no proxy around a frozen object");
+  assert.throws(() => { (state.frozen.point as { x: number }).x = 1; }, "a write into a frozen value throws");
+  state.frozen.point = Object.freeze({ x: 1, y: 2 });
+  await nextTick();
+  assert.equal(out.textContent, "1,2");
 });

@@ -55,11 +55,11 @@ function write(el, attribute, ids) {
  * @param {...(Element|string|null|undefined)} targets  elements, or ids the page already owns
  */
 export function relate(el, attribute, ...targets) {
-  const ids = listOf(el, attribute);
+  let ids = listOf(el, attribute);
   for (const target of targets) {
     if (!target) continue;
     const id = idOf(target);
-    if (!ids.includes(id)) ids.push(id);
+    if (!ids.includes(id)) ids = ids.concat(id);
   }
   write(el, attribute, ids);
 }
