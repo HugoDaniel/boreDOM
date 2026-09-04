@@ -28,48 +28,62 @@ export function setState(state: object): void {
 
 /** Common base so `instanceof` identifies component hosts of any tag. */
 abstract class BoredBase extends HTMLElement {
-  abstract attach(): void;
-  abstract detach(): void;
-  abstract handle(act: ActionEvent & { stopped: boolean }): void;
+  abstract _attach(): void;
+  abstract _detach(): void;
+  abstract _handle(act: ActionEvent & { _stopped: boolean }): void;
 }
-type Impl = BoredBase & { addAction(action: string, handler: ActionHandler<any, any, any, any>): void; addCleanup(fn: () => void): void };
+type Impl = BoredBase & { _addAction(action: string, handler: ActionHandler<any, any, any, any>): void; _addCleanup(fn: () => void): void };
 
 /** Hands an action to each component host above the dispatcher, nearest first, until one stops it. */
 function deliver(dispatcher: HTMLElement, name: string, event: Event): void {
   const act = action(name, event, dispatcher);
-  for (let host = hostOf(dispatcher); host && !act.stopped; host = hostOf(host.parentNode)) host.handle(act);
+  for (let host = hostOf(dispatcher); host && !act._stopped; host = hostOf(host.parentNode)) host._handle(act);
 }
-
-/** Shared by every element's context, so `local` and `refs` are made on first use without a closure per element. */
-const contextProto = {
-  get local() { return (this as unknown as { self: BoredElement }).self.local; },
-  get refs() { return (this as unknown as { self: BoredElement }).self.refs; },
-};
 
 /** The element whose init is running. `on()` and `onCleanup()` register into it. */
 let initializing: Impl | null = null;
 function on(action: string, handler: ActionHandler<any, any, any, any>): void {
   if (!initializing) throw new Error("on() must be called during init");
-  initializing.addAction(action, handler);
+  initializing._addAction(action, handler);
 }
 function onCleanup(fn: () => void): void {
   if (!initializing) throw new Error("onCleanup() must be called during init");
-  initializing.addCleanup(fn);
+  initializing._addCleanup(fn);
 }
 
+/**
+ * Shared by every element's context: `local` and `refs` are made on first
+ * use without a closure per element, and `on()` and `onCleanup()` register
+ * into whichever element is initializing, so init and render share one
+ * context object.
+ */
+const contextProto = {
+  get local() { return (this as unknown as { self: BoredElement }).self.local; },
+  get refs() { return (this as unknown as { self: BoredElement }).self.refs; },
+  on,
+  onCleanup,
+};
+
+/** Marks an element already waiting for the sweep, so leaving twice in one tick queues it once. */
+const LEAVING: unique symbol = Symbol("boredom.leaving");
+type Leaving = BoredBase & { [LEAVING]?: boolean };
 /** Elements that left the document this tick. One microtask checks them all. */
-const detached = new Set<BoredBase>();
+const detached: Leaving[] = [];
 let sweepQueued = false;
 function sweep(): void {
   sweepQueued = false;
-  for (const el of detached) if (!el.isConnected) el.detach();
-  detached.clear();
+  for (let i = 0; i < detached.length; i++) {
+    const el = detached[i];
+    el[LEAVING] = false;
+    if (!el.isConnected) el._detach();
+  }
+  detached.length = 0;
 }
 
 /** Runs init and first render on every connected element of this tag that has none yet. */
 export function attachAll(name: string): void {
   for (const el of document.querySelectorAll(name)) {
-    if (el instanceof BoredBase) el.attach();
+    if (el instanceof BoredBase) el._attach();
   }
 }
 
@@ -80,36 +94,43 @@ function hostOf(node: Node | null): BoredBase | null {
   return current;
 }
 
+/** Where a host keeps the refs it has already found. */
+const FOUND: unique symbol = Symbol("boredom.refs");
+type RefHost = BoredBase & { [FOUND]?: Map<string, HTMLElement> };
+
 /**
- * Elements marked `data-ref` that belong to this host and not to a nested
- * component. Each name is looked up once and kept while it stays inside the
- * host. Reading a missing name throws; `name in refs` asks without throwing.
+ * The element marked `data-ref="name"` that belongs to `host` and not to a
+ * nested component. Each name is looked up once and kept while it stays
+ * inside the host.
  */
-function refsOf(host: BoredBase): Refs {
-  let found: Map<string, HTMLElement> | undefined;
-  const find = (name: string): HTMLElement | undefined => {
-    const known = found?.get(name);
-    if (known && host.contains(known)) return known;
-    for (const el of host.querySelectorAll<HTMLElement>(`[data-ref="${CSS.escape(name)}"]`)) {
-      if (hostOf(el.parentNode) === host) {
-        (found ??= new Map()).set(name, el);
-        return el;
-      }
+function findRef(host: RefHost, name: string): HTMLElement | undefined {
+  const known = host[FOUND]?.get(name);
+  if (known && host.contains(known)) return known;
+  for (const el of host.querySelectorAll<HTMLElement>(`[data-ref="${CSS.escape(name)}"]`)) {
+    if (hostOf(el.parentNode) === host) {
+      (host[FOUND] ??= new Map()).set(name, el);
+      return el;
     }
-    return undefined;
-  };
-  return new Proxy({} as Refs, {
-    get(_, name) {
-      if (typeof name !== "string") return undefined;
-      const el = find(name);
-      if (el) return el;
-      throw new Error(`Ref "${name}" not found in <${host.tagName.toLowerCase()}>`);
-    },
-    has(_, name) {
-      return typeof name === "string" && find(name) !== undefined;
-    },
-  });
+  }
+  return undefined;
 }
+
+/**
+ * One handler for every `refs` proxy; the host is the proxy's target, so no
+ * closure is needed per element. Reading a missing name throws; `name in refs`
+ * asks without throwing.
+ */
+const refsHandler: ProxyHandler<RefHost> = {
+  get(host, name) {
+    if (typeof name !== "string") return undefined;
+    const el = findRef(host, name);
+    if (el) return el;
+    throw new Error(`Ref "${name}" not found in <${host.tagName.toLowerCase()}>`);
+  },
+  has(host, name) {
+    return typeof name === "string" && findRef(host, name) !== undefined;
+  },
+};
 
 /** The template for a tag: scanned by mount(), or found in the document on first use. */
 function templateFor(name: string): HTMLTemplateElement | undefined {
@@ -203,7 +224,7 @@ export function register(name: string): void {
       }
 
       get refs(): Refs {
-        return (this.#refs ??= refsOf(this));
+        return (this.#refs ??= new Proxy(this, refsHandler) as unknown as Refs);
       }
 
       /** Built once per element; `local` and `refs` come from the shared prototype on first use. */
@@ -211,19 +232,19 @@ export function register(name: string): void {
         return (this.#context ??= { __proto__: contextProto, state: appState, self: this } as { readonly state: object; readonly self: BoredBase });
       }
 
-      addAction(action: string, handler: ActionHandler<any, any, any, any>) {
+      _addAction(action: string, handler: ActionHandler<any, any, any, any>) {
         const actions = (this.#actions ??= new Map());
         const list = actions.get(action) ?? [];
         list.push(handler);
         actions.set(action, list);
       }
 
-      addCleanup(fn: () => void) {
+      _addCleanup(fn: () => void) {
         (this.#cleanups ??= []).push(fn);
       }
 
       /** Runs this component's handlers for an action that reached it. */
-      handle(act: ActionEvent & { stopped: boolean }) {
+      _handle(act: ActionEvent & { _stopped: boolean }) {
         const handlers = this.#actions?.get(act.name);
         if (!handlers) return;
         const context = { __proto__: this.#ctx(), e: act } as unknown as ActionContext<any, any, any, any>;
@@ -242,28 +263,28 @@ export function register(name: string): void {
           this.#hydrated = true;
           hydrate(this, name);
         }
-        this.attach();
+        this._attach();
       }
 
       /** A `moveBefore()` keeps the element as it is: no teardown, no re-init. */
       connectedMoveCallback() {}
 
       /** Runs init and the first render, once, if this tag has logic. */
-      attach() {
+      _attach() {
         if (this.#attached || !this.#alive) return;
         const def = definitions.get(name);
         if (!def) return;
         this.#attached = true;
 
         // Init runs untracked: a child created during its parent's render must
-        // not add its own reads to the parent's dependencies. The init context
-        // inherits from the render context, so `local` and `refs` stay lazy.
+        // not add its own reads to the parent's dependencies. Init and render
+        // share the context object; `on()` and `onCleanup()` come from its prototype.
         const paused = pause();
         const outer = initializing;
         initializing = this;
         let render;
         try {
-          render = def.init({ __proto__: this.#ctx(), on, onCleanup } as unknown as InitContext<any, any, any, any>);
+          render = def.init(this.#ctx() as unknown as InitContext<any, any, any, any>);
         } finally {
           initializing = outer;
           resume(paused);
@@ -275,7 +296,10 @@ export function register(name: string): void {
       }
 
       disconnectedCallback() {
-        detached.add(this);
+        const leaving = this as Leaving;
+        if (leaving[LEAVING]) return;
+        leaving[LEAVING] = true;
+        detached.push(leaving);
         if (!sweepQueued) {
           sweepQueued = true;
           queueMicrotask(sweep);
@@ -283,7 +307,7 @@ export function register(name: string): void {
       }
 
       /** Releases subscriptions, runs cleanups in reverse, and forgets local state. */
-      detach() {
+      _detach() {
         if (!this.#alive) return;
         this.#alive = false;
         this.#attached = false;

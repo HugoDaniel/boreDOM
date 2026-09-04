@@ -14,11 +14,15 @@ const common = {
   legalComments: "none",
 };
 
+// Properties that start with an underscore are internal, so the minified
+// builds rename them. Everything the user can read keeps its name.
+const minified = { minify: true, mangleProps: /^_/ };
+
 const outputs = [
   { format: "esm", outfile: "dist/boredom.js" },
-  { format: "esm", outfile: "dist/boredom.min.js", minify: true },
+  { format: "esm", outfile: "dist/boredom.min.js", ...minified },
   { format: "iife", globalName: "boreDOM", outfile: "dist/boredom.iife.js" },
-  { format: "iife", globalName: "boreDOM", outfile: "dist/boredom.iife.min.js", minify: true },
+  { format: "iife", globalName: "boreDOM", outfile: "dist/boredom.iife.min.js", ...minified },
 ];
 
 for (const options of outputs) await build({ ...common, ...options });

@@ -392,10 +392,19 @@ test("keyed() moves only what is out of place: a swap is two moves, a removal no
   assert.equal(moves, 0, "removal");
 
   moves = 0;
+  state.moves.rows = state.moves.rows.toSpliced(500, 0, { id: 1000 }, { id: 1001 });
+  await nextTick();
+  assert.equal(ul.children[500].textContent, "1000");
+  assert.equal(ul.children[501].textContent, "1001");
+  assert.equal(ul.children.length, 1001);
+  assert.equal(moves, 2, "an insertion costs one insert per new element and moves nothing else");
+
+  moves = 0;
   state.moves.rows = state.moves.rows.slice().reverse();
   await nextTick();
   assert.equal(ul.children[0].textContent, "999");
-  assert.ok(moves <= 999, "reverse stays linear");
+  assert.ok(moves < state.moves.rows.length, "reverse stays linear: at most one move per row, got " + moves);
+  assert.equal(Array.from(ul.children, (el) => el.textContent).join(","), state.moves.rows.map((r) => r.id).join(","), "the DOM matches the list after a reverse");
 });
 
 test("keyed() replaces a list with one clear when nothing is reused, and skips the walk when order holds", async () => {

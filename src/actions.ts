@@ -10,37 +10,26 @@
  */
 import type { ActionEvent } from "./types.ts";
 
-/** `data-dispatch` is click. Every other event uses `data-dispatch-<name>`. */
-const EVENT_ATTRIBUTES: Record<string, string> = {
-  click: "data-dispatch",
-  dblclick: "data-dispatch-dblclick",
-  input: "data-dispatch-input",
-  change: "data-dispatch-change",
-  submit: "data-dispatch-submit",
-  keydown: "data-dispatch-keydown",
-  keyup: "data-dispatch-keyup",
-  pointerdown: "data-dispatch-pointerdown",
-  pointerup: "data-dispatch-pointerup",
-  pointermove: "data-dispatch-pointermove",
-  focusin: "data-dispatch-focus",
-  focusout: "data-dispatch-blur",
-  dragstart: "data-dispatch-dragstart",
-  dragover: "data-dispatch-dragover",
-  drop: "data-dispatch-drop",
-  dragend: "data-dispatch-dragend",
-};
+/**
+ * `data-dispatch` is click. Every other event uses `data-dispatch-<name>`,
+ * where focus and blur listen to the bubbling focusin and focusout.
+ */
+const EVENT_ATTRIBUTES: Record<string, string> = { click: "data-dispatch", focusin: "data-dispatch-focus", focusout: "data-dispatch-blur" };
+for (const type of ["dblclick", "input", "change", "submit", "keydown", "keyup", "pointerdown", "pointerup", "pointermove", "dragstart", "dragover", "drop", "dragend"]) {
+  EVENT_ATTRIBUTES[type] = "data-dispatch-" + type;
+}
 
 /** What every action shares: `stop()` ends delivery to further ancestors. */
 const actionProto = {
-  stopped: false,
-  stop(this: { stopped: boolean }) {
-    this.stopped = true;
+  _stopped: false,
+  stop(this: { _stopped: boolean }) {
+    this._stopped = true;
   },
 };
 
 /** Makes the action object handed to handlers. One allocation per action. */
-export function action(name: string, event: Event, dispatcher: HTMLElement): ActionEvent & { stopped: boolean } {
-  return { __proto__: actionProto, name, event, dispatcher } as unknown as ActionEvent & { stopped: boolean };
+export function action(name: string, event: Event, dispatcher: HTMLElement): ActionEvent & { _stopped: boolean } {
+  return { __proto__: actionProto, name, event, dispatcher } as unknown as ActionEvent & { _stopped: boolean };
 }
 
 let installed = false;

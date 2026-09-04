@@ -5,34 +5,64 @@
  * render has to rebuild every child, which loses focus, selection, and any
  * state the children hold. `keyed()` creates an element once per key, moves
  * elements when the order changes, and removes the ones whose key is gone.
- * The parent should contain nothing but the elements `keyed()` manages.
+ * It owns the parent's children: nothing else should add, move, or remove
+ * them, because it remembers the order it produced and does not read the
+ * DOM to check it.
  *
- * It reads only the DOM tree, never layout, so it causes no forced reflow.
  * Each key gets one record for the life of its element, records are marked
- * per pass instead of copied, and the list is walked by index, so a pass
- * over an unchanged list allocates nothing and touches no DOM. An item that
- * is the same object as last pass, at the same index, is matched without
- * calling `key` or touching the map, so a list built by replacing a few
- * items costs a few lookups. Order is restored by walking from both ends,
- * starting where the first difference is, so a swap costs two moves and a
- * removal none. A pass that reuses no element clears the parent in one call
- * before appending.
+ * per pass instead of copied, and two packed arrays hold the order of the
+ * last pass and of this one. An item that is the same object as last pass,
+ * at the same index, is matched without calling `key` or touching the map,
+ * and `update` runs only for an item whose object changed, so a pass over an
+ * unchanged list allocates nothing, calls nothing, and touches no DOM at all. Order is restored by walking both arrays from both ends, starting
+ * where the first difference is, so a swap costs two moves, a removal none,
+ * and an insertion one. A pass that reuses no element clears the parent in
+ * one call before appending. It never reads layout, so it causes no forced
+ * reflow.
  */
 import { pause, resume } from "./reactive.ts";
 
-type Entry = { element: Element; item: unknown; seen: number };
-/** `order` mirrors the items of the last pass, so it is also the DOM order. */
-type List = { pass: number; byKey: Map<unknown, Entry>; order: Entry[] };
-const managed = new WeakMap<Element, List>();
+/** One record per key: its element, the item it last saw, and the pass that last saw or moved it. */
+type Entry = { _element: Element; _item: unknown; _seen: number; _moved: number };
+/** `_prev` mirrors the DOM order; `_order` is built by the running pass. They trade places after each pass. */
+type List = { _pass: number; _byKey: Map<unknown, Entry>; _order: Entry[]; _prev: Entry[] };
+/** Where a managed parent keeps its list, so it dies with the element. */
+const LIST: unique symbol = Symbol("boredom.list");
+type Managed = Element & { [LIST]?: List };
+
+/** Calls `key` with tracking off, so a key read does not become a dependency. */
+function keyOf<T>(key: (item: T, index: number) => unknown, item: T, index: number): unknown {
+  const paused = pause();
+  try {
+    return key(item, index);
+  } finally {
+    resume(paused);
+  }
+}
 
 /** The list being pruned; set right before a forEach so no closure is needed. */
 let pruning: List;
 let detachPruned = true;
 function removeUnseen(entry: Entry, key: unknown): void {
-  if (entry.seen !== pruning.pass) {
-    if (detachPruned) entry.element.remove();
-    pruning.byKey.delete(key);
+  if (entry._seen !== pruning._pass) {
+    if (detachPruned) entry._element.remove();
+    pruning._byKey.delete(key);
   }
+}
+
+/** True for a record that is still where the last pass left it: seen this pass and not moved yet. */
+const inPlace = (entry: Entry, pass: number): boolean => entry._seen === pass && entry._moved !== pass;
+
+/** The first index at or after `p`, up to `q`, whose record is still in place. */
+function nextInPlace(prev: Entry[], pass: number, p: number, q: number): number {
+  while (p <= q && !inPlace(prev[p], pass)) p++;
+  return p;
+}
+
+/** The last index at or before `q`, down to `p`, whose record is still in place. */
+function lastInPlace(prev: Entry[], pass: number, p: number, q: number): number {
+  while (q >= p && !inPlace(prev[q], pass)) q--;
+  return q;
 }
 
 /**
@@ -40,8 +70,9 @@ function removeUnseen(entry: Entry, key: unknown): void {
  * @param items   The list to render.
  * @param key     Returns a stable identity for an item. Runs untracked. Duplicates throw.
  * @param create  Makes the element for an item seen for the first time.
- * @param update  Optional. Runs for items whose element already exists.
- *                Needed when items are replaced rather than mutated.
+ * @param update  Optional. Runs for an item whose element already exists and
+ *                whose object is not the one the last pass saw. Items are
+ *                values: an unchanged object is an unchanged row.
  */
 export function keyed<T>(
   parent: Element,
@@ -50,57 +81,51 @@ export function keyed<T>(
   create: (item: T, index: number) => Element,
   update?: (element: Element, item: T, index: number) => void,
 ): void {
-  let list = managed.get(parent);
-  if (!list) managed.set(parent, (list = { pass: 0, byKey: new Map(), order: [] }));
-  const { byKey, order } = list;
+  const list = ((parent as Managed)[LIST] ??= { _pass: 0, _byKey: new Map(), _order: [], _prev: [] });
+  const byKey = list._byKey;
+  const order = list._order;
+  const prev = list._prev;
   const before = byKey.size;
   const count = items.length;
   if (count === 0 && before) {
     parent.replaceChildren();
     byKey.clear();
     order.length = 0;
+    prev.length = 0;
     return;
   }
-  const pass = ++list.pass;
+  const pass = ++list._pass;
 
-  const keyOf = (item: T, index: number): unknown => {
-    const paused = pause();
-    try {
-      return key(item, index);
-    } finally {
-      resume(paused);
-    }
-  };
-
-  // Pass one: every item gets its element, new ones are created, seen ones
-  // are marked, and the cursor finds the first index that is out of place.
+  // Pass one: every item gets its record, new ones are created, seen ones are
+  // marked, and `start` is the first index whose record is not the one the
+  // last pass left there. Nothing here reads the DOM.
   let seen = 0;
   let start = count;
-  let cursor: ChildNode | null = parent.firstChild;
   for (let index = 0; index < count; index++) {
     const item = items[index];
-    let entry: Entry | undefined = order[index];
-    if (entry === undefined || entry.item !== item) {
-      const k = keyOf(item, index);
+    let entry: Entry | undefined = prev[index];
+    let replaced = false;
+    if (entry === undefined || entry._item !== item) {
+      const k = keyOf(key, item, index);
       entry = byKey.get(k);
       if (entry === undefined) {
-        byKey.set(k, (order[index] = { element: create(item, index), item, seen: pass }));
+        byKey.set(k, (order[index] = { _element: create(item, index), _item: item, _seen: pass, _moved: 0 }));
         if (start === count) start = index;
         continue;
       }
-      entry.item = item;
+      replaced = entry._item !== item;
     }
-    if (entry.seen === pass) {
-      throw new Error(`keyed(): duplicate key ${String(keyOf(item, index))} in <${parent.tagName.toLowerCase()}>`);
+    if (entry._seen === pass) {
+      throw new Error(`keyed(): duplicate key ${String(keyOf(key, item, index))} in <${parent.tagName.toLowerCase()}>`);
     }
-    entry.seen = pass;
+    entry._seen = pass;
     seen++;
     order[index] = entry;
-    update?.(entry.element, item, index);
-    if (start === count) {
-      if (entry.element === cursor) cursor = cursor.nextSibling;
-      else start = index;
+    if (replaced) {
+      entry._item = item;
+      update?.(entry._element, item, index);
     }
+    if (start === count && entry !== prev[index]) start = index;
   }
   order.length = count;
   if (seen < before) {
@@ -109,41 +134,46 @@ export function keyed<T>(
     if (!detachPruned) parent.replaceChildren();
     byKey.forEach(removeUnseen);
   }
+  list._order = prev;
+  list._prev = order;
   if (start === count) return;
 
-  // Pass two: from the first difference, walk from both ends and move only what is out of place.
+  // Pass two: `prev[p..q]`, skipping records that are gone or already moved,
+  // is what the DOM holds between the settled ends; `order[i..j]` is what it
+  // should hold. Walk both from both ends and move only what is out of place.
   let i = start;
   let j = count - 1;
-  let head: ChildNode | null = start ? order[start - 1].element.nextSibling : parent.firstChild;
-  let tail = parent.lastChild;
+  let p = nextInPlace(prev, pass, start, prev.length - 1);
+  let q = lastInPlace(prev, pass, p, prev.length - 1);
   while (i <= j) {
-    const first = order[i].element;
-    if (first === head) {
+    const first = order[i];
+    if (p <= q && first === prev[p]) {
       i++;
-      head = head.nextSibling;
+      p = nextInPlace(prev, pass, p + 1, q);
       continue;
     }
-    const last = order[j].element;
-    if (last === tail) {
+    const last = order[j];
+    if (p <= q && last === prev[q]) {
       j--;
-      tail = tail.previousSibling;
+      q = lastInPlace(prev, pass, p, q - 1);
       continue;
     }
-    if (first === tail) {
-      const previous = tail.previousSibling;
-      place(parent, first, head);
+    // The element before which a front insertion goes: the head of the middle, or the settled back end.
+    const head = p <= q ? prev[p]._element : j + 1 < count ? order[j + 1]._element : null;
+    if (p <= q && first === prev[q]) {
+      place(parent, first._element, head);
       i++;
-      tail = previous;
+      q = lastInPlace(prev, pass, p, q - 1);
       continue;
     }
-    if (last === head) {
-      const next = head.nextSibling;
-      place(parent, last, tail ? tail.nextSibling : null);
+    if (p <= q && last === prev[p]) {
+      place(parent, last._element, j + 1 < count ? order[j + 1]._element : null);
       j--;
-      head = next;
+      p = nextInPlace(prev, pass, p + 1, q);
       continue;
     }
-    place(parent, first, head);
+    place(parent, first._element, head);
+    first._moved = pass;
     i++;
   }
 }

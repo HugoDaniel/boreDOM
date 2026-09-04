@@ -11,7 +11,7 @@
 import type { ActionEvent } from "./types.ts";
 /** Makes the action object handed to handlers. One allocation per action. */
 export declare function action(name: string, event: Event, dispatcher: HTMLElement): ActionEvent & {
-    stopped: boolean;
+    _stopped: boolean;
 };
 /** Installs the document listeners once. `deliver` routes an action to the components above its dispatcher. */
 export declare function ensureDelegation(deliver: (dispatcher: HTMLElement, name: string, event: Event) => void): void;

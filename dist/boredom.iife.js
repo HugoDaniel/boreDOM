@@ -35,26 +35,33 @@ var boreDOM = (() => {
   // src/reactive.ts
   var ANY = Symbol("boredom.any");
   var RAW = Symbol("boredom.raw");
-  var targetMap = /* @__PURE__ */ new WeakMap();
-  var proxyOf = /* @__PURE__ */ new WeakMap();
+  var PROXY = Symbol("boredom.proxy");
+  var DEPS = Symbol("boredom.deps");
   var active = null;
   var epoch = 0;
   var queue = [];
   var spare = [];
-  var pending = null;
+  var pending = false;
   var rounds = 0;
+  var ticket = null;
+  var settle = null;
+  var { isArray } = Array;
+  var { isExtensible, isFrozen } = Object;
   function isPlain(value) {
     if (value === null || typeof value !== "object" || value === Object.prototype) return false;
-    if (Array.isArray(value)) return true;
+    if (isArray(value)) return true;
     const proto = Object.getPrototypeOf(value);
     return proto === Object.prototype || proto === null;
   }
-  var makeDep = (target, key) => Object.assign(/* @__PURE__ */ new Set(), { target, key });
+  function hide(target, key, value) {
+    Object.defineProperty(target, key, { value, writable: true, configurable: true, enumerable: false });
+  }
+  var makeDep = (target, key) => ({ _target: target, _key: key, _one: null, _more: null });
   function depFor(target, key) {
-    const entry = targetMap.get(target);
+    const entry = target[DEPS];
     if (entry === void 0) {
       const dep2 = makeDep(target, key);
-      targetMap.set(target, dep2);
+      hide(target, DEPS, dep2);
       return dep2;
     }
     if (entry instanceof Map) {
@@ -62,61 +69,91 @@ var boreDOM = (() => {
       if (!dep2) entry.set(key, dep2 = makeDep(target, key));
       return dep2;
     }
-    if (entry.key === key) return entry;
+    if (entry._key === key) return entry;
     const dep = makeDep(target, key);
     const map = /* @__PURE__ */ new Map();
-    map.set(entry.key, entry);
+    map.set(entry._key, entry);
     map.set(key, dep);
-    targetMap.set(target, map);
+    target[DEPS] = map;
     return dep;
   }
   function track(target, key) {
     const sub = active;
-    if (!sub || sub.lastTarget === target && sub.lastKey === key) return;
-    sub.lastTarget = target;
-    sub.lastKey = key;
+    if (!sub || sub._lastTarget === target && sub._lastKey === key) return;
+    sub._lastTarget = target;
+    sub._lastKey = key;
+    if (!isExtensible(target)) return;
     const dep = depFor(target, key);
-    dep.add(sub);
-    if (sub.dep === null || sub.dep === dep) {
-      sub.dep = dep;
-      sub.depEpoch = sub.epoch;
+    if (sub._dep === dep) {
+      sub._depEpoch = sub._epoch;
+      return;
+    }
+    if (sub._deps?.has(dep)) {
+      sub._deps.set(dep, sub._epoch);
+      return;
+    }
+    if (dep._one === null) dep._one = sub;
+    else (dep._more ??= /* @__PURE__ */ new Set()).add(sub);
+    if (sub._dep === null) {
+      sub._dep = dep;
+      sub._depEpoch = sub._epoch;
     } else {
-      (sub.deps ??= /* @__PURE__ */ new Map()).set(dep, sub.epoch);
+      (sub._deps ??= /* @__PURE__ */ new Map()).set(dep, sub._epoch);
     }
   }
+  function notify(dep) {
+    if (dep._one) schedule(dep._one);
+    if (dep._more) dep._more.forEach(schedule);
+  }
   function trigger(target, key) {
-    const entry = targetMap.get(target);
+    const entry = target[DEPS];
     if (entry === void 0) return;
     if (entry instanceof Map) {
-      entry.get(key)?.forEach(schedule);
-      if (key !== ANY) entry.get(ANY)?.forEach(schedule);
-    } else if (entry.key === key || entry.key === ANY) {
-      entry.forEach(schedule);
+      const dep = entry.get(key);
+      if (dep) notify(dep);
+      if (key !== ANY) {
+        const any = entry.get(ANY);
+        if (any) notify(any);
+      }
+    } else if (entry._key === key || entry._key === ANY) {
+      notify(entry);
     }
   }
   function drop(dep, sub) {
-    dep.delete(sub);
-    if (dep.size) return;
-    const entry = targetMap.get(dep.target);
-    if (entry === dep) targetMap.delete(dep.target);
-    else if (entry instanceof Map) entry.delete(dep.key);
+    if (dep._one === sub) dep._one = null;
+    else dep._more?.delete(sub);
+    if (dep._one !== null || dep._more?.size) return;
+    const target = dep._target;
+    const entry = target[DEPS];
+    if (entry === dep) {
+      if (isExtensible(target)) target[DEPS] = void 0;
+    } else if (entry instanceof Map) {
+      entry.delete(dep._key);
+    }
   }
   function schedule(sub) {
-    if (sub.queued || sub === active) return;
-    sub.queued = true;
+    if (sub._queued || sub === active) return;
+    sub._queued = true;
     queue.push(sub);
-    if (!pending) pending = Promise.resolve().then(flush);
+    if (!pending) {
+      pending = true;
+      queueMicrotask(flush);
+    }
+  }
+  function report(error) {
+    if (settle) settle(true, error);
+    else Promise.reject(error);
   }
   function flush() {
-    pending = null;
+    pending = false;
     const batch = queue;
     queue = spare;
     let failure;
     let failed = false;
     for (let i = 0; i < batch.length; i++) {
       const sub = batch[i];
-      if (!sub.queued) continue;
-      sub.queued = false;
+      if (!sub._queued) continue;
+      sub._queued = false;
       try {
         run(sub);
       } catch (error) {
@@ -131,20 +168,31 @@ var boreDOM = (() => {
     if (!pending) {
       rounds = 0;
     } else if (++rounds > 100) {
-      for (const sub of queue) sub.queued = false;
+      for (const sub of queue) sub._queued = false;
       queue.length = 0;
       rounds = 0;
-      throw new Error("subscribers kept scheduling each other for 100 rounds; giving up");
+      if (!failed) {
+        failed = true;
+        failure = new Error("subscribers kept scheduling each other for 100 rounds; giving up");
+      }
     }
-    if (failed) throw failure;
+    if (failed) report(failure);
+    else if (!pending && settle) settle(false, void 0);
   }
-  async function nextTick() {
-    while (pending) await pending;
+  function nextTick() {
+    if (!pending) return Promise.resolve();
+    return ticket ??= new Promise((resolve, reject) => {
+      settle = (failed, error) => {
+        ticket = settle = null;
+        if (failed) reject(error);
+        else resolve();
+      };
+    });
   }
   var subject;
   function pruneStale(seen, dep) {
-    if (seen !== subject.epoch) {
-      subject.deps.delete(dep);
+    if (seen !== subject._epoch) {
+      subject._deps.delete(dep);
       drop(dep, subject);
     }
   }
@@ -152,21 +200,21 @@ var boreDOM = (() => {
     drop(dep, subject);
   }
   function run(sub) {
-    sub.epoch = ++epoch;
-    sub.lastTarget = null;
+    sub._epoch = ++epoch;
+    sub._lastTarget = null;
     const previous = active;
     active = sub;
     try {
-      sub.run(sub.arg);
+      sub._run(sub._arg);
     } finally {
       active = previous;
-      if (sub.dep && sub.depEpoch !== sub.epoch) {
-        drop(sub.dep, sub);
-        sub.dep = null;
+      if (sub._dep && sub._depEpoch !== sub._epoch) {
+        drop(sub._dep, sub);
+        sub._dep = null;
       }
-      if (sub.deps) {
+      if (sub._deps) {
         subject = sub;
-        sub.deps.forEach(pruneStale);
+        sub._deps.forEach(pruneStale);
       }
     }
   }
@@ -179,17 +227,17 @@ var boreDOM = (() => {
     active = previous;
   }
   function release(sub) {
-    if (sub.dep) drop(sub.dep, sub);
-    sub.dep = null;
-    if (sub.deps) {
+    if (sub._dep) drop(sub._dep, sub);
+    sub._dep = null;
+    if (sub._deps) {
       subject = sub;
-      sub.deps.forEach(dropEach);
-      sub.deps = null;
+      sub._deps.forEach(dropEach);
+      sub._deps = null;
     }
-    sub.queued = false;
+    sub._queued = false;
   }
   function subscriber(fn, arg) {
-    return { run: fn, arg, dep: null, depEpoch: 0, deps: null, epoch: 0, queued: false, lastTarget: null, lastKey: ANY };
+    return { _run: fn, _arg: arg, _dep: null, _depEpoch: 0, _deps: null, _epoch: 0, _queued: false, _lastTarget: null, _lastKey: ANY };
   }
   function effect(fn) {
     const sub = subscriber(fn);
@@ -203,68 +251,57 @@ var boreDOM = (() => {
   function isReactive(value) {
     return typeof value === "object" && value !== null && value[RAW] !== void 0;
   }
+  var isHidden = (key) => key === PROXY || key === DEPS;
   var handler = {
     get(t, key, receiver) {
       if (key === RAW) return t;
-      track(t, Array.isArray(t) ? ANY : key);
+      track(t, isArray(t) ? ANY : key);
       const value = Reflect.get(t, key, receiver);
-      return isPlain(value) && !Object.isFrozen(t) ? reactive(value) : value;
+      return isPlain(value) && !isFrozen(t) ? reactive(value) : value;
     },
     has(t, key) {
-      track(t, Array.isArray(t) ? ANY : key);
+      track(t, isArray(t) ? ANY : key);
       return Reflect.has(t, key);
     },
     ownKeys(t) {
       track(t, ANY);
-      return Reflect.ownKeys(t);
+      const keys = Reflect.ownKeys(t);
+      return isExtensible(t) ? keys.filter((key) => !isHidden(key)) : keys;
     },
     set(t, key, value, receiver) {
       const next = toRaw(value);
       const had = Reflect.has(t, key);
       if (had && Object.is(Reflect.get(t, key, receiver), next)) return true;
       const ok = Reflect.set(t, key, next, receiver);
-      if (ok) trigger(t, Array.isArray(t) ? ANY : key);
+      if (ok) trigger(t, isArray(t) ? ANY : key);
       return ok;
     },
     deleteProperty(t, key) {
       const had = Reflect.has(t, key);
       const ok = Reflect.deleteProperty(t, key);
-      if (had && ok) trigger(t, Array.isArray(t) ? ANY : key);
+      if (had && ok) trigger(t, isArray(t) ? ANY : key);
       return ok;
     }
   };
   function reactive(target) {
-    const known = proxyOf.get(target);
+    if (target[RAW] !== void 0) return target;
+    const known = target[PROXY];
     if (known) return known;
-    if (target[RAW] !== void 0 || !isPlain(target) || Object.isFrozen(target)) return target;
+    if (!isPlain(target) || !isExtensible(target)) return target;
     const proxy = new Proxy(target, handler);
-    proxyOf.set(target, proxy);
+    hide(target, PROXY, proxy);
     return proxy;
   }
 
   // src/actions.ts
-  var EVENT_ATTRIBUTES = {
-    click: "data-dispatch",
-    dblclick: "data-dispatch-dblclick",
-    input: "data-dispatch-input",
-    change: "data-dispatch-change",
-    submit: "data-dispatch-submit",
-    keydown: "data-dispatch-keydown",
-    keyup: "data-dispatch-keyup",
-    pointerdown: "data-dispatch-pointerdown",
-    pointerup: "data-dispatch-pointerup",
-    pointermove: "data-dispatch-pointermove",
-    focusin: "data-dispatch-focus",
-    focusout: "data-dispatch-blur",
-    dragstart: "data-dispatch-dragstart",
-    dragover: "data-dispatch-dragover",
-    drop: "data-dispatch-drop",
-    dragend: "data-dispatch-dragend"
-  };
+  var EVENT_ATTRIBUTES = { click: "data-dispatch", focusin: "data-dispatch-focus", focusout: "data-dispatch-blur" };
+  for (const type of ["dblclick", "input", "change", "submit", "keydown", "keyup", "pointerdown", "pointerup", "pointermove", "dragstart", "dragover", "drop", "dragend"]) {
+    EVENT_ATTRIBUTES[type] = "data-dispatch-" + type;
+  }
   var actionProto = {
-    stopped: false,
+    _stopped: false,
     stop() {
-      this.stopped = true;
+      this._stopped = true;
     }
   };
   function action(name, event, dispatcher) {
@@ -297,7 +334,16 @@ var boreDOM = (() => {
   };
   function deliver(dispatcher, name, event) {
     const act = action(name, event, dispatcher);
-    for (let host = hostOf(dispatcher); host && !act.stopped; host = hostOf(host.parentNode)) host.handle(act);
+    for (let host = hostOf(dispatcher); host && !act._stopped; host = hostOf(host.parentNode)) host._handle(act);
+  }
+  var initializing = null;
+  function on(action2, handler2) {
+    if (!initializing) throw new Error("on() must be called during init");
+    initializing._addAction(action2, handler2);
+  }
+  function onCleanup(fn) {
+    if (!initializing) throw new Error("onCleanup() must be called during init");
+    initializing._addCleanup(fn);
   }
   var contextProto = {
     get local() {
@@ -305,27 +351,25 @@ var boreDOM = (() => {
     },
     get refs() {
       return this.self.refs;
-    }
+    },
+    on,
+    onCleanup
   };
-  var initializing = null;
-  function on(action2, handler2) {
-    if (!initializing) throw new Error("on() must be called during init");
-    initializing.addAction(action2, handler2);
-  }
-  function onCleanup(fn) {
-    if (!initializing) throw new Error("onCleanup() must be called during init");
-    initializing.addCleanup(fn);
-  }
-  var detached = /* @__PURE__ */ new Set();
+  var LEAVING = Symbol("boredom.leaving");
+  var detached = [];
   var sweepQueued = false;
   function sweep() {
     sweepQueued = false;
-    for (const el of detached) if (!el.isConnected) el.detach();
-    detached.clear();
+    for (let i = 0; i < detached.length; i++) {
+      const el = detached[i];
+      el[LEAVING] = false;
+      if (!el.isConnected) el._detach();
+    }
+    detached.length = 0;
   }
   function attachAll(name) {
     for (const el of document.querySelectorAll(name)) {
-      if (el instanceof BoredBase) el.attach();
+      if (el instanceof BoredBase) el._attach();
     }
   }
   function hostOf(node) {
@@ -333,31 +377,29 @@ var boreDOM = (() => {
     while (current && !(current instanceof BoredBase)) current = current.parentNode;
     return current;
   }
-  function refsOf(host) {
-    let found;
-    const find = (name) => {
-      const known = found?.get(name);
-      if (known && host.contains(known)) return known;
-      for (const el of host.querySelectorAll(`[data-ref="${CSS.escape(name)}"]`)) {
-        if (hostOf(el.parentNode) === host) {
-          (found ??= /* @__PURE__ */ new Map()).set(name, el);
-          return el;
-        }
+  var FOUND = Symbol("boredom.refs");
+  function findRef(host, name) {
+    const known = host[FOUND]?.get(name);
+    if (known && host.contains(known)) return known;
+    for (const el of host.querySelectorAll(`[data-ref="${CSS.escape(name)}"]`)) {
+      if (hostOf(el.parentNode) === host) {
+        (host[FOUND] ??= /* @__PURE__ */ new Map()).set(name, el);
+        return el;
       }
-      return void 0;
-    };
-    return new Proxy({}, {
-      get(_, name) {
-        if (typeof name !== "string") return void 0;
-        const el = find(name);
-        if (el) return el;
-        throw new Error(`Ref "${name}" not found in <${host.tagName.toLowerCase()}>`);
-      },
-      has(_, name) {
-        return typeof name === "string" && find(name) !== void 0;
-      }
-    });
+    }
+    return void 0;
   }
+  var refsHandler = {
+    get(host, name) {
+      if (typeof name !== "string") return void 0;
+      const el = findRef(host, name);
+      if (el) return el;
+      throw new Error(`Ref "${name}" not found in <${host.tagName.toLowerCase()}>`);
+    },
+    has(host, name) {
+      return typeof name === "string" && findRef(host, name) !== void 0;
+    }
+  };
   function templateFor(name) {
     let template = templates.get(name);
     if (!template) {
@@ -427,23 +469,23 @@ var boreDOM = (() => {
           return this.#local ??= reactive({});
         }
         get refs() {
-          return this.#refs ??= refsOf(this);
+          return this.#refs ??= new Proxy(this, refsHandler);
         }
         /** Built once per element; `local` and `refs` come from the shared prototype on first use. */
         #ctx() {
           return this.#context ??= { __proto__: contextProto, state: appState, self: this };
         }
-        addAction(action2, handler2) {
+        _addAction(action2, handler2) {
           const actions = this.#actions ??= /* @__PURE__ */ new Map();
           const list = actions.get(action2) ?? [];
           list.push(handler2);
           actions.set(action2, list);
         }
-        addCleanup(fn) {
+        _addCleanup(fn) {
           (this.#cleanups ??= []).push(fn);
         }
         /** Runs this component's handlers for an action that reached it. */
-        handle(act) {
+        _handle(act) {
           const handlers = this.#actions?.get(act.name);
           if (!handlers) return;
           const context = { __proto__: this.#ctx(), e: act };
@@ -461,13 +503,13 @@ var boreDOM = (() => {
             this.#hydrated = true;
             hydrate(this, name);
           }
-          this.attach();
+          this._attach();
         }
         /** A `moveBefore()` keeps the element as it is: no teardown, no re-init. */
         connectedMoveCallback() {
         }
         /** Runs init and the first render, once, if this tag has logic. */
-        attach() {
+        _attach() {
           if (this.#attached || !this.#alive) return;
           const def = definitions.get(name);
           if (!def) return;
@@ -477,7 +519,7 @@ var boreDOM = (() => {
           initializing = this;
           let render;
           try {
-            render = def.init({ __proto__: this.#ctx(), on, onCleanup });
+            render = def.init(this.#ctx());
           } finally {
             initializing = outer;
             resume(paused);
@@ -487,14 +529,17 @@ var boreDOM = (() => {
           run(this.#subscriber);
         }
         disconnectedCallback() {
-          detached.add(this);
+          const leaving = this;
+          if (leaving[LEAVING]) return;
+          leaving[LEAVING] = true;
+          detached.push(leaving);
           if (!sweepQueued) {
             sweepQueued = true;
             queueMicrotask(sweep);
           }
         }
         /** Releases subscriptions, runs cleanups in reverse, and forgets local state. */
-        detach() {
+        _detach() {
           if (!this.#alive) return;
           this.#alive = false;
           this.#attached = false;
@@ -512,63 +557,74 @@ var boreDOM = (() => {
   var BRAND = Symbol.for("boredom.component");
 
   // src/keyed.ts
-  var managed = /* @__PURE__ */ new WeakMap();
+  var LIST = Symbol("boredom.list");
+  function keyOf(key, item, index) {
+    const paused = pause();
+    try {
+      return key(item, index);
+    } finally {
+      resume(paused);
+    }
+  }
   var pruning;
   var detachPruned = true;
   function removeUnseen(entry, key) {
-    if (entry.seen !== pruning.pass) {
-      if (detachPruned) entry.element.remove();
-      pruning.byKey.delete(key);
+    if (entry._seen !== pruning._pass) {
+      if (detachPruned) entry._element.remove();
+      pruning._byKey.delete(key);
     }
   }
+  var inPlace = (entry, pass) => entry._seen === pass && entry._moved !== pass;
+  function nextInPlace(prev, pass, p, q) {
+    while (p <= q && !inPlace(prev[p], pass)) p++;
+    return p;
+  }
+  function lastInPlace(prev, pass, p, q) {
+    while (q >= p && !inPlace(prev[q], pass)) q--;
+    return q;
+  }
   function keyed(parent, items, key, create, update) {
-    let list = managed.get(parent);
-    if (!list) managed.set(parent, list = { pass: 0, byKey: /* @__PURE__ */ new Map(), order: [] });
-    const { byKey, order } = list;
+    const list = parent[LIST] ??= { _pass: 0, _byKey: /* @__PURE__ */ new Map(), _order: [], _prev: [] };
+    const byKey = list._byKey;
+    const order = list._order;
+    const prev = list._prev;
     const before = byKey.size;
     const count = items.length;
     if (count === 0 && before) {
       parent.replaceChildren();
       byKey.clear();
       order.length = 0;
+      prev.length = 0;
       return;
     }
-    const pass = ++list.pass;
-    const keyOf = (item, index) => {
-      const paused = pause();
-      try {
-        return key(item, index);
-      } finally {
-        resume(paused);
-      }
-    };
+    const pass = ++list._pass;
     let seen = 0;
     let start = count;
-    let cursor = parent.firstChild;
     for (let index = 0; index < count; index++) {
       const item = items[index];
-      let entry = order[index];
-      if (entry === void 0 || entry.item !== item) {
-        const k = keyOf(item, index);
+      let entry = prev[index];
+      let replaced = false;
+      if (entry === void 0 || entry._item !== item) {
+        const k = keyOf(key, item, index);
         entry = byKey.get(k);
         if (entry === void 0) {
-          byKey.set(k, order[index] = { element: create(item, index), item, seen: pass });
+          byKey.set(k, order[index] = { _element: create(item, index), _item: item, _seen: pass, _moved: 0 });
           if (start === count) start = index;
           continue;
         }
-        entry.item = item;
+        replaced = entry._item !== item;
       }
-      if (entry.seen === pass) {
-        throw new Error(`keyed(): duplicate key ${String(keyOf(item, index))} in <${parent.tagName.toLowerCase()}>`);
+      if (entry._seen === pass) {
+        throw new Error(`keyed(): duplicate key ${String(keyOf(key, item, index))} in <${parent.tagName.toLowerCase()}>`);
       }
-      entry.seen = pass;
+      entry._seen = pass;
       seen++;
       order[index] = entry;
-      update?.(entry.element, item, index);
-      if (start === count) {
-        if (entry.element === cursor) cursor = cursor.nextSibling;
-        else start = index;
+      if (replaced) {
+        entry._item = item;
+        update?.(entry._element, item, index);
       }
+      if (start === count && entry !== prev[index]) start = index;
     }
     order.length = count;
     if (seen < before) {
@@ -577,39 +633,41 @@ var boreDOM = (() => {
       if (!detachPruned) parent.replaceChildren();
       byKey.forEach(removeUnseen);
     }
+    list._order = prev;
+    list._prev = order;
     if (start === count) return;
     let i = start;
     let j = count - 1;
-    let head = start ? order[start - 1].element.nextSibling : parent.firstChild;
-    let tail = parent.lastChild;
+    let p = nextInPlace(prev, pass, start, prev.length - 1);
+    let q = lastInPlace(prev, pass, p, prev.length - 1);
     while (i <= j) {
-      const first = order[i].element;
-      if (first === head) {
+      const first = order[i];
+      if (p <= q && first === prev[p]) {
         i++;
-        head = head.nextSibling;
+        p = nextInPlace(prev, pass, p + 1, q);
         continue;
       }
-      const last = order[j].element;
-      if (last === tail) {
+      const last = order[j];
+      if (p <= q && last === prev[q]) {
         j--;
-        tail = tail.previousSibling;
+        q = lastInPlace(prev, pass, p, q - 1);
         continue;
       }
-      if (first === tail) {
-        const previous = tail.previousSibling;
-        place(parent, first, head);
+      const head = p <= q ? prev[p]._element : j + 1 < count ? order[j + 1]._element : null;
+      if (p <= q && first === prev[q]) {
+        place(parent, first._element, head);
         i++;
-        tail = previous;
+        q = lastInPlace(prev, pass, p, q - 1);
         continue;
       }
-      if (last === head) {
-        const next = head.nextSibling;
-        place(parent, last, tail ? tail.nextSibling : null);
+      if (p <= q && last === prev[p]) {
+        place(parent, last._element, j + 1 < count ? order[j + 1]._element : null);
         j--;
-        head = next;
+        p = nextInPlace(prev, pass, p + 1, q);
         continue;
       }
-      place(parent, first, head);
+      place(parent, first._element, head);
+      first._moved = pass;
       i++;
     }
   }
