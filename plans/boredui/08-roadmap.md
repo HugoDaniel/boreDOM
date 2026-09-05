@@ -38,7 +38,7 @@ fired and anything listening for them was passing for the wrong reason until
 The bundle size gate still has to be measured, which needs the build entry that milestone 2
 adds.
 
-## Milestone 2: tokens, layers, and tier 1. Four to five days.
+## Milestone 2: tokens, layers, and tier 1. Done.
 
 1. `boreui.css`: the four layers, the `@property` token set, and the state selectors.
 2. Every tier 1 component except slider and number field: button, toggle button, link,
@@ -98,9 +98,22 @@ drawing a `<meter>` means painting its three value pseudo elements separately, b
 colour for all of them silently takes the meaning out of `low`, `high` and `optimum`.
 
 Every one of those four was found by looking at a screenshot, not by reading the file.
-Milestone 3 onwards keeps that step.
+Milestone 3 onwards keeps that step, and `scripts/screenshot.mjs` makes it one command.
 
-## Milestone 3: overlays. Two to three days.
+The rest of the tier landed on 2026-09-05: `ui-checkbox-group` and `ui-radio-group` over
+one shared `<fieldset>` body, `ui-form`, `ui-disclosure` and `ui-accordion` over
+`<details>`, `ui-dialog` and `ui-alert-dialog` over `<dialog>`, `ui-breadcrumbs` and
+`ui-toolbar`. Two of them found core bugs. A slot filled with components emptied itself as
+each one hydrated, because the hydration counter was shared with the nested hydration, and
+`toggle` does not bubble, so `data-dispatch-toggle` needed the core to listen in the capture
+phase; `05-core-support.md` has both. The form example is `examples/kit/`, which shows every
+component and is driven end to end by `tests/browser/examples.test.ts`. The build entry
+writes the two bundles and the stylesheet and fails past a budget.
+
+`ui-number-field` and `ui-slider` were listed here and came with milestone 5, where the
+parsing lives.
+
+## Milestone 3: overlays. Done.
 
 1. `overlay()` on the popover API with anchor positioning, plus `data-open` and
    `data-placement`.
@@ -112,7 +125,17 @@ Milestone 3 onwards keeps that step.
 Done when a menu opens, positions, flips at the viewport edge, dismisses on outside click,
 and returns focus, with no JavaScript positioning on a current browser.
 
-## Milestone 4: collections. Five to six days.
+Done, with one change of shape. There is no `ui-menu-trigger`: `ui-menu` holds its button
+in a `trigger` slot, the way `ui-popover` does, because a menu without a button is not a
+thing a page writes. The one hard problem was the platform's own light dismiss: a click on
+the trigger of an open popover closes it on pointer down and would reopen it on click,
+unless the trigger is the popover's invoker, so `overlay` names it one through
+`popoverTargetElement` and requires a `<button>` for that reason. Menus open on mouse down,
+as native menus do, and the click the platform would toggle on is cancelled once. The
+fallback module is `position.js`, loaded only when `CSS.supports("anchor-name", "--a")`
+says no. The overlay churn bench is not written.
+
+## Milestone 4: collections. Done.
 
 1. `collection()` and `typeahead()`, the largest single piece of work in the plan.
 2. `ui-listbox`, then `ui-menu`, then `ui-select`, then `ui-tabs`, in that order, because
@@ -124,7 +147,13 @@ and returns focus, with no JavaScript positioning on a current browser.
 Done when a five thousand item listbox navigates with arrow keys at a p95 interaction
 latency under 100ms.
 
-## Milestone 5: text entry and the rest of tier 2. Four to five days.
+Done, except the bench. `collection()` is one behavior with both focus modes, roving and
+virtual, and typeahead inside it, with `typeahead()` exported on its own for a closed
+select. `ui-listbox`, `ui-menu`, `ui-select`, `ui-tabs` and `ui-tag-group` are built on it,
+and each is under two hundred lines, most of which is the markup each pattern wants. The
+list scale bench and its numbers are still owed.
+
+## Milestone 5: text entry and the rest of tier 2. Done.
 
 1. `ui-number-field` with `Intl.NumberFormat` parsing, `ui-slider` on `move()`.
 2. `ui-combobox` with virtual focus, then `ui-autocomplete` with collator filtering.
@@ -132,6 +161,16 @@ latency under 100ms.
 4. The locale string table and the right to left pass over every component.
 
 Done when the combobox works with VoiceOver, which is the hardest single test in the kit.
+
+`ui-number-field` learns the locale's digits and separators from `Intl.NumberFormat`'s own
+output and borrows a `<input type="number">` for min, max and step messages. `ui-slider` is
+a range input with an output and a painted track. `ui-combobox` is `collection()` in virtual
+focus mode over a manual popover, since the platform's light dismiss would close the list on
+the pointer down that puts the caret in the field. `ui-tag-group` is a grid, as react-aria's
+is, so a tag can hold its own remove button. `ui-grid-list` was dropped: a grid list is a
+listbox whose rows hold buttons, and the tag group is that. The locale string table is
+`kit/strings.js`. The VoiceOver test has not been made, nor the right to left pass over
+every component; the components that turn a key around are tested with `dir="rtl"`.
 
 ## Milestone 6: documentation and release. Two to three days.
 
@@ -157,6 +196,6 @@ Reconsider in this order, each on evidence rather than on a checklist:
 
 ## Tracking
 
-One markdown checklist in `plans/boredui/PROGRESS.md`, one line per component, updated as
-each one meets the definition of done in `07-a11y-i18n-testing.md`. No project board, no
-issue templates, no labels.
+`PROGRESS.md`, one line per component with a column per item of the definition of done in
+`07-a11y-i18n-testing.md`, and a table of the behaviors against their react-aria
+equivalents. No project board, no issue templates, no labels.

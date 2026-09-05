@@ -113,3 +113,20 @@ test("props() makes outside assignments render, keeps pre-upgrade values, and de
   assert.equal(first.items.join(","), "pre,upgrade", "instances do not share");
   assert.ok(!Object.hasOwn(first, "items") && Object.hasOwn(Object.getPrototypeOf(first), "items"), "accessor lives on the prototype");
 });
+
+test("components written inside a slot all arrive, though each one hydrates as it lands", () => {
+  const inner = uid("inner");
+  const outer = uid("outer");
+  const root = fixture(`
+    <template data-component="${inner}"><i data-slot></i></template>
+    <template data-component="${outer}"><div data-slot></div></template>
+    <${outer}>
+      <${inner}>a</${inner}>
+      <${inner}>b</${inner}>
+      <${inner}>c</${inner}>
+    </${outer}>`);
+  define(inner, webComponent(() => {}));
+  define(outer, webComponent(() => {}));
+  const el = root.querySelector(outer)!;
+  assert.equal(Array.from(el.querySelectorAll(inner), (n) => n.textContent!.trim()).join(""), "abc", "moving the first in hydrates it, which must not empty the slot for the second");
+});

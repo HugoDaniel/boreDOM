@@ -104,7 +104,7 @@ Makes `state` reactive and returns it. Once the document has finished parsing, i
 
 ### Actions
 
-`data-dispatch="name"` on any element fires the action on click. Other events use `data-dispatch-<event>`: `input`, `change`, `submit`, `keydown`, `keyup`, `dblclick`, `pointerdown`, `pointerup`, `pointermove`, `focus`, `blur`, `dragstart`, `dragover`, `drop`, `dragend`.
+`data-dispatch="name"` on any element fires the action on click. Other events use `data-dispatch-<event>`: `input`, `change`, `submit`, `keydown`, `keyup`, `dblclick`, `pointerdown`, `pointerup`, `pointermove`, `focus`, `blur`, `dragstart`, `dragover`, `drop`, `dragend`, `toggle`. The last one does not bubble, so it is heard in the capture phase: a `data-dispatch-toggle` on an ancestor of a `<details>`, a `<dialog>` or a popover hears it open and close.
 
 A handler receives the same fields as render plus `e`: `{ name, event, dispatcher, stop }`. `event` is the native event, `dispatcher` the element with the attribute, and `stop()` prevents ancestor components from seeing the action. To pass data, put it on the dispatcher and read `e.dispatcher.dataset`.
 
@@ -116,7 +116,7 @@ Children written inside the element move into the template's `data-slot`: `<ui-b
 
 ### `keyed(parent, items, key, create, update?)`
 
-Keeps `parent`'s children in sync with the array `items`. `key` returns a stable identity and runs without dependency tracking, `create` makes the element for a new item, and `update`, when given, runs for an item whose element already exists and whose object is not the one the previous pass saw. Items are values: an unchanged object is an unchanged row, and nothing runs for it. It remembers the order it produced, so it never reads the DOM to find out what changed: a pass over a list whose order did not change touches no DOM at all, and an item that is the same object as in the previous pass, at the same index, is matched without calling `key` or touching the map. Otherwise order is restored by walking the previous and the new order from both ends from the first difference, so a swap costs two moves, a removal none, and an insertion one. A pass that reuses no element clears the parent in one call before appending. Elements are moved with `moveBefore()` where the browser has it, so focus and selection survive a reorder and the element is not torn down and set up again. An empty list clears the parent in one call. `keyed()` owns the parent's children: nothing else should add, move, or remove them.
+Keeps `parent`'s children in sync with the array `items`. `key` returns a stable identity and runs without dependency tracking, `create` makes the element for a new item, and `update`, when given, runs for an item whose element already exists and whose object is not the one the previous pass saw. Items are values: an unchanged object is an unchanged row, and nothing runs for it. It remembers the order it produced, so it never reads the DOM to find out what changed: a pass over a list whose order did not change touches no DOM at all, and an item that is the same object as in the previous pass, at the same index, is matched without calling `key` or touching the map. Otherwise order is restored by walking the previous and the new order from both ends from the first difference, so a swap costs two moves, a removal none, and an insertion one. A pass that reuses no element clears the parent in one call before appending. The parent stays in the document while it is filled: taking it out and putting it back would make each append cheaper, but it would also close a popover, reset its scroll position, restart its animations, and fire its callbacks if it is a custom element. Elements are moved with `moveBefore()` where the browser has it, so focus and selection survive a reorder and the element is not torn down and set up again. An empty list clears the parent in one call. `keyed()` owns the parent's children: nothing else should add, move, or remove them.
 
 ### `reactive(obj)`, `effect(fn)`, `nextTick()`, `toRaw(value)`
 
@@ -154,6 +154,31 @@ The number that matters more is the one this benchmark does not measure: the run
 
 The runtime uses no `eval`, no `new Function`, and no `blob:` URL. Inline scripts need the nonce or hash any page needs.
 
+## boreUI
+
+A UI kit for boreDOM, in `boreui/`, built the way react-aria is built: behavior and accessibility live in small functions that take an element and return the function that unwires it, and appearance lives in one stylesheet you override with plain CSS. It has no dependency beyond boreDOM and adds nothing to a page that does not load it.
+
+```html
+<link rel="stylesheet" href="boreui/boreui.css">
+<script type="importmap">{ "imports": { "@mr_hugo/boredom": "./dist/boredom.js" } }</script>
+<script type="module">
+  import { mount } from "@mr_hugo/boredom";
+  import { install } from "./boreui/kit/index.js";
+  install();
+  mount({});
+</script>
+
+<ui-select name="size" required placeholder="Choose a size">
+  <span slot="label">Size</span>
+  <li data-key="s">Small</li>
+  <li data-key="m">Medium</li>
+</ui-select>
+```
+
+`boreui/behaviors/` is the lower layer and imports nothing: `press`, `hover`, `focusRing`, `field`, `collection`, `overlay`, `tooltip`, `longPress`, `announce`, and the id helpers, each writing `aria-*` and a fixed set of `data-*` state attributes and nothing else. `boreui/kit/` is the upper layer: one file per component, a `<template data-component>` and the `webComponent()` that drives it, wrapping a native element wherever one exists. `install()` defines every component the page has not already defined, and a `<template data-component="ui-button">` the page writes itself is used in place of the kit's, which is how you fork one component without forking the library.
+
+The kit has thirty components: `ui-button`, `ui-toggle-button`, `ui-link`, `ui-checkbox`, `ui-checkbox-group`, `ui-radio-group`, `ui-switch`, `ui-text-field`, `ui-text-area`, `ui-search-field`, `ui-number-field`, `ui-slider`, `ui-select`, `ui-combobox`, `ui-field`, `ui-form`, `ui-meter`, `ui-progress`, `ui-separator`, `ui-disclosure`, `ui-accordion`, `ui-dialog`, `ui-alert-dialog`, `ui-popover`, `ui-tooltip`, `ui-menu`, `ui-listbox`, `ui-tabs`, `ui-tag-group`, `ui-toolbar` and `ui-breadcrumbs`. `examples/kit/` shows all of them on one page, and `plans/boredui/` holds the design and the status of each. The build writes `dist/boreui.behaviors.js`, `dist/boreui.kit.js` and `dist/boreui.css`, with minified variants, and fails when one crosses its gzip budget.
+
 ## Development
 
 ```
@@ -162,14 +187,18 @@ pnpm run build       # dist/: ES module, IIFE, minified variants, and types
 pnpm test            # unit tests in node, then the browser tests in headless Chrome
 pnpm run serve       # a static server with reload at http://localhost:8080/
 pnpm run test:watch  # the browser tests, live, at /tests/browser/
+node scripts/screenshot.mjs /examples/kit/ kit.png 900 dark   # a page, in headless Chrome, as a PNG
 ```
 
 The dev server in `bin/serve.js` has no dependencies and is also the `boredom` command: `npx boredom [directory]`. Add `?noreload` to a page URL to serve it without the reload script. The headless run needs Chrome on the machine; set `CHROME=/path/to/chrome` if it is somewhere unusual.
 
 | file | size | gzip |
 |---|---|---|
-| `dist/boredom.min.js` | 9.1 KB | 3.8 KB |
-| `dist/boredom.iife.min.js` | 9.6 KB | 4.0 KB |
+| `dist/boredom.min.js` | 9.3 KB | 4.0 KB |
+| `dist/boredom.iife.min.js` | 9.7 KB | 4.3 KB |
+| `dist/boreui.behaviors.min.js` | 32.8 KB | 9.8 KB |
+| `dist/boreui.kit.min.js` | 49.6 KB | 13.9 KB |
+| `dist/boreui.min.css` | 24.7 KB | 4.3 KB |
 
 ## License
 

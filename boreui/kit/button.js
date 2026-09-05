@@ -32,8 +32,9 @@ export const template = `<button data-ref="button" type="button" data-slot></but
  */
 const MIRRORED = [
   "disabled", "type", "form", "name", "value", "autofocus",
+  "formaction", "formenctype", "formmethod", "formnovalidate", "formtarget",
   "aria-label", "aria-labelledby", "aria-describedby",
-  "aria-haspopup", "aria-expanded", "aria-controls",
+  "aria-haspopup", "aria-expanded", "aria-controls", "aria-pressed", "aria-current",
 ];
 
 const component = webComponent(({ self, local, refs, onCleanup }) => {

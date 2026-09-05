@@ -14,9 +14,13 @@
  * component makes its render track a hover or a press.
  */
 export { press } from "./press.js";
+export { longPress } from "./long-press.js";
+export { collection, typeahead } from "./collection.js";
+export { anchor, overlay, placementOf } from "./overlay.js";
+export { tooltip } from "./tooltip.js";
 export { field } from "./field.js";
 export { hover } from "./hover.js";
-export { focusRing, focusSafely, isFocusVisible, modality, onModalityChange } from "./focus.js";
+export { focusRing, focusSafely, isFocusVisible, modality, onModalityChange, setModality } from "./focus.js";
 export { announce, announced, clearAnnouncements, destroyAnnouncer, installAnnouncer } from "./announce.js";
 export { idFor, point, relate, unrelate } from "./aria.js";
-export { isDisabled, isFocusable } from "./dom.js";
+export { isDisabled, isFocusable, isTextInput, isVirtualClick, tabbables } from "./dom.js";

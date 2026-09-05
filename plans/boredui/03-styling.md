@@ -207,5 +207,17 @@ Support forced-colors mode with `forced-color-adjust` left alone and `Highlight`
 `ButtonText` and `Canvas` system colours used in the one media query that needs them.
 Never define a colour that only works because the author's palette is intact.
 
-Ship one file. A page that uses two components loads the same 4 KB as a page that uses
-twenty, and 4 KB gzip does not need code splitting.
+Ship one file. A page that uses two components loads the same 4.3 KB as a page that uses
+thirty, and 4.3 KB gzip does not need code splitting.
+
+Close the layer. Every rule in the file sits inside one of the four layers, and a rule
+that lands after a layer's closing brace is unlayered, which beats every layer including
+the page's own, silently. That happened once, when a block of component rules was appended
+before the state banner and after the base layer's brace, and it showed up as a combobox
+that could not hide an option: `[hidden]` in the base layer lost to an unlayered
+`display: flex`. The file has four closing braces and they are the four layers.
+
+Keep item rules weak. A rule that sets `display` on an option, a menu item or a tab is
+written as `:where(ui-listbox) :where([role="option"])`, with no specificity, so a plain
+`[hidden]` on the element still wins and a component hides what it needs to by setting the
+property, which is the platform's own way.

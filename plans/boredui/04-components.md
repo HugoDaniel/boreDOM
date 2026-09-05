@@ -38,49 +38,55 @@ when someone asks.
 
 ## Tier 1
 
+All written. The behaviors column is what each one actually uses.
+
 | component | native base | behaviors | notes |
 |---|---|---|---|
-| `ui-button` | `<button>` | `press` | `press` only for the async pending state; plain clicks need nothing |
-| `ui-toggle-button` | `<button aria-pressed>` | `press` | |
-| `ui-link` | `<a>` | none | styling and focus ring only |
-| `ui-checkbox` | `<input type=checkbox>` | none | indeterminate set as a property |
-| `ui-checkbox-group` | `<fieldset>` | none | group validity from the Constraint Validation API |
-| `ui-radio-group` | `<fieldset>` | none | native radios already do roving focus |
-| `ui-switch` | `<input type=checkbox role=switch>` | none | |
+| `ui-button` | `<button>` | `press` | `press` only for `data-pressed` and the async pending state |
+| `ui-toggle-button` | `<button aria-pressed>` | `press` | `selected` on the host is the one place the state lives |
+| `ui-link` | `<a>` | none | `disabled` takes the `href` away, which is how the platform disables a link |
+| `ui-checkbox` | `<input type=checkbox>` | `field` | indeterminate set as a property; description and error slots for a required promise |
+| `ui-checkbox-group` | `<fieldset>` | `field` on the fieldset | required means at least one, said as a custom validity on the first box |
+| `ui-radio-group` | `<fieldset>` | `field` on the fieldset | native radios do the keyboard; `required` on the first radio is the platform's group rule |
+| `ui-switch` | `<input type=checkbox role=switch>` | `field` | |
 | `ui-text-field` | `<input>` | `field` | |
 | `ui-text-area` | `<textarea field-sizing=content>` | `field` | autosizing is CSS |
-| `ui-search-field` | `<input type=search>` | `field`, `press` | Escape clears |
-| `ui-number-field` | `<input inputmode=decimal>` | `field`, `press`, `longPress` | value formatted with `Intl.NumberFormat`, parsed back per locale |
-| `ui-slider` | `<input type=range>` or custom | `move`, `field` | native range for single value, custom for two thumbs |
+| `ui-search-field` | `<input type=search>` | `field`, `press` | Escape clears; the button is out of the Tab order |
+| `ui-number-field` | `<input type=text inputmode=decimal>` | `field`, `press` | formats with `Intl.NumberFormat`, learns the symbols from its output, validates through a `<input type=number>` nobody sees |
+| `ui-slider` | `<input type=range>` | `field` | one thumb; the track fill is a custom property the render writes |
 | `ui-meter` | `<meter>` | none | |
-| `ui-progress` | `<progress>` | none | indeterminate variant is a CSS animation |
+| `ui-progress` | `<progress>` | none | `indeterminate` removes the attribute, the one way back |
 | `ui-separator` | `<hr>` | none | |
 | `ui-field` | `<label>` + slots | `field` | label, description and error wiring for any control |
-| `ui-form` | `<form novalidate>` | `field`, `announce` | submit collects `validity`, announces the first error, focuses it |
-| `ui-disclosure` | `<details>` + `::details-content` | none | zero JavaScript |
-| `ui-accordion` | `<details name>` | none | zero JavaScript, exclusive by default |
-| `ui-dialog` | `<dialog>` | none | `showModal()`, focus and inert are the platform's |
-| `ui-alert-dialog` | `<dialog>` | `announce` | `role="alertdialog"`, initial focus on the safe action |
-| `ui-tooltip` | `[popover=hint]` | `overlay` | opens on hover after a delay and on focus, never on touch |
-| `ui-popover` | `[popover=auto]` | `overlay` | anchor positioned |
-| `ui-toolbar` | `<div role=toolbar>` | `collection` | roving focus, no selection |
-| `ui-breadcrumbs` | `<nav><ol>` | none | last item gets `aria-current="page"` |
-| `ui-tabs` | `[role=tablist]` | `collection` | |
+| `ui-form` | `<form>` | `announce` | the browser validates; `field` shows and focuses; the form announces the first message once |
+| `ui-disclosure` | `<details>` + `::details-content` | none | `disabled` is the one thing a details cannot say |
+| `ui-accordion` | `<details name>` | none | one name per accordion; `allow-multiple` takes it away |
+| `ui-dialog` | `<dialog>` | none | `showModal()`; named by its first heading; `close` is an action any button inside sends |
+| `ui-alert-dialog` | `<dialog role=alertdialog>` | none | described by its first paragraph; `autofocus` on the safe choice |
+| `ui-tooltip` | `[popover=hint]` | `tooltip` | wraps what it describes; opens on hover after a delay and on keyboard focus, never on touch |
+| `ui-popover` | `[popover=auto]` | `overlay` | a dialog beside its button; focuses the first thing inside |
+| `ui-toolbar` | `<div role=toolbar>` | none | arrows move between the controls, Tab leaves from the far end; nested toolbars are groups |
+| `ui-breadcrumbs` | `<nav><ol>` | none | last item gets `aria-current="page"`, on its link when it has one |
+| `ui-tabs` | `[role=tablist]` | `collection` | automatic activation by default, `activation="manual"` otherwise |
 
 ## Tier 2
 
+Written except the last two, and with fewer names than planned.
+
 | component | pattern | built on |
 |---|---|---|
-| `ui-listbox` | `role=listbox` with `role=option` children | `collection`, `typeahead`, `keyed` |
-| `ui-menu` | `role=menu`, in a popover | `ui-listbox` plus submenu handling |
-| `ui-menu-trigger` | button plus menu | `overlay` |
-| `ui-select` | button plus listbox in a popover, with a hidden native `<select>` for forms | `ui-listbox`, `overlay` |
-| `ui-combobox` | input plus listbox, virtual focus | `ui-listbox` in `focusMode: "virtual"` |
-| `ui-autocomplete` | combobox that filters as you type | `ui-combobox`, `Intl.Collator` |
-| `ui-tag-group` | `role=listbox` with removable items | `ui-listbox`, `announce` on removal |
-| `ui-grid-list` | rows with interactive cells | `collection` in grid mode |
-| `ui-table` | `role=grid` over a real `<table>` | `collection` in grid mode |
-| `ui-tree` | `role=tree` with expansion | `collection`, `@scope` |
+| `ui-listbox` | `role=listbox` with `role=option` children | `collection`, `keyed` |
+| `ui-menu` | button plus `role=menu` in a popover | `overlay` on mouse down, `collection` with `aria-checked` |
+| `ui-select` | button plus listbox in a popover, with a hidden native `<select>` for forms | `overlay`, `collection`, `typeahead` on the closed button |
+| `ui-combobox` | input plus listbox, virtual focus, filtered as you type | `collection` in `focusMode: "virtual"` over a manual popover |
+| `ui-tag-group` | `role=grid` of rows with a remove button each | `collection`, `keyed`, `announce` on removal |
+| `ui-table` | `role=grid` over a real `<table>` | not written |
+| `ui-tree` | `role=tree` with expansion | not written |
+
+`ui-menu-trigger` became the `trigger` slot of `ui-menu`, since a menu without a button is
+not a thing a page writes. `ui-autocomplete` is `ui-combobox`: filtering as you type is
+what a combobox does. `ui-grid-list` was a listbox whose rows hold buttons, and
+`ui-tag-group` is that.
 
 ## Tier 3
 
@@ -99,9 +105,16 @@ carousel. Each gets its own plan when it is scheduled.
 ```
 
 ```js
-export default webComponent(({ self, refs, onCleanup }) => {
-  mirrorAttributes(self, refs.button, ["disabled", "type", "form", "name", "value"]);
-  onCleanup(press(refs.button, { onPress: () => self.dispatchEvent(new Event("press", { bubbles: true })) }));
+export default webComponent(({ self, local, refs, onCleanup }) => {
+  onCleanup(mirrorAttributes(self, refs.button, MIRRORED));
+  forward(self, "button", ["disabled", "value"]);
+  props(self, local, { onPress: null });
+  onCleanup(press(refs.button, {
+    onPress: (e) => {
+      self.dispatchEvent(new Event("press", { bubbles: true }));
+      return local.onPress?.(e);
+    },
+  }));
 });
 ```
 
@@ -119,78 +132,94 @@ and the plan should say so in the docs.
 ```html
 <template data-component="ui-checkbox">
   <label>
-    <input type="checkbox" data-ref="input" data-dispatch-change="toggle">
+    <input type="checkbox" data-ref="input">
     <span class="ui-checkbox-box" aria-hidden="true"></span>
     <span data-slot></span>
   </label>
+  <p data-ref="description" data-slot="description"></p>
+  <p data-ref="error" data-slot="error"></p>
 </template>
 ```
 
 The real `<input>` stays in the DOM, focusable and form associated, and CSS draws the box
-from `:checked`, `:indeterminate` and `:focus-visible` on the sibling. No behavior is
-needed, no ARIA is added, and the component works inside a `<form>` with no extra code.
-This is the pattern to reach for whenever a native control exists.
+from `:checked`, `:indeterminate` and `:focus-visible` on the sibling. No ARIA is added,
+the change event is the input's own and bubbles out of the host, and the component works
+inside a `<form>` with no extra code. This is the pattern to reach for whenever a native
+control exists. Inside a `ui-checkbox-group` the box leaves validity to the group, since a
+message under the first box and under the group would say the same thing twice.
 
 ### `ui-listbox`, the collection
 
 ```html
-<template data-component="ui-listbox" data-role="listbox">
-  <div data-ref="list"></div>
+<template data-component="ui-listbox">
+  <span data-ref="label" data-slot="label" hidden></span>
+  <ul data-ref="list" role="listbox" data-slot></ul>
 </template>
 ```
 
 ```js
 export default webComponent(({ self, local, refs, onCleanup }) => {
-  onCleanup(collection(refs.list, {
-    itemSelector: '[role="option"]',
+  onCleanup(observeContent(refs.list, local));
+  props(self, local, { items: null, renderItem: null });
+  const list = collection(refs.list, {
     selectionMode: self.getAttribute("selection-mode") ?? "single",
-    onSelectionChange: (keys) => self.dispatchEvent(new CustomEvent("selectionchange", { detail: keys, bubbles: true })),
-  }));
+    onSelectionChange: (keys) => {
+      local.value = keys;
+      self.dispatchEvent(new Event("change", { bubbles: true }));
+    },
+  });
+  onCleanup(list.destroy);
 
   return () => {
-    keyed(refs.list, self.items ?? [], (item) => item.id, createOption, updateOption);
-    for (const el of refs.list.children) {
-      const selected = self.selectedKeys?.has(el.dataset.key);
-      el.toggleAttribute("data-selected", selected);
-      el.setAttribute("aria-selected", String(!!selected));
-    }
+    local.content;
+    if (local.items) keyed(refs.list, local.items, itemKey, renderOption, updateOption);
+    markOptions(refs.list);
   };
 });
 ```
 
-Two things to notice. Selection is written from state to the DOM in render and never read
-back, so there is one direction of truth. And the options are plain elements created by
-`createOption`, not components, because a thousand components means a thousand custom
-element upgrades and a thousand subscriber objects for something that only needs two
-attributes toggled.
+Three things to notice. The options are the author's children, or, given `items`, plain
+`<li>` elements made by `renderOption`, never components, because a thousand components
+means a thousand custom element upgrades and a thousand subscriber objects for something
+that only needs two attributes toggled. `markOptions` writes the role, the `tabindex="-1"`
+that lets an option take focus, and `aria-selected="false"`, comparing first. And the
+selection is read from the DOM by the behavior and written back to it, so `value` is
+whatever the options say; the plan's one direction of truth held, with the DOM as the truth
+rather than state, and a component that keeps the selection in state writes it on render
+and the two agree.
 
 Give options their own component only when an option carries state of its own.
 
 ### `ui-select`, the composite
 
-Three elements, wired by ids and by the platform.
+Four elements, wired by ids and by the platform.
 
 ```html
 <template data-component="ui-select">
-  <button data-ref="trigger" data-dispatch="toggle" aria-haspopup="listbox">
-    <span data-ref="value"></span>
-  </button>
-  <div data-ref="panel" popover="auto">
-    <ui-listbox data-ref="listbox"></ui-listbox>
+  <span data-ref="label" data-slot="label"></span>
+  <button data-ref="trigger" type="button"><span data-ref="value"></span></button>
+  <div data-ref="panel"><ul data-ref="list" role="listbox" data-slot></ul></div>
+  <div class="ui-visually-hidden" aria-hidden="true">
+    <label><span data-ref="nativeLabel"></span><select data-ref="native" tabindex="-1"></select></label>
   </div>
-  <select data-ref="native" hidden tabindex="-1" aria-hidden="true"></select>
+  <p data-ref="description" data-slot="description"></p>
+  <p data-ref="error" data-slot="error"></p>
 </template>
 ```
 
-The hidden native `<select>` carries the value into form submission and into
-`FormData`, which is worth four lines and removes every question about forms. The popover
-gives light dismiss and top layer. `overlay()` sets `anchor-name` on the trigger and
-`position-anchor` on the panel, and reflects `data-open` and `data-placement`. The listbox
-component does selection and keyboard navigation and knows nothing about being inside a
-select.
+The native `<select>` carries the value into form submission and into `FormData`, refuses
+an empty one when `required`, and is what autofill finds, which removes every question
+about forms. It is visually hidden rather than `display: none`, because Safari's autofill
+ignores a hidden select, and it has a label of its own, because Firefox's needs one. The
+label the user sees is a span, not a `<label for>` the button, since a label for a button
+presses it; clicking it focuses the button with a ring instead, the way a native select's
+label focuses the select. The popover gives light dismiss and the top layer, `overlay()`
+the placement and the attributes, and `collection()` the keyboard inside the list, knowing
+nothing about being inside a select.
 
 Typing while the trigger is focused runs typeahead against the options without opening,
-matching a native select. That is one call to `typeahead()`.
+and Left and Right change the value, both matching a native select. The first is one call
+to `typeahead()` and the second is nine lines.
 
 ### `ui-dialog`, the platform component
 
@@ -201,31 +230,43 @@ matching a native select. That is one call to `typeahead()`.
 ```
 
 ```js
-export default webComponent(({ self, refs, on }) => {
-  on("open", () => refs.dialog.showModal());
-  on("close", () => refs.dialog.close());
-  return () => refs.dialog.toggleAttribute("data-open", refs.dialog.open);
+export default webComponent(({ self, refs, on, onCleanup }) => {
+  forward(self, "dialog", ["open", "returnValue"]);
+  methods(self);                       // showModal, show and close reach the dialog
+  label(self, refs.dialog);            // named by its first heading, unless the host says otherwise
+  on("close", ({ e }) => {
+    e.stop();
+    refs.dialog.close(e.dispatcher.value ?? "");
+  });
 });
 ```
 
 Focus containment, inert background, scroll locking, Escape, the backdrop and focus
-restoration are all `showModal()`. What is left is the open state and the transition, and
-the transition is `@starting-style` in CSS.
+restoration are all `showModal()`, and the transition is `@starting-style` in CSS. There is
+no `open` action, because an action reaches the components above the button that sent it
+and a button that opens a dialog is outside it; the page calls `showModal()`. `close` is an
+action because the buttons that close a dialog are inside it, and the dispatcher's `value`
+becomes the dialog's `returnValue`. There is no `data-open` either: `dialog[open]` is the
+platform saying the same thing.
 
 ### `ui-tabs`, roving focus
 
 ```html
 <template data-component="ui-tabs">
-  <div data-ref="tablist" role="tablist"></div>
+  <div data-ref="list" role="tablist" data-slot="tab"></div>
   <div data-ref="panels" data-slot></div>
 </template>
 ```
 
-`collection()` in horizontal orientation with `selectionMode: "single"` does the keyboard
-work. Selecting a tab sets `aria-selected` and `tabindex` on the tabs and toggles `hidden`
-on the panels, and each panel is `role="tabpanel"` with `aria-labelledby` pointing at its
-tab. Automatic activation follows focus, which is the correct default; manual activation is
-an attribute for the case where showing a panel is expensive.
+The tabs are written with `slot="tab"` and everything else is a panel, matched to its tab
+by `data-key`. `collection()` in horizontal orientation with `selectionMode: "single"` and
+`selectionBehavior: "replace"` does the keyboard work: the arrows move and select, which is
+automatic activation and the right default when a panel is cheap to show. `activation=
+"manual"` switches the behavior to `toggle`, so the arrows move and Enter or Space selects.
+Selecting a tab sets `aria-selected` and `tabindex` on the tabs and toggles `hidden` on the
+panels, each panel is `role="tabpanel"` with `aria-labelledby` pointing at its tab, and a
+panel with nothing focusable inside is itself a Tab stop, so the keyboard can reach its
+text.
 
 ## What every kit component must do
 

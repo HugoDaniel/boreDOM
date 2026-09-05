@@ -5,8 +5,10 @@ behavior. Every export follows the same signature: it takes an element, wires it
 returns the function that unwires it. No custom elements, no CSS, no boreDOM dependency, so
 the layer works in a page that never heard of boreDOM.
 
-`dom.js` holds the questions they all ask, `isDisabled()` and `isFocusable()`, because a
-behavior reads the element at event time instead of taking the answer as an option.
+`dom.js` holds the questions they all ask, because a behavior reads the element at event
+time instead of taking the answer as an option: `isDisabled()`, `isFocusable()`,
+`isTextInput()`, `tabbables()`, and the two discriminators that tell a screen reader's
+click and pointer apart from a real one, `isVirtualClick()` and `isVirtualPointer()`.
 
 ## The state attribute contract
 
@@ -26,17 +28,20 @@ it.
 | attribute | written by | means |
 |---|---|---|
 | `data-hovered` | `hover` | a pointer that can hover is over the element |
-| `data-pressed` | `press` | held down by pointer, or Space/Enter is down |
-| `data-focused` | `focusRing` | has DOM focus |
+| `data-pressed` | `press` | held down by a pointer that is over the element, or Space/Enter is down |
+| `data-focused` | `focusRing` | has DOM focus, or, with `within`, contains it |
 | `data-focus-visible` | `focusRing`, `collection` | focus should be shown, including virtual focus |
 | `data-selected` | `collection` | selected within its collection |
-| `data-current` | `collection` | the focused item under `aria-activedescendant` |
-| `data-open` | `overlay`, `disclosure` | expanded or shown |
-| `data-placement` | `overlay` | resolved side, from anchor positioning |
-| `data-invalid` | `field` | failed validation |
+| `data-current` | `collection` | the item under `aria-activedescendant`, in virtual focus mode |
+| `data-open` | `overlay`, `tooltip` | the panel is showing, on the trigger and the panel |
+| `data-placement` | `overlay`, `tooltip` | the side and alignment the panel landed on, read once per opening |
+| `data-invalid` | `field` | failed validation, on the control or on the fieldset standing for its controls |
 | `data-pending` | `press` | an async press is in flight |
 | `data-dragging`, `data-drop-target` | `dragging` | drag and drop, tier 3 |
-| `data-orientation` | `collection`, `toolbar` | `horizontal` or `vertical` |
+| `data-orientation` | `ui-toolbar` | `horizontal` or `vertical` |
+
+`data-open` was listed for `disclosure` too. A `<details>` says it with `open`, and a
+`<dialog>` with `open` and `:modal`, so nothing writes it for those.
 
 Two rules keep this honest. A behavior writes only the attributes in its row. Anything not
 in this table is application state and belongs in `state` or `local`.
@@ -45,8 +50,8 @@ in this table is application state and belongs in `state` or `local`.
 
 ### `press(el, { onPress, onPressStart, onPressEnd, mirror, preventFocus })`
 
-Written, in `boreui/behaviors/press.js`, 248 lines against react-aria's 1198. Tested by the
-seventeen cases in `tests/browser/boreui/press.test.ts`.
+Written, in `boreui/behaviors/press.js`, 320 lines against react-aria's 1198. Tested by the
+twenty two cases in `tests/browser/boreui/press.test.ts`.
 
 A press starts when a pointer goes down on the element or an activation key goes down while
 it has focus, and it activates only when that input is released on the element, so dragging
@@ -70,23 +75,38 @@ else, which means `role="button"` and its relatives, has its activation owned he
 fires as the key goes down, Space as it comes up, and Space is prevented from scrolling the
 page. Space on a link is left alone, because scrolling is what it is for.
 
-**No pointer capture is taken.** Touch and pen are already captured to the element that
-received `pointerdown`, so their release is only visible in the coordinates, which means one
-`getBoundingClientRect()` read when such a press starts and none after. A mouse is not
-captured, so its release is judged by where the event landed, with no geometry read at all.
-A scroll cancels the press before the cached box can go stale.
+**The pointer capture is given back.** Touch and pen are captured to the element that
+received `pointerdown`, which means the browser never says whether they left it. Releasing
+that capture, as react-aria does, makes `pointerleave` and `pointerenter` arrive for a
+finger as they do for a mouse, and that is what `data-pressed` follows: off the element it
+is gone, back over it is back, which is what `:active` does on a native button. The release
+activates only when it lands on the element. No rectangle is read at any point, which was
+the first version's one layout read.
 
 Cancellation covers `pointercancel`, a scroll during the press, a `contextmenu` from a long
-touch, focus leaving with a key still held, and the element becoming disabled halfway
-through. Disabled is read at event time from `disabled`, the `disabled` attribute, and
-`aria-disabled`, so a control disabled during a press does not activate.
+touch, a `dragstart`, since Safari sends no `pointercancel` for one, focus leaving with a key
+still held, and the element becoming disabled halfway through. Disabled is read at event
+time from `disabled`, the `disabled` attribute, and `aria-disabled`, so a control disabled
+during a press does not activate.
 
-`preventFocus` opts out of the focus a pointer press takes. The default is to take it,
-because Safari does not focus a button when it is clicked and every other browser does.
+`preventFocus` keeps focus where it was by cancelling `pointerdown`, which cancels the
+mouse down the browser would make from it and the focus and text selection that come with
+that. The default is to take focus, because Safari does not focus a button when it is
+clicked and every other browser does.
+
+The second audit against `usePress` found four more cases, all now tested. Enter and Space
+typed into a text field, a textarea or a contenteditable are text, not a press. Space on a
+checkbox or a radio is the browser's own toggle and Enter on one submits the form, so
+neither is taken over. macOS sends no `keyup` for a key released while Meta is held, so the
+release of Meta stands in for it. And a screen reader's pointer has no size and wrong
+coordinates, so a `pointerdown` with zero width and height is set aside and the click that
+follows is answered instead, which is also how the click from NVDA and JAWS on Firefox and
+from TalkBack is recognised, in `isVirtualClick()`.
 
 What was dropped from the port: the iOS 12 and Android 6 workarounds, the synthetic mouse
-event deduplication that pointer events made unnecessary, and the React event pooling
-defence.
+event deduplication that pointer events made unnecessary, the React event pooling defence,
+and the document-wide `user-select: none` on iOS during a press, which this layer applies to
+the element alone.
 
 ### `hover(el, { onHoverStart, onHoverEnd, mirror })`
 
@@ -109,17 +129,29 @@ no pointer events. For the rest, `boreui.css` styles hover as
 `[data-hovered]:not(:disabled, [aria-disabled="true"])` and the stale attribute is
 invisible.
 
-### `longPress(el, { onLongPress, threshold = 500 })`
+Two cases from `useHover` were added in the second audit. iOS sends a second `pointerenter`
+after a tap that claims to be a mouse, so a mouse arriving within half a second of a finger
+lifting anywhere on the page is that finger and is ignored, through one document listener
+installed by the first hover. And an element removed from under the pointer, or one that
+shrank away from it, never gets its leave, but whatever the pointer is over next gets an
+over, so while hovered the behavior listens for `pointerover` on the document and ends the
+hover when the target is not inside it.
 
-Fires after the threshold with the pointer still down and not moved past a small slop
-radius. Cancels the following `press`. Needed by context menus and colour swatches.
+### `longPress(el, { onLongPress, onLongPressStart, onLongPressEnd, threshold = 500, pointerType })`
+
+Written, in `boreui/behaviors/long-press.js`, 120 lines. Fires after the threshold with the
+pointer still down and not lifted, left, or scrolled. When it fires it dispatches a
+`pointercancel` on the element, so a `press` on the same element lets go without
+activating, swallows the click and the context menu the eventual lift would bring, and
+moves focus to the element, since browsers focus on lift and this fired before that. Menus
+on touch and colour swatches are its callers.
 
 ### `move(el, { onMoveStart, onMove, onMoveEnd })`
 
-Normalised pointer and keyboard dragging over a one or two dimensional range, reporting
-deltas rather than coordinates. Sliders, colour areas, and the splitter use it. Keyboard
-support means arrow keys produce deltas, which is what makes a slider usable without a
-mouse. About 90 lines.
+Not written. `ui-slider` is a range input and needed none of it, and the two thumb slider,
+the colour area and the splitter that would are after version one. When it comes it is
+`useMove`: pointer deltas from `pageX` and `pageY`, since `movementX` is zero on Safari
+and scaled on Android, and arrow keys producing unit deltas.
 
 ## Focus
 
@@ -152,6 +184,17 @@ marks the input as already accounted for, and `press` routes its focus through i
 **Modality is `null` until the first input**, and `isFocusVisible()` is true while it is, so
 an element focused before anything has happened, by `autofocus` for instance, shows a ring.
 
+Three things changed in the second audit. A `pointermove` listener was added after all,
+passive, doing one assignment: it makes the modality pointer without telling anyone, so a
+ring already on screen stays until the next thing happens, and an item a menu focuses
+because the mouse arrived over it gets no ring. Typing does not move rings: while a text
+field has focus, only Tab and Escape count as navigation, which is `useFocusVisible`'s
+`isTextInput` rule. And `setModality()` was exported, for the moment a script moves focus
+for a reason the user has to see, such as to the first field a refused form complained
+about; `field` calls it. `focusRing` gained `within`, which watches the bubbling pair so
+focus landing on anything inside counts, and it decides after a microtask so that it never
+trusts `relatedTarget`.
+
 ### `focusRing(el, { mirror })`
 
 Written, in the same file. Marks `data-focused` while the element has focus and
@@ -165,46 +208,55 @@ a time, so the notify loop stays one entry long however many rings exist.
 Reach for `:focus-visible` in CSS first. This is for the widgets the browser cannot judge,
 where DOM focus sits on one element and the focus a user sees is somewhere else.
 
-### `focusScope(el, { contain, restore, autoFocus })`
+### `focusScope` and `interactOutside`
 
-Keyboard containment for non-modal overlays. Modal dialogs do not use this, because
-`<dialog>.showModal()` already contains focus, makes the rest of the document inert, and
-puts the element in the top layer.
-
-So `focusScope` is a fallback and a menu helper, not the centrepiece it is in react-aria.
-Contain works by listening for `keydown` on Tab, computing the tabbable set inside the
-scope, and wrapping. Restore stores `document.activeElement` on entry and returns focus on
-exit unless focus already moved somewhere else deliberately. Target 120 lines against
-react-aria's 1126.
-
-### `interactOutside(el, { onInteractOutside })`
-
-Fires when a pointerdown lands outside the element and outside anything it owns. Needed
-only where the popover API's light dismiss does not apply, which after `03-styling.md` is
-almost nowhere. Keep it small and keep the `composedPath()` check so a click inside a
-nested popover does not count as outside.
+Neither was needed. `<dialog>.showModal()` contains focus and makes the rest inert, the
+popover API restores focus to the invoker on close and dismisses on a pointer down outside,
+and the one place light dismiss does not apply, the combobox, closes on a document
+`pointerdown` outside itself in eight lines of the component. A menu closes when focus
+leaves it by Tab in three. If a non-modal overlay that traps focus ever comes, `tabbables()`
+in `dom.js` is the half of `focusScope` that walks the tree.
 
 ## Collections
 
 ### `collection(container, options)`
 
+Written, in `boreui/behaviors/collection.js`, 540 lines against react-aria's 2062 across
+`useSelectableCollection`, `useSelectableItem`, `useTypeSelect` and `ListKeyboardDelegate`.
 The keyboard, selection and typeahead engine for every list-shaped widget: listbox, menu,
-tabs, grid list, tag group, toolbar, tree.
+tabs, tag group.
 
 ```js
-collection(refs.list, {
-  itemSelector: '[role="option"]',
+const list = collection(refs.list, {
+  items: '[role="option"]',
   orientation: "vertical",          // or "horizontal", or "grid"
   selectionMode: "single",          // "none" | "single" | "multiple"
-  focusMode: "roving",              // "roving" tabindex, or "virtual" activedescendant
+  selectionBehavior: "toggle",      // or "replace": arrows select as they move, Ctrl and Shift modify
+  focusMode: "roving",              // "roving" tabindex, or "virtual" activedescendant on `input`
   wrap: false,
-  onAction: (item) => {},
-  onSelectionChange: (keys) => {},
+  focusOnHover: false,              // true for a menu
+  disallowEmpty: false,
+  selectedAttribute: "aria-selected", // "aria-checked" for a menu
+  onAction: (item, e) => {},
+  onSelectionChange: (keys, items) => {},
+  onCurrentChange: (item) => {},
 });
+onCleanup(list.destroy);
+list.current; list.setCurrent(item, focus); list.first(); list.last(); list.next(step); list.selected(); list.select(item); list.clear();
 ```
 
-It installs exactly three listeners on the container, never one per item: `keydown`,
-`pointerdown`, and `focusin`. A thousand options cost three listeners.
+It is the one behavior that returns a controller rather than a bare cleanup, because the
+components that use it drive it: a select puts the keyboard on the chosen option when it
+opens, a menu on the first or the last depending on the arrow that opened it. It installs
+four listeners on the container and one `MutationObserver`, never anything per item: a
+thousand options cost that. Items are read fresh at every event, so a list rendered by
+`keyed()` needs no registration, and a current item removed from the DOM hands the Tab
+stop back to the container.
+
+Selection is read from the items' own `aria-selected` and written back there, with
+`data-selected` beside it, so the DOM is the truth and a component that keeps the selection
+in state writes it again on render; the write compares first, so the two agree. `keys` in
+the callback are the items' `data-key`.
 
 Keyboard map, taken from the ARIA authoring practices and from react-aria's
 `useSelectableCollection`, which is the reference implementation worth copying closely:
@@ -222,17 +274,21 @@ Disabled items are skipped for navigation but stay in the DOM and keep `aria-dis
 the count a screen reader announces is right.
 
 `focusMode: "roving"` gives the current item `tabindex="0"` and everything else `-1`, then
-calls `focusSafely()`. `focusMode: "virtual"` leaves DOM focus where it is, sets
-`aria-activedescendant` on the container, and marks the current item with `data-current`
-and `data-focus-visible`. Combobox needs virtual. Everything else uses roving.
+calls `focusSafely()` and scrolls it into view. The container is the Tab stop while no
+item is current, and focus landing on it is handed to the first selected item, or to the
+end nearest where focus came from. `focusMode: "virtual"` leaves DOM focus on `input`,
+sets `aria-activedescendant` there, and marks the current item with `data-current` and
+`data-focus-visible` while the modality says a ring belongs; a pointer down on an item is
+cancelled so focus stays in the input. Combobox needs virtual. Everything else uses roving.
 
-### `typeahead(collection, { getText })`
+### `typeahead(el, { items, from, onMatch, getText })`
 
-Buffers printable characters with a one second reset and matches against item text with
-`Intl.Collator(locale, { usage: "search", sensitivity: "base" })`, so accents and case do
-not block a match. A repeated single character cycles through items starting with it,
-which is the behaviour every native listbox has and every hand-rolled one misses. About 60
-lines.
+Inside `collection()`, and exported on its own for a closed select, where typing chooses an
+option without opening the list. Buffers printable characters with a one second reset and
+matches against item text with `Intl.Collator(locale, { usage: "search", sensitivity:
+"base" })`, one collator per language, so accents and case do not block a match. A fresh
+letter looks past the current item, the way a native select does, a longer search includes
+it, and a repeated single character cycles through the items starting with it.
 
 ### `keyed()` is already the renderer
 
@@ -276,22 +332,43 @@ Required for selection changes, filtering results, item removal, and drag and dr
 
 ## Overlays
 
-### `overlay(trigger, panel, options)`
+### `overlay(trigger, panel, { type, placement, openOn, onToggle })`
 
-Ties a trigger to a panel using the platform. The panel carries `popover="auto"` or is a
-`<dialog>`, the trigger gets `aria-expanded` and `aria-controls`, the panel gets
-`anchor-name` wiring, and `data-open` and `data-placement` land on both.
+Written, in `boreui/behaviors/overlay.js`, 300 lines against react-aria's 2839 across
+`useOverlay`, `usePopover`, `useOverlayTrigger`, `useOverlayPosition`, `calculatePosition`
+and `ariaHideOutside`. Ties a trigger to a panel using the platform. The panel gets
+`popover="auto"`, the trigger `aria-expanded`, `aria-controls` and, for a menu or a listbox,
+`aria-haspopup`, and `data-open` lands on both. `anchor-name` goes on the trigger and
+`position-anchor`, `position-area` and `position-try-fallbacks` on the panel, as inline
+styles, since an anchor name has to be unique to the pair. `data-placement` is read from the
+rectangles once per opening, in a frame after the panel showed, since the fallbacks may
+have flipped it and no API says which side won.
 
-The behaviour is small because the platform does the work: light dismiss, top layer
-stacking, Escape handling and focus return are popover API features. What remains is
-setting the anchor name pair, reflecting open state into attributes, and reading the
-resolved position back out for `data-placement`. Roughly 70 lines, against react-aria's
-`useOverlay` plus `useOverlayPosition` plus `calculatePosition` plus `ariaHideOutside`,
-which together exceed 1200.
+Light dismiss needed one thing the first plan did not know. A pointer down on the trigger
+of an open popover is outside the popover and closes it, and the click that follows would
+open it again, unless the trigger is the popover's invoker: the platform treats an invoker as
+part of its popover. So the behavior names the trigger one, through `popoverTargetElement`,
+which is why a trigger is a `<button>`. The platform then toggles on click, which is right
+for a popover and wrong for a menu, since native menus open on mouse down; `openOn:
+"pointerdown"` opens there and cancels the one click that would have closed it again. The
+arrows open a menu or a listbox and `onToggle` says which end the keyboard would like
+focused. It returns a controller, `open()`, `close()`, `toggle()`, `isOpen`, and `destroy()`
+for `onCleanup`.
 
-A fallback module, `boreui.position.js`, implements JavaScript positioning for browsers
-without anchor positioning. It loads only when `CSS.supports("anchor-name: --a")` is false,
-so the common path never pays for it.
+The fallback module is `position.js`. It loads only when `CSS.supports("anchor-name",
+"--a")` is false, so the common path never pays for it, and it does with rectangles and two
+passive listeners what `position-area` does declaratively.
+
+### `tooltip(trigger, tip, { delay, closeDelay, trigger, placement })`
+
+Written, in `boreui/behaviors/tooltip.js`, 180 lines against react-aria's 639. The tip is a
+`popover="hint"` where the browser knows the word and a manual popover where it does not,
+with `role="tooltip"`, placed by the same `anchor()` the overlay uses, and the trigger is
+described by it. It opens after a delay on hover, at once on a focus that came from the
+keyboard, and never for a finger. Once one tooltip has opened the page is warm and the next
+opens without the delay, until half a second after the last one closed, so a row of icon
+buttons can be read by sweeping across it. It closes when the pointer leaves, when focus
+leaves, when the trigger is pressed, and on Escape.
 
 ## Allocation discipline
 

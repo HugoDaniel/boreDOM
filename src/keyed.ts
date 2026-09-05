@@ -17,8 +17,11 @@
  * unchanged list allocates nothing, calls nothing, and touches no DOM at all. Order is restored by walking both arrays from both ends, starting
  * where the first difference is, so a swap costs two moves, a removal none,
  * and an insertion one. A pass that reuses no element clears the parent in
- * one call before appending. It never reads layout, so it causes no forced
- * reflow.
+ * one call before appending. The parent stays in the document while it is
+ * filled: taking it out and putting it back would make each append cheaper,
+ * but it would also close a popover, reset its scroll position, restart its
+ * animations, and fire its callbacks if it is a custom element. It never
+ * reads layout, so it causes no forced reflow.
  */
 import { pause, resume } from "./reactive.ts";
 

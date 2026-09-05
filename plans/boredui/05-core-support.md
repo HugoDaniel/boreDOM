@@ -37,6 +37,13 @@ from content they do not own.
 **Fallback content is the default value.** A component with an optional part puts the
 default in the slot rather than branching in JavaScript.
 
+**A component written inside a slot hydrates as it lands there.** Moving a child into a
+slot upgrades it if it is a component, and its own hydration runs inside the parent's. The
+first version kept the pass number in a module counter, which the nested hydration
+advanced, so the parent read the wrong number for its next child and emptied the slot
+again: a `<ui-checkbox-group>` with three boxes ended up with one. The pass number is now a
+local, and `tests/browser/kit.test.ts` keeps three components in one slot.
+
 ## 2. `defined(name)`
 
 Shipped as proposed, exported from `src/index.ts`. `define()` still throws on a second
@@ -110,6 +117,23 @@ are swept in a microtask and an element put back before that check is never torn
 `keyed()` moves elements with `moveBefore()` where the browser has it, which is not a
 disconnect at all. Reordering a list resets nothing.
 
+## 6. `toggle` as an action
+
+`data-dispatch-toggle` is new. `toggle` is how a `<details>`, a `<dialog>` and a popover
+say they opened or closed, and it does not bubble, so the one document listener the core
+installs per event type could not hear it. `CAPTURED` in `src/actions.ts` names the events
+heard in the capture phase instead, and `toggle` is the first. `<ui-disclosure
+data-dispatch-toggle="track">` reaches the page with `e.event.newState` saying which way.
+
+## 7. Helpers that came with the components
+
+`boreui/kit/helpers.js` grew three more. `observeContent(el, local)` counts additions and
+removals under `el` in `local.content`, so a render that reads it runs again when a part the
+author wrote arrives late, which is what every component made of authored children does. It
+also covers the custom element that upgrades after its parent did, which the microtask
+retry in the first `ui-field` was for. `showMessage(local, error)` is the one line of render
+every field shares. `strings.js` beside it is the word table from `07-a11y-i18n-testing.md`.
+
 ## What else changed underneath
 
 The core was refactored past the five gaps while this work landed, and the kit inherits it.
@@ -128,3 +152,9 @@ allocates its context and its subscriber, and nothing more until it touches `loc
 A render that throws no longer reaches `console.error`. It surfaces as an uncaught
 rejection, or from `nextTick()` when something awaits it, which changes how a kit test
 asserts a failing render.
+
+A reactive object now keeps its proxy and its dependencies on itself under two hidden
+symbols rather than in a `WeakMap`, a frozen or sealed object is handed out as it is, and
+`keyed()` runs `update` only for an item whose object changed. None of it changed the kit,
+whose `props()` already said to assign a new frozen array rather than write into one, and
+`ui-listbox` renders `items` exactly that way.

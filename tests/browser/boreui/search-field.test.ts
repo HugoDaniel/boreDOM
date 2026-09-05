@@ -27,6 +27,7 @@ test("ui-search-field: a search input and a way back to nothing typed", async ()
   const { input, clear } = searchField();
   assert.equal(input.type, "search");
   assert.equal(clear.getAttribute("aria-label"), "Clear");
+  assert.equal(clear.tabIndex, -1, "out of the Tab order: Escape is the keyboard's way to clear");
   await nextTick();
   assert.equal(clear.hidden, true, "there is nothing to clear yet");
 });
@@ -96,4 +97,13 @@ test("ui-search-field: it is a field like the others", () => {
     </ui-search-field>`);
   assert.equal(host.querySelector("label")!.htmlFor, input.id);
   assert.ok(input.getAttribute("aria-describedby"));
+});
+
+test("ui-search-field: the clear button speaks the page's language", async () => {
+  const { strings } = await import("../../../boreui/kit/strings.js");
+  strings.set("pt", { clear: "Limpar" });
+  const { clear } = searchField(`<div lang="pt"><ui-search-field name="q"><span slot="label">Procurar</span></ui-search-field></div>`);
+  assert.equal(clear.getAttribute("aria-label"), "Limpar");
+  const own = fixture(`<template data-component="ui-search-field-own"><input data-ref="input"><button data-ref="clear" aria-label="Wipe"></button></template>`);
+  assert.ok(own, "a template the page wrote keeps its own words, which the kit checks before writing");
 });

@@ -85,3 +85,24 @@ test("hover: cleanup stops the behavior and takes its attribute with it", () => 
   pointer("pointerenter", el);
   assert.deepEqual(events, ["start"]);
 });
+
+test("hover: the mouse iOS pretends to be right after a tap is that finger", () => {
+  const { el, cleanup, events } = target();
+  document.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 2, pointerType: "touch" }));
+  pointer("pointerenter", el, "mouse");
+  assert.equal(el.hasAttribute("data-hovered"), false, "an emulated mouse hover is ignored");
+  assert.deepEqual(events, []);
+  cleanup();
+});
+
+test("hover: an element taken out from under the pointer is unhovered by the next pointerover", () => {
+  const { el, cleanup, events } = target();
+  pointer("pointerenter", el, "pen");
+  assert.ok(el.hasAttribute("data-hovered"));
+  // No leave arrives for an element that shrank or was removed, but whatever
+  // the pointer is over now gets an over, and it is not inside this one.
+  document.body.dispatchEvent(new PointerEvent("pointerover", { bubbles: true, pointerId: 1, pointerType: "pen" }));
+  assert.equal(el.hasAttribute("data-hovered"), false);
+  assert.deepEqual(events, ["start", "end"]);
+  cleanup();
+});

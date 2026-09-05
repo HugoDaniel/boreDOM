@@ -11,7 +11,7 @@
  * quietly copy attributes onto a control that has no use for them.
  */
 import { field } from "../behaviors/index.js";
-import { expose, forward, mirrorAttributes } from "./helpers.js";
+import { expose, forward, mirrorAttributes, showMessage } from "./helpers.js";
 
 /**
  * Mirrors the host's attributes onto the control, wires the label, the hint
@@ -36,10 +36,7 @@ export function wire({ self, local, refs, onCleanup }, mirrored) {
     mirror: local,
   }));
 
-  return () => {
-    if (local.message === undefined || refs.error.textContent === local.message) return;
-    refs.error.textContent = local.message;
-  };
+  return () => showMessage(local, refs.error);
 }
 
 /**
@@ -49,7 +46,7 @@ export function wire({ self, local, refs, onCleanup }, mirrored) {
  */
 export const COMMON = [
   "name", "placeholder", "required", "disabled", "readonly",
-  "minlength", "maxlength", "autocomplete", "autocapitalize", "spellcheck",
+  "minlength", "maxlength", "autocomplete", "autocapitalize", "autocorrect", "spellcheck",
   "inputmode", "enterkeyhint", "form", "autofocus",
   "aria-label", "aria-labelledby", "aria-describedby",
 ];

@@ -151,6 +151,19 @@ export function expose(self, ref, name = "control") {
 const HELD = Symbol("boreui.held");
 
 /**
+ * The one line of render every field shares: the control's message goes into
+ * the error element, once there is one. Until `field` has reported anything,
+ * `local.message` is undefined and whatever the page wrote there is left alone.
+ *
+ * @param {Record<string, any>} local  the component's local state, mirrored by `field`
+ * @param {HTMLElement} error  the element that shows the message
+ */
+export function showMessage(local, error) {
+  if (local.message === undefined || error.textContent === local.message) return;
+  error.textContent = local.message;
+}
+
+/**
  * Mirrors the named attributes into `local`, so renders that read
  * `local.disabled` re-run when someone writes `el.setAttribute("disabled", "")`.
  * Returns the function that stops observing; hand it to `onCleanup`.
@@ -169,6 +182,24 @@ export function observeAttributes(self, local, names) {
     }
   });
   observer.observe(self, { attributes: true, attributeFilter: names });
+  return () => observer.disconnect();
+}
+
+/**
+ * Makes renders that read `local.content` re-run when elements are added to
+ * or removed from `el`, at any depth. For a component whose parts are written
+ * by the author, a group's radios or an accordion's panels, this is how a
+ * part that arrives after init, or a custom element that upgrades after its
+ * parent did, is still found. Returns the function that stops observing.
+ *
+ * @param {Element} el  the element whose content to watch
+ * @param {Record<string, any>} local  its local state; `content` counts the changes
+ * @returns {() => void}
+ */
+export function observeContent(el, local) {
+  local.content = 0;
+  const observer = new MutationObserver(() => { local.content++; });
+  observer.observe(el, { childList: true, subtree: true });
   return () => observer.disconnect();
 }
 

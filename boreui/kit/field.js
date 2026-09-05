@@ -21,7 +21,7 @@
  */
 import { define, defined, webComponent } from "@mr_hugo/boredom";
 import { field } from "../behaviors/index.js";
-import { adoptTemplate } from "./helpers.js";
+import { adoptTemplate, showMessage } from "./helpers.js";
 
 const NAME = "ui-field";
 
@@ -52,10 +52,7 @@ const component = webComponent(({ self, local, refs, onCleanup }) => {
   if (!wire()) queueMicrotask(() => { if (self.isConnected && !stop) wire(); });
   onCleanup(() => stop?.());
 
-  return () => {
-    if (local.message === undefined || refs.error.textContent === local.message) return;
-    refs.error.textContent = local.message;
-  };
+  return () => showMessage(local, refs.error);
 });
 
 export default component;

@@ -15,9 +15,12 @@ import type { ActionEvent } from "./types.ts";
  * where focus and blur listen to the bubbling focusin and focusout.
  */
 const EVENT_ATTRIBUTES: Record<string, string> = { click: "data-dispatch", focusin: "data-dispatch-focus", focusout: "data-dispatch-blur" };
-for (const type of ["dblclick", "input", "change", "submit", "keydown", "keyup", "pointerdown", "pointerup", "pointermove", "dragstart", "dragover", "drop", "dragend"]) {
+for (const type of ["dblclick", "input", "change", "submit", "keydown", "keyup", "pointerdown", "pointerup", "pointermove", "dragstart", "dragover", "drop", "dragend", "toggle"]) {
   EVENT_ATTRIBUTES[type] = "data-dispatch-" + type;
 }
+
+/** Events that do not bubble, heard in the capture phase instead. `toggle` comes from `<details>`, `<dialog>` and popovers. */
+const CAPTURED: Record<string, true> = { toggle: true };
 
 /** What every action shares: `stop()` ends delivery to further ancestors. */
 const actionProto = {
@@ -46,6 +49,6 @@ export function ensureDelegation(deliver: (dispatcher: HTMLElement, name: string
       const dispatcher = from?.closest<HTMLElement>(selector);
       const name = dispatcher?.getAttribute(attribute);
       if (dispatcher && name) deliver(dispatcher, name, event);
-    });
+    }, CAPTURED[type] === true);
   }
 }

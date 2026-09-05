@@ -63,22 +63,51 @@ test("press: releasing a mouse away from the element does not activate", () => {
   cleanup();
 });
 
-test("press: touch and pen are captured, so the release point decides", () => {
+test("press: touch and pen give their capture back, so leaving the element is seen", () => {
   for (const pointerType of ["touch", "pen"]) {
     const { el, cleanup, count } = button();
     pointer("pointerdown", el, { ...centre(el), pointerType });
     assert.equal(el.style.getPropertyValue("user-select"), "none", `${pointerType} suppresses selection`);
-    // The browser retargets a captured pointer to the element it started on,
-    // so a release outside is only visible in the coordinates.
-    pointer("pointerup", el, { ...beyond(el), pointerType });
+    // With the implicit capture released, the browser reports the finger
+    // sliding off as a leave, and the release lands on whatever is under it.
+    el.dispatchEvent(new PointerEvent("pointerleave", { pointerId: 1, pointerType }));
+    assert.equal(el.hasAttribute("data-pressed"), false, `${pointerType} off the element is not pressed`);
+    pointer("pointerup", document.body, { ...beyond(el), pointerType });
     assert.equal(count(), 0, `${pointerType} released outside`);
     assert.equal(el.style.getPropertyValue("user-select"), "", `${pointerType} restores selection`);
+    assert.equal(el.hasAttribute("style"), false, "and leaves no empty style behind");
 
     pointer("pointerdown", el, { ...centre(el), pointerType });
     pointer("pointerup", el, { ...centre(el), pointerType });
     assert.equal(count(), 1, `${pointerType} released inside`);
     cleanup();
   }
+});
+
+test("press: a pointer that leaves and comes back is pressed again, like :active", () => {
+  const { el, cleanup, count } = button();
+  const seen: string[] = [];
+  const stop = press(el, { onPressStart: () => seen.push("start"), onPressEnd: () => seen.push("end") });
+  pointer("pointerdown", el, centre(el));
+  el.dispatchEvent(new PointerEvent("pointerleave", { pointerId: 1, pointerType: "mouse" }));
+  assert.equal(el.hasAttribute("data-pressed"), false, "off the element");
+  el.dispatchEvent(new PointerEvent("pointerenter", { pointerId: 1, pointerType: "mouse" }));
+  assert.ok(el.hasAttribute("data-pressed"), "back over it");
+  pointer("pointerup", el, centre(el));
+  assert.equal(count(), 1);
+  assert.deepEqual(seen, ["start", "end", "start", "end"]);
+  stop();
+  cleanup();
+});
+
+test("press: a drag starting cancels the press, since Safari sends no pointercancel for one", () => {
+  const { el, cleanup, count } = button();
+  pointer("pointerdown", el, centre(el));
+  el.dispatchEvent(new Event("dragstart", { bubbles: true }));
+  assert.equal(el.hasAttribute("data-pressed"), false);
+  pointer("pointerup", el, centre(el));
+  assert.equal(count(), 0);
+  cleanup();
 });
 
 test("press: pointercancel and a scroll end the press without activating", () => {
@@ -181,6 +210,59 @@ test("press: the secondary button and a key repeat are ignored", () => {
   key("keydown", el, "Enter");
   key("keydown", el, "Enter", { repeat: true });
   assert.equal(count(), 1, "holding Enter activates once");
+  cleanup();
+});
+
+test("press: keys typed into a text field are text, not a press", () => {
+  for (const html of [`<input type="text">`, `<textarea></textarea>`, `<div contenteditable="true" tabindex="0">x</div>`]) {
+    const { el, cleanup, count } = button(html);
+    const space = key("keydown", el, " ");
+    assert.equal(space.defaultPrevented, false, `${html}: Space types a space`);
+    assert.equal(el.hasAttribute("data-pressed"), false);
+    key("keyup", el, " ");
+    key("keydown", el, "Enter");
+    key("keyup", el, "Enter");
+    assert.equal(count(), 0, `${html}: nothing pressed`);
+    cleanup();
+  }
+});
+
+test("press: on a checkbox Space is the browser's own toggle and Enter submits the form", () => {
+  const { el, cleanup, count } = button(`<input type="checkbox">`);
+  const space = key("keydown", el, " ");
+  assert.ok(el.hasAttribute("data-pressed"), "held");
+  assert.equal(space.defaultPrevented, false, "the browser toggles it and clicks");
+  key("keyup", el, " ");
+  syntheticClick(el);
+  assert.equal(count(), 1);
+  const enter = key("keydown", el, "Enter");
+  assert.equal(enter.defaultPrevented, false, "Enter is implicit submission, left alone");
+  assert.equal(el.hasAttribute("data-pressed"), false, "and not an activation");
+  key("keyup", el, "Enter");
+  assert.equal(count(), 1);
+  cleanup();
+});
+
+test("press: a Meta release ends a press whose own keyup macOS swallowed", () => {
+  const { el, cleanup, count } = button(`<div role="button" tabindex="0">go</div>`);
+  key("keydown", el, " ", { metaKey: true });
+  assert.ok(el.hasAttribute("data-pressed"));
+  key("keyup", el, "Meta");
+  assert.equal(el.hasAttribute("data-pressed"), false, "released along with Meta");
+  assert.equal(count(), 1, "and Space still activated");
+  cleanup();
+});
+
+test("press: a pointer with no size is a screen reader, answered by the click that follows", () => {
+  const { el, cleanup, count } = button();
+  pointer("pointerdown", el, { ...centre(el), width: 0, height: 0 });
+  assert.equal(el.hasAttribute("data-pressed"), false, "not a real press");
+  pointer("pointerup", el, { ...centre(el), width: 0, height: 0 });
+  assert.equal(count(), 0, "the pointer itself activates nothing");
+  el.dispatchEvent(new PointerEvent("click", { bubbles: true, detail: 1, pointerType: "mouse" }));
+  assert.equal(count(), 1, "the click that follows does, whatever it looks like");
+  el.dispatchEvent(new PointerEvent("click", { bubbles: true, detail: 1, pointerType: "mouse" }));
+  assert.equal(count(), 1, "and only once");
   cleanup();
 });
 

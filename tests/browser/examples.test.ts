@@ -78,3 +78,35 @@ test("example: tic-tac-toe", async () => {
   await until(() => label() === "Next player: O");
   assert.equal(buttons[0].textContent, "");
 });
+
+test("example: kit", async () => {
+  const doc = await load("/examples/kit/?noreload");
+  const log = () => doc.getElementById("log")!.textContent!;
+  await until(() => doc.querySelector("ui-select [role='option']") !== null);
+  assert.equal(doc.querySelectorAll("template[data-component]").length >= 30, true, "every component adopted its template");
+
+  doc.querySelector<HTMLElement>("ui-button[value='button'] button")!.click();
+  await until(() => log().includes("ui-button button"));
+  assert.ok(log().includes("ui-button button"), "an action from a kit button reached the page");
+
+  const form = doc.querySelector("ui-form form") as HTMLFormElement;
+  form.requestSubmit();
+  await until(() => doc.querySelector("ui-text-field [data-slot='error']")!.textContent !== "");
+  assert.ok(doc.querySelector("ui-text-field [data-slot='error']")!.textContent, "a refused submit shows the browser's message");
+  assert.equal(doc.activeElement, doc.querySelector("ui-text-field input"), "and focuses the first field that was refused");
+
+  const select = doc.querySelector("ui-select") as HTMLElement & { value: string };
+  select.value = "pt";
+  const combobox = doc.querySelector("ui-combobox") as HTMLElement & { value: string };
+  combobox.value = "por";
+  (doc.querySelector("ui-text-field input") as HTMLInputElement).value = "a@b.c";
+  (doc.querySelector("ui-field select") as HTMLSelectElement).value = "Red";
+  form.requestSubmit();
+  await until(() => log().includes("submit"));
+  const submitted = JSON.parse(log().split("\n").find((line) => line.startsWith("submit"))!.slice("submit ".length));
+  assert.equal(submitted.country, "pt", "the select submitted through its hidden select");
+  assert.equal(submitted.city, "por", "the combobox through its hidden input");
+  assert.equal(submitted.qty, "3", "the number field as a plain number");
+  assert.equal(submitted.price, "19.99", "and a currency as one too");
+  assert.equal(submitted.colour, "Red", "a native control inside a ui-field is untouched");
+});

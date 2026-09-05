@@ -5,7 +5,9 @@
  * goes down while it has focus, and it ends when that input is released. It
  * activates only when the release happens on the element, so dragging off and
  * letting go does nothing, which is what every native control does and what
- * hand written click handlers get wrong.
+ * hand written click handlers get wrong. While a pointer is held, `data-pressed`
+ * follows it: off the element it is gone, back over it is back, the way
+ * `:active` behaves on a native button.
  *
  * The behavior writes `data-pressed` while the press is held and `data-pending`
  * while an async `onPress` is in flight. It reads whether the element is
@@ -14,51 +16,63 @@
  * not activate.
  *
  * Allocation: one object per element, used as the listener for every event
- * type, so no closure is made per element and none per press.
+ * type, so no closure is made per element and none per press. Nothing here
+ * reads layout: where the pointer is comes from `pointerenter` and
+ * `pointerleave`, which the browser only sends for touch and pen once the
+ * capture it takes for them is released, so that release is the first thing a
+ * press does.
  */
 
-import { isDisabled, isFocusable } from "./dom.js";
+import { isDisabled, isFocusable, isTextInput, isVirtualClick, isVirtualPointer } from "./dom.js";
 import { focusSafely } from "./focus.js";
 
 /** Elements the browser activates from a key press by dispatching a click of its own. */
 const NATIVE_BUTTON_TYPES = { button: 1, submit: 1, reset: 1, image: 1 };
 
+/**
+ * The key a keydown activates with, or null when it is not one. Space arrives
+ * as `" "`, and as `"Spacebar"` from older assistive technology. Enter on a
+ * checkbox or a radio is not an activation, it is the implicit submission of
+ * the form around it, and Space on a link scrolls the page, which is what it
+ * is for.
+ */
+function activationKey(e, el) {
+  const key = e.key === "Spacebar" ? " " : e.key;
+  if (key !== "Enter" && key !== " ") return null;
+  const tag = el.localName;
+  if (tag === "input" && (el.type === "checkbox" || el.type === "radio")) return key === " " ? key : null;
+  if (tag === "a" || tag === "area" || el.getAttribute("role") === "link") return key === "Enter" ? key : null;
+  return key;
+}
+
 /** True when the browser turns `key` into a click on this element without help. */
 function activatesNatively(el, key) {
   const tag = el.localName;
   if (tag === "button" || tag === "summary") return true;
-  if (tag === "input") return NATIVE_BUTTON_TYPES[el.type] === 1;
+  if (tag === "input") return NATIVE_BUTTON_TYPES[el.type] === 1 || el.type === "checkbox" || el.type === "radio";
   if (tag === "a" || tag === "area") return key === "Enter" && el.hasAttribute("href");
   return false;
 }
 
-/**
- * True for a click the browser made from a key press or from assistive
- * technology rather than from a pointer. A real click is a PointerEvent
- * carrying the pointer that made it; a synthesized one carries none and counts
- * no clicks. This is what tells a screen reader's activation apart from a
- * finger tap, with no timers and no flags.
- */
-function isSynthetic(e) {
-  return e.detail === 0 && !e.pointerType;
-}
-
-/** Space arrives as `" "`, and as `"Spacebar"` from older assistive technology. */
-function activationKey(e) {
-  const key = e.key === "Spacebar" ? " " : e.key;
-  return key === "Enter" || key === " " ? key : null;
-}
-
-const PRESSING = ["pointerup", "pointercancel", "contextmenu"];
+/** Listened to on the window for the length of a pointer press. */
+const WINDOW = ["pointerup", "pointercancel", "contextmenu"];
+/** Listened to on the element for the length of a pointer press. */
+const ELEMENT = ["pointerenter", "pointerleave", "dragstart"];
 
 class Press {
   constructor(el, options) {
     this.el = el;
     this.options = options;
+    /** The pointer being held, or null. */
     this.pointer = null;
-    /** The element's box, read once when a press starts with a pointer the browser captures. */
-    this.rect = null;
+    /** True while the held pointer is over the element. */
+    this.over = false;
+    /** True after a pointer a screen reader sent, so the click that follows is answered. */
+    this.virtual = false;
+    /** The activation key being held, or null. */
     this.key = null;
+    /** True while `data-pressed` is on, so start and end are each reported once. */
+    this.pressed = false;
     this.pending = false;
     /** The element's own `user-select`, saved while a touch press suppresses selection. */
     this.selection = null;
@@ -73,8 +87,11 @@ class Press {
     switch (e.type) {
       case "pointerdown": return this.pointerDown(e);
       case "pointerup": return this.pointerUp(e);
+      case "pointerenter": return this.pointerEnter(e);
+      case "pointerleave": return this.pointerLeave(e);
       case "pointercancel":
-      case "contextmenu": return this.release(e, false);
+      case "contextmenu":
+      case "dragstart":
       case "scroll": return this.release(e, false);
       case "keydown": return this.keyDown(e);
       case "keyup": return this.keyUp(e);
@@ -88,6 +105,20 @@ class Press {
     this.el.toggleAttribute(`data-${name}`, on);
     const { mirror } = this.options;
     if (mirror) mirror[name] = on;
+  }
+
+  start(e) {
+    if (this.pressed) return;
+    this.pressed = true;
+    this.mark("pressed", true);
+    this.options.onPressStart?.(e);
+  }
+
+  end(e) {
+    if (!this.pressed) return;
+    this.pressed = false;
+    this.mark("pressed", false);
+    this.options.onPressEnd?.(e);
   }
 
   /** Runs `onPress`, and holds `data-pending` for as long as it takes when it returns a promise. */
@@ -114,75 +145,94 @@ class Press {
     if (this.pointer !== null || this.key !== null) return;
     if (e.button !== 0 || e.isPrimary === false) return;
     if (this.pending || isDisabled(this.el)) return;
+    // A screen reader's pointer has no size and lands nowhere useful. The
+    // click it sends next is the event to answer.
+    if (isVirtualPointer(e)) {
+      this.virtual = true;
+      return;
+    }
     this.pointer = e.pointerId;
+    this.over = true;
 
     // Touch and pen are captured to the element that received pointerdown, so
-    // their pointerup arrives here whatever it is over. The box read now says
-    // where "over the element" is, and a scroll cancels the press before the
-    // box can go stale.
-    if (e.pointerType !== "mouse") {
-      this.rect = this.el.getBoundingClientRect();
-      this.suppressSelection();
-    }
-    for (const type of PRESSING) window.addEventListener(type, this);
+    // the browser never says whether they left it. Giving the capture back
+    // makes pointerleave and pointerenter arrive for them as they do for a
+    // mouse, and that is the only way this behavior knows where the finger is.
+    const target = e.target;
+    if (target.hasPointerCapture?.(e.pointerId)) target.releasePointerCapture(e.pointerId);
+    if (e.pointerType !== "mouse") this.suppressSelection();
+    for (const type of WINDOW) window.addEventListener(type, this);
+    for (const type of ELEMENT) this.el.addEventListener(type, this);
     window.addEventListener("scroll", this, { capture: true, passive: true });
 
-    if (!this.options.preventFocus && isFocusable(this.el) && document.activeElement !== this.el) {
+    if (this.options.preventFocus) {
+      // Cancelling pointerdown cancels the mousedown the browser would make
+      // from it, and with it the focus and the text selection it would start.
+      e.preventDefault();
+    } else if (isFocusable(this.el) && document.activeElement !== this.el) {
       // Safari does not focus a button when it is clicked. Doing it here makes
       // every browser agree, and going through focusSafely keeps the modality
       // the pointer already set, so no ring appears.
       focusSafely(this.el);
     }
-    this.mark("pressed", true);
-    this.options.onPressStart?.(e);
+    this.start(e);
+  }
+
+  pointerEnter(e) {
+    if (e.pointerId !== this.pointer || this.over) return;
+    this.over = true;
+    this.start(e);
+  }
+
+  pointerLeave(e) {
+    if (e.pointerId !== this.pointer || !this.over) return;
+    this.over = false;
+    this.end(e);
   }
 
   pointerUp(e) {
     if (e.pointerId !== this.pointer) return;
-    const over = this.rect
-      ? e.clientX >= this.rect.left && e.clientX <= this.rect.right &&
-        e.clientY >= this.rect.top && e.clientY <= this.rect.bottom
-      : e.target === this.el || this.el.contains(e.target);
-    this.release(e, over);
+    this.release(e, this.over && this.el.contains(e.target));
   }
 
   /** Ends a pointer press, activating only when it was released on the element. */
   release(e, activate) {
     if (this.pointer === null) return;
     this.pointer = null;
-    this.rect = null;
+    this.over = false;
     this.restoreSelection();
-    for (const type of PRESSING) window.removeEventListener(type, this);
+    for (const type of WINDOW) window.removeEventListener(type, this);
+    for (const type of ELEMENT) this.el.removeEventListener(type, this);
     window.removeEventListener("scroll", this, true);
-    this.mark("pressed", false);
-    this.options.onPressEnd?.(e);
+    this.end(e);
     if (activate) this.fire(e);
   }
 
   keyDown(e) {
     if (e.repeat || this.key !== null || this.pointer !== null) return;
     if (this.pending || isDisabled(this.el)) return;
-    const key = activationKey(e);
+    // Enter and Space typed into a field are text, not a command.
+    if (isTextInput(this.el)) return;
+    const key = activationKey(e, this.el);
     if (!key) return;
     const native = activatesNatively(this.el, key);
-    // Space on a link scrolls the page. Leave it alone.
-    if (key === " " && !native && (this.el.localName === "a" || this.el.localName === "area")) return;
     this.key = key;
     // When the browser will not make a click of its own, this behavior owns the
     // activation and has to stop Space from scrolling the page.
     if (!native) e.preventDefault();
-    this.mark("pressed", true);
-    this.options.onPressStart?.(e);
+    this.start(e);
     // Enter activates as soon as it goes down, Space when it comes back up.
     if (key === "Enter" && !native) this.fire(e);
   }
 
   keyUp(e) {
-    if (this.key === null || activationKey(e) !== this.key) return;
+    if (this.key === null) return;
+    // macOS sends no keyup for a key released while Meta is held, only for
+    // Meta itself, so that release stands in for the one that never came.
+    if (e.key !== "Meta" && activationKey(e, this.el) !== this.key) return;
     const key = this.key;
     this.key = null;
-    this.mark("pressed", false);
-    this.options.onPressEnd?.(e);
+    this.end(e);
     if (key === " " && !activatesNatively(this.el, key)) this.fire(e);
   }
 
@@ -190,15 +240,16 @@ class Press {
   blur(e) {
     if (this.key === null) return;
     this.key = null;
-    this.mark("pressed", false);
-    this.options.onPressEnd?.(e);
+    this.end(e);
   }
 
   click(e) {
     // A pointer's click follows a pointerup this behavior already answered.
     // What is left is the click the browser makes from a key press on a native
     // control, and the one assistive technology sends in place of a pointer.
-    if (isSynthetic(e)) this.fire(e);
+    const virtual = this.virtual;
+    this.virtual = false;
+    if (virtual || isVirtualClick(e)) this.fire(e);
   }
 
   suppressSelection() {
@@ -216,11 +267,13 @@ class Press {
       else style.removeProperty(property);
     }
     this.selection = null;
+    if (this.el.getAttribute("style") === "") this.el.removeAttribute("style");
   }
 
   destroy() {
     this.release(new Event("destroy"), false);
     this.key = null;
+    this.pressed = false;
     this.el.removeEventListener("pointerdown", this);
     this.el.removeEventListener("keydown", this);
     this.el.removeEventListener("keyup", this);
@@ -238,8 +291,8 @@ class Press {
  * @param {Element} el  the element to press
  * @param {object} [options]
  * @param {(e: Event) => unknown} [options.onPress]  activation. Returning a promise holds `data-pending` until it settles
- * @param {(e: Event) => void} [options.onPressStart]  the press began
- * @param {(e: Event) => void} [options.onPressEnd]  the press ended, whether or not it activated
+ * @param {(e: Event) => void} [options.onPressStart]  the press began, or a held pointer came back over the element
+ * @param {(e: Event) => void} [options.onPressEnd]  the press ended, or a held pointer left the element
  * @param {Record<string, boolean>} [options.mirror]  an object whose `pressed` and `pending` follow the attributes. Pass `local` to make renders track them
  * @param {boolean} [options.preventFocus]  leave focus where it is when pressing with a pointer
  * @returns {() => void}

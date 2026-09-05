@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>boreUI kit</title>
+<link rel="stylesheet" href="../../boreui/boreui.css">
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 52rem; padding: 0 1rem; line-height: 1.5; color: light-dark(#222, #eee); }
+  h2 { margin-top: 2.5rem; font-size: 1.1rem; border-top: 1px solid light-dark(#ddd, #333); padding-top: 1rem; }
+  .row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin: 1rem 0; }
+  .stack { display: grid; gap: 1rem; max-width: 24rem; }
+  code { font-family: ui-monospace, monospace; font-size: .8rem; color: light-dark(#666, #999); }
+  output.log { display: block; font-family: ui-monospace, monospace; font-size: .8rem; padding: .5rem .75rem; background: light-dark(#f4f4f4, #232323); border-radius: 4px; min-height: 1.5rem; }
+</style>
+<script type="importmap">
+  { "imports": { "@mr_hugo/boredom": "../../dist/boredom.js" } }
+</script>
+</head>
+<body>
+<kit-page>
+
+<h1>boreUI kit</h1>
+<p>Every component the kit ships, on one page, with <code>boreui.css</code> and nothing else. The log at the bottom shows what each one says.</p>
+
+<h2>Buttons and links</h2>
+<div class="row">
+  <ui-button data-dispatch="say" value="button">Button</ui-button>
+  <ui-button id="pending">Pending press</ui-button>
+  <ui-button disabled>Disabled</ui-button>
+  <ui-toggle-button data-dispatch-change="say" value="toggle">Toggle</ui-toggle-button>
+  <ui-toggle-button selected>Selected</ui-toggle-button>
+  <ui-link href="#links">A link</ui-link>
+  <ui-link href="#links" disabled>Disabled link</ui-link>
+</div>
+<ui-toolbar aria-label="Formatting">
+  <ui-toggle-button>Bold</ui-toggle-button>
+  <ui-toggle-button>Italic</ui-toggle-button>
+  <ui-separator orientation="vertical"></ui-separator>
+  <ui-button>Link</ui-button>
+  <ui-tooltip><ui-button aria-label="Image">🖼</ui-button><span slot="tip">Insert an image</span></ui-tooltip>
+</ui-toolbar>
+
+<h2>Choices</h2>
+<div class="row">
+  <ui-checkbox name="tos" required data-dispatch-change="say" value="checkbox">I agree<span slot="description">You can withdraw at any time.</span></ui-checkbox>
+  <ui-checkbox indeterminate>Some</ui-checkbox>
+  <ui-switch checked data-dispatch-change="say" value="switch">Wi-Fi</ui-switch>
+</div>
+<div class="row">
+  <ui-checkbox-group name="toppings" required>
+    <span slot="label">Toppings</span>
+    <ui-checkbox value="cheese" checked>Cheese</ui-checkbox>
+    <ui-checkbox value="olives">Olives</ui-checkbox>
+    <span slot="description">Pick at least one.</span>
+  </ui-checkbox-group>
+  <ui-radio-group name="size" required data-dispatch-change="say">
+    <span slot="label">Size</span>
+    <label><input type="radio" value="s"> Small</label>
+    <label><input type="radio" value="m"> Medium</label>
+    <label><input type="radio" value="l"> Large</label>
+  </ui-radio-group>
+</div>
+
+<h2>A form</h2>
+<ui-form data-dispatch-submit="submit" style="max-width: 24rem">
+  <ui-text-field name="email" type="email" required>
+    <span slot="label">Email</span>
+    <span slot="description">Only used for receipts.</span>
+  </ui-text-field>
+  <ui-text-area name="notes" rows="2"><span slot="label">Notes</span></ui-text-area>
+  <ui-search-field name="q" placeholder="Search"><span slot="label">Search</span></ui-search-field>
+  <ui-number-field name="qty" value="3" min="0" max="20" step="1"><span slot="label">Quantity</span></ui-number-field>
+  <ui-number-field name="price" currency="EUR" value="19.99"><span slot="label">Price</span></ui-number-field>
+  <ui-slider name="volume" value="40" percent><span slot="label">Volume</span></ui-slider>
+  <ui-select name="country" required placeholder="Choose a country">
+    <span slot="label">Country</span>
+    <li data-key="pt">Portugal</li>
+    <li data-key="es">Spain</li>
+    <li data-key="fr">France</li>
+  </ui-select>
+  <ui-combobox name="city" placeholder="Type a city">
+    <span slot="label">City</span>
+    <li data-key="lis">Lisbon</li>
+    <li data-key="por">Porto</li>
+    <li data-key="sao">São Paulo</li>
+  </ui-combobox>
+  <ui-field>
+    <span slot="label">Colour</span>
+    <select name="colour" required><option value="">Choose</option><option>Red</option><option>Blue</option></select>
+  </ui-field>
+  <div class="row"><ui-button type="submit">Save</ui-button><ui-button type="reset">Reset</ui-button></div>
+</ui-form>
+
+<h2>Measurement</h2>
+<div class="stack">
+  <ui-meter value="0.7" low="0.3" high="0.8" optimum="0.9" aria-label="Disk usage">70% full</ui-meter>
+  <ui-progress value="0.4" aria-label="Uploading">40%</ui-progress>
+  <ui-progress aria-label="Working"></ui-progress>
+</div>
+
+<h2>Disclosure</h2>
+<ui-accordion>
+  <ui-disclosure open><span slot="title">Shipping</span><p>Three to five working days.</p></ui-disclosure>
+  <ui-disclosure><span slot="title">Returns</span><p>Thirty days, no questions.</p></ui-disclosure>
+  <ui-disclosure disabled><span slot="title">Warranty</span><p>Not for this item.</p></ui-disclosure>
+</ui-accordion>
+
+<h2>Navigation</h2>
+<ui-breadcrumbs>
+  <li><ui-link href="#">Home</ui-link></li>
+  <li><ui-link href="#">Docs</ui-link></li>
+  <li>Kit</li>
+</ui-breadcrumbs>
+<ui-tabs style="margin-top: 1rem">
+  <button slot="tab" data-key="write">Write</button>
+  <button slot="tab" data-key="preview">Preview</button>
+  <button slot="tab" data-key="off" disabled>Settings</button>
+  <div data-key="write">Type here.</div>
+  <div data-key="preview">Looks like this.</div>
+  <div data-key="off">Nothing.</div>
+</ui-tabs>
+
+<h2>Lists</h2>
+<div class="row" style="align-items: flex-start">
+  <ui-listbox selection-mode="multiple" style="min-width: 12rem">
+    <span slot="label">Fruit</span>
+    <li data-key="a">Apple</li>
+    <li data-key="b">Banana</li>
+    <li data-key="c" disabled>Cherry</li>
+    <li data-key="d">Date</li>
+  </ui-listbox>
+  <ui-tag-group aria-label="Filters" id="tags"></ui-tag-group>
+</div>
+
+<h2>Overlays</h2>
+<div class="row">
+  <ui-menu data-dispatch-change="say" value="menu">
+    <ui-button slot="trigger">Actions</ui-button>
+    <button data-key="cut" data-dispatch="say" value="cut">Cut</button>
+    <button data-key="copy" data-dispatch="say" value="copy">Copy</button>
+    <hr>
+    <button data-key="delete" disabled>Delete</button>
+  </ui-menu>
+  <ui-menu selection-mode="single">
+    <ui-button slot="trigger">View</ui-button>
+    <button data-key="list">List</button>
+    <button data-key="grid">Grid</button>
+  </ui-menu>
+  <ui-popover>
+    <ui-button slot="trigger">Settings</ui-button>
+    <h3>Settings</h3>
+    <ui-switch>Dark mode</ui-switch>
+    <ui-button data-dispatch="close">Done</ui-button>
+  </ui-popover>
+  <ui-button id="open-dialog">Dialog</ui-button>
+  <ui-button id="open-alert">Alert</ui-button>
+</div>
+<ui-dialog id="dialog">
+  <h2>Delete this file?</h2>
+  <p>There is no undo.</p>
+  <div class="row"><ui-button data-dispatch="close" value="cancel">Cancel</ui-button><ui-button data-dispatch="close" value="delete" autofocus>Delete</ui-button></div>
+</ui-dialog>
+<ui-alert-dialog id="alert">
+  <h2>Connection lost</h2>
+  <p>Your changes since 14:02 were not saved.</p>
+  <ui-button data-dispatch="close" autofocus>Retry</ui-button>
+</ui-alert-dialog>
+
+<h2>Log</h2>
+<output class="log" id="log" aria-live="polite"></output>
+
+</kit-page>
+
+<script type="module">
+  import { define, mount, webComponent } from "@mr_hugo/boredom";
+  import { install } from "../../boreui/kit/index.js";
+
+  install();
+
+  // The page is a component too, with no template of its own, so the kit's
+  // actions have somewhere to land: a dispatch inside any component here
+  // walks up to kit-page once the component itself has let it through.
+  define("kit-page", webComponent(({ on, refs, self }) => {
+    const log = self.querySelector("#log");
+    const say = (text) => { log.textContent = [text, ...log.textContent.split("\n")].slice(0, 6).join("\n"); };
+    on("say", ({ e }) => {
+      const d = e.dispatcher;
+      say(`${d.localName} ${d.value ?? ""}${"checked" in d ? ` checked=${d.checked}` : ""}${"selected" in d ? ` selected=${d.selected}` : ""}`.trim());
+    });
+    on("submit", ({ e }) => {
+      e.event.preventDefault();
+      say(`submit ${JSON.stringify(Object.fromEntries(new FormData(e.dispatcher.form)))}`);
+    });
+    self.querySelector("#pending").onPress = () => new Promise((done) => setTimeout(done, 1500));
+    self.querySelector("#open-dialog").onPress = () => self.querySelector("#dialog").showModal();
+    self.querySelector("#open-alert").onPress = () => self.querySelector("#alert").showModal();
+    self.querySelector("#dialog").addEventListener("toggle", (e) => { if (e.newState === "closed") say(`dialog closed: ${e.target.returnValue}`); });
+    self.querySelector("ui-menu").addEventListener("action", (e) => say(`menu action: ${e.detail.key}`));
+    const tags = self.querySelector("#tags");
+    tags.items = Object.freeze(["New", "On sale", "Blue", "Large"]);
+    tags.addEventListener("remove", (e) => { tags.items = Object.freeze(tags.items.filter((t) => !e.detail.keys.includes(t))); say(`removed ${e.detail.keys}`); });
+    self.querySelector("ui-listbox").addEventListener("change", (e) => say(`listbox ${JSON.stringify(e.target.value)}`));
+    self.querySelector("ui-tabs").addEventListener("change", (e) => say(`tab ${e.target.value}`));
+    self.querySelector("ui-select").addEventListener("change", (e) => say(`select ${e.target.value}`));
+    self.querySelector("ui-combobox").addEventListener("change", (e) => say(`combobox ${e.target.value}`));
+  }));
+  mount({});
+</script>
+</body>
+</html>

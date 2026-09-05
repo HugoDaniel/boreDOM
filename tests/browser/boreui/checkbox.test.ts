@@ -86,3 +86,26 @@ test("ui-checkbox: a value set before the element upgraded is kept", () => {
   assert.equal(host.querySelector("input")!.checked, true);
   assert.equal(host.checked, true);
 });
+
+test("ui-checkbox: a required promise shows the browser's message in its own error slot", async () => {
+  const { root, host, input } = checkbox(`
+    <form><ui-checkbox name="tos" required>
+      I agree
+      <span slot="description">You can withdraw at any time.</span>
+    </ui-checkbox></form>`);
+  const description = host.querySelector("[data-slot='description']")!;
+  const error = host.querySelector("[data-slot='error']")!;
+  assert.equal(description.textContent, "You can withdraw at any time.");
+  assert.ok(input.getAttribute("aria-describedby")!.includes(description.id));
+  assert.equal(host.querySelector("label")!.textContent!.trim(), "I agree", "the description is not part of the label");
+  assert.equal((host as any).control, input, "the input is one property away");
+
+  root.querySelector("form")!.reportValidity();
+  await nextTick();
+  assert.equal(error.textContent, input.validationMessage);
+  assert.equal(document.activeElement, input, "and focus went to it, as the browser would have done");
+
+  input.click();
+  await nextTick();
+  assert.equal(error.textContent, "", "agreeing takes the message away");
+});

@@ -1,6 +1,8 @@
 // A test harness small enough to read. Results go to the page and to
 // window.__boredomTests, so a headless driver can read them.
 
+import { nextTick } from "../../src/index.ts";
+
 type Result = { name: string; ok: boolean; error?: string };
 type Test = { name: string; fn: () => void | Promise<void> };
 
@@ -43,6 +45,16 @@ export const assert = {
   },
 };
 
+/**
+ * Resolves once an attribute change has reached a component and the render it
+ * scheduled has run: a MutationObserver delivers in a microtask, and the
+ * render it causes in the one after, so a task boundary covers both.
+ */
+export async function settled(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await nextTick();
+}
+
 /** Appends `html` inside a fresh section of the sandbox and returns the section. */
 export function fixture(html: string): HTMLElement {
   const section = document.createElement("section");
@@ -52,6 +64,15 @@ export function fixture(html: string): HTMLElement {
 }
 
 export async function run(): Promise<void> {
+  // A test page never navigates. A form that reaches submission uncancelled
+  // is a test bug, and this turns it into a failed assertion instead of a
+  // lost session.
+  // On the window, so every document listener has had its say first.
+  window.addEventListener("submit", (e) => {
+    if (e.defaultPrevented) return;
+    e.preventDefault();
+    console.error("a form submitted during the tests:", (e.target as HTMLFormElement).outerHTML.slice(0, 200));
+  });
   const list = document.getElementById("results")!;
   const results: Result[] = [];
   for (const { name, fn } of tests) {

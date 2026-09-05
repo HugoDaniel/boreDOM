@@ -141,3 +141,34 @@ test("ui-field: the message lands in the error slot when a submit is refused", a
   assert.equal(error.textContent, select.validationMessage);
   assert.ok(error.textContent, "which the browser wrote, not the kit");
 });
+
+test("field: once someone shows the message, the browser's bubble is cancelled and focus goes to the first refusal", () => {
+  const root = fixture(`<form><input required><input required></form>`);
+  const [first, second] = Array.from(root.querySelectorAll("input"));
+  const invalid: boolean[] = [];
+  const stops = [field(first, { mirror: {} }), field(second, { mirror: {} })];
+  const onInvalid = (e: Event) => invalid.push(e.defaultPrevented);
+  first.addEventListener("invalid", onInvalid);
+  second.addEventListener("invalid", onInvalid);
+
+  (document.activeElement as HTMLElement | null)?.blur();
+  root.querySelector("form")!.reportValidity();
+  assert.deepEqual(invalid, [true, true], "no native bubble for either");
+  assert.equal(document.activeElement, first, "the first refused control has focus, as the browser would have done");
+  assert.equal(first.getAttribute("title"), "", "and no Firefox tooltip repeating the message");
+
+  stops.forEach((stop) => stop());
+  assert.equal(first.hasAttribute("title"), false, "unwiring takes the empty title back");
+});
+
+test("field: with nobody showing the message, the browser keeps its bubble", () => {
+  const root = fixture(`<form><input required></form>`);
+  const control = root.querySelector("input")!;
+  let prevented = true;
+  control.addEventListener("invalid", (e) => { prevented = e.defaultPrevented; });
+  const stop = field(control, {});
+  control.checkValidity();
+  assert.equal(prevented, false);
+  assert.equal(control.hasAttribute("title"), false);
+  stop();
+});

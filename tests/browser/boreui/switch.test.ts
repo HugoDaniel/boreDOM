@@ -55,3 +55,11 @@ test("ui-switch: change bubbles out, so data-dispatch-change on the host works",
   await nextTick();
   assert.deepEqual(heard, [true]);
 });
+
+test("ui-switch: a description under the setting, described-by the input", () => {
+  const { host, input } = uiSwitch(`<ui-switch>Wi-Fi<span slot="description">Uses more battery.</span></ui-switch>`);
+  const description = host.querySelector("[data-slot='description']")!;
+  assert.equal(description.textContent, "Uses more battery.");
+  assert.ok(input.getAttribute("aria-describedby")!.includes(description.id));
+  assert.equal((host as any).control, input);
+});

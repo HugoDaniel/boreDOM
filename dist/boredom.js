@@ -261,9 +261,10 @@ function reactive(target) {
 
 // src/actions.ts
 var EVENT_ATTRIBUTES = { click: "data-dispatch", focusin: "data-dispatch-focus", focusout: "data-dispatch-blur" };
-for (const type of ["dblclick", "input", "change", "submit", "keydown", "keyup", "pointerdown", "pointerup", "pointermove", "dragstart", "dragover", "drop", "dragend"]) {
+for (const type of ["dblclick", "input", "change", "submit", "keydown", "keyup", "pointerdown", "pointerup", "pointermove", "dragstart", "dragover", "drop", "dragend", "toggle"]) {
   EVENT_ATTRIBUTES[type] = "data-dispatch-" + type;
 }
+var CAPTURED = { toggle: true };
 var actionProto = {
   _stopped: false,
   stop() {
@@ -285,7 +286,7 @@ function ensureDelegation(deliver2) {
       const dispatcher = from?.closest(selector);
       const name = dispatcher?.getAttribute(attribute);
       if (dispatcher && name) deliver2(dispatcher, name, event);
-    });
+    }, CAPTURED[type] === true);
   }
 }
 
@@ -391,14 +392,14 @@ function hydrate(host, name) {
   if (last === null) return;
   const slots = host.querySelectorAll("[data-slot]");
   if (slots.length === 0) return;
-  hydration++;
+  const pass = ++hydration;
   let node = host.firstChild;
   while (node) {
     const next = node === last ? null : node.nextSibling;
     const slot = slotFor(host, slots, node instanceof Element ? node.slot : "");
     if (slot) {
-      if (slot[FILLED] !== hydration) {
-        slot[FILLED] = hydration;
+      if (slot[FILLED] !== pass) {
+        slot[FILLED] = pass;
         slot.textContent = "";
       }
       slot.appendChild(node);

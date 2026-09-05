@@ -171,14 +171,17 @@ function hydrate(host: BoredBase, name: string): void {
 
   const slots = host.querySelectorAll<Slot>("[data-slot]");
   if (slots.length === 0) return;
-  hydration++;
+  // Moving a child into a slot upgrades it if it is a component, and that
+  // hydration runs inside this one, so the pass number is kept here rather
+  // than read back from the counter the nested one advanced.
+  const pass = ++hydration;
   let node: ChildNode | null = host.firstChild;
   while (node) {
     const next: ChildNode | null = node === last ? null : node.nextSibling;
     const slot = slotFor(host, slots, node instanceof Element ? node.slot : "");
     if (slot) {
-      if (slot[FILLED] !== hydration) {
-        slot[FILLED] = hydration;
+      if (slot[FILLED] !== pass) {
+        slot[FILLED] = pass;
         slot.textContent = "";
       }
       slot.appendChild(node);

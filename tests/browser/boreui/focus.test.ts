@@ -1,5 +1,5 @@
 import { assert, fixture, test } from "../harness.ts";
-import { focusRing, focusSafely, isFocusVisible, modality } from "../../../boreui/behaviors/focus.js";
+import { focusRing, focusSafely, isFocusVisible, modality, setModality } from "../../../boreui/behaviors/focus.js";
 
 const keyboard = (key = "Tab", init: KeyboardEventInit = {}) =>
   document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key, ...init }));
@@ -155,4 +155,65 @@ test("focus: cleanup unsubscribes and takes its attributes with it", () => {
   keyboard();
   assert.equal(el.hasAttribute("data-focus-visible"), false, "no longer listening");
   el.blur();
+});
+
+test("focus: typing into a text field is not navigating, but Tab and Escape are", () => {
+  const input = fixture(`<input type="text">`).firstElementChild as HTMLInputElement;
+  const cleanup = focusRing(input);
+  pointerdown();
+  input.focus();
+  assert.equal(input.hasAttribute("data-focus-visible"), false, "clicked into");
+  input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "a" }));
+  assert.equal(modality(), "keyboard", "the page knows a key was pressed");
+  assert.equal(input.hasAttribute("data-focus-visible"), false, "but a character does not put a ring on the field");
+  input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
+  assert.ok(input.hasAttribute("data-focus-visible"), "Escape does");
+  input.blur();
+  cleanup();
+});
+
+test("focus: a moving pointer makes the modality pointer without disturbing a ring on screen", () => {
+  const { el, cleanup } = ring();
+  keyboard();
+  el.focus();
+  assert.ok(el.hasAttribute("data-focus-visible"));
+  document.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" }));
+  assert.equal(modality(), "pointer");
+  assert.ok(el.hasAttribute("data-focus-visible"), "the ring stays until the next thing happens");
+  assert.equal(isFocusVisible(), false, "and an element focused now, by a script following the mouse, gets none");
+  el.blur();
+  cleanup();
+});
+
+test("focus: setModality puts a ring where a script sent focus on purpose", () => {
+  const { el, cleanup } = ring();
+  pointerdown();
+  focusSafely(el);
+  assert.equal(el.hasAttribute("data-focus-visible"), false);
+  setModality("keyboard");
+  assert.ok(el.hasAttribute("data-focus-visible"), "told to show it");
+  el.blur();
+  cleanup();
+});
+
+test("focus: within marks the wrapper while anything inside it has focus", async () => {
+  const root = fixture(`<div><input><button>go</button></div>`);
+  const wrapper = root.firstElementChild as HTMLElement;
+  const [input, button] = [wrapper.querySelector("input")!, wrapper.querySelector("button")!];
+  const seen: boolean[] = [];
+  // Counts changes only, the way a reactive `local` would: writing a value that is already there is a no-op.
+  const mirror = new Proxy({} as Record<string, boolean>, { set(t, k, v) { if (k === "focused" && t.focused !== v) seen.push(v); t[k as string] = v; return true; } });
+  const cleanup = focusRing(wrapper, { within: true, mirror });
+  keyboard();
+  input.focus();
+  assert.ok(wrapper.hasAttribute("data-focused"));
+  assert.ok(wrapper.hasAttribute("data-focus-visible"));
+  button.focus();
+  await Promise.resolve();
+  assert.ok(wrapper.hasAttribute("data-focused"), "moving between two things inside is not leaving");
+  assert.deepEqual(seen, [true], "reported once");
+  button.blur();
+  await Promise.resolve();
+  assert.equal(wrapper.hasAttribute("data-focused"), false);
+  cleanup();
 });

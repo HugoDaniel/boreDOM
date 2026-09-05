@@ -25,13 +25,40 @@
  *
  * It writes attributes and never text. What the message says on screen is the
  * component's render, from `mirror.message`, because a behavior that writes
- * into an element owns content it did not create.
+ * into an element owns content it did not create. And once someone is showing
+ * the message, the browser's own bubble would be a second copy of it, so the
+ * `invalid` event is cancelled and the one job the bubble did that nobody else
+ * was going to, putting focus on the first field that was refused, is done
+ * here with a ring, because the user did not choose where focus went.
  */
 
 import { idFor, relate } from "./aria.js";
+import { setModality } from "./focus.js";
 
 /** Elements a `<label for>` can name. Everything else is named by `aria-labelledby`. */
 const LABELABLE = { button: 1, input: 1, meter: 1, output: 1, progress: 1, select: 1, textarea: 1 };
+
+/** The first control in the form that is invalid, in document order. The one the browser would have focused. */
+function firstInvalid(form) {
+  const elements = form.elements;
+  for (let i = 0; i < elements.length; i++) {
+    if (elements[i].validity?.valid === false) return elements[i];
+  }
+  return null;
+}
+
+/**
+ * The control itself when it is the kind that can be invalid, or else the
+ * first invalid control inside it: a `<fieldset>` has no validity of its own,
+ * and a group's message is whichever of its controls complained first.
+ */
+function invalidIn(control) {
+  if (control.willValidate) return control.validity.valid ? null : control;
+  for (const el of control.querySelectorAll("input, select, textarea")) {
+    if (el.willValidate && !el.validity.valid) return el;
+  }
+  return null;
+}
 
 class Field {
   constructor(control, options) {
@@ -39,6 +66,10 @@ class Field {
     this.options = options;
     /** True once a submit was refused, until the value changes again. */
     this.refused = false;
+    /** True when this behavior is the one showing the message, so the browser must not. */
+    this.owns = !!(options.error || options.mirror);
+    /** True when this behavior wrote an empty `title`, so it can take it back. */
+    this.titled = false;
 
     const { label, description, error } = options;
     if (label) {
@@ -50,26 +81,47 @@ class Field {
     // the reference costs nothing while there is nothing to say.
     relate(control, "aria-describedby", description, error);
 
+    // Firefox shows the validation message as a tooltip on hover as well as in
+    // the bubble, and an empty title is what turns that off.
+    if (this.owns && !control.hasAttribute("title")) {
+      control.setAttribute("title", "");
+      this.titled = true;
+    }
+
     control.addEventListener("input", this);
     control.addEventListener("change", this);
     control.addEventListener("blur", this);
-    control.addEventListener("invalid", this);
+    // `invalid` does not bubble. Capturing it hears the control's own, and,
+    // when the control is a fieldset, every one from the controls inside.
+    control.addEventListener("invalid", this, true);
     this.report();
   }
 
   handleEvent(e) {
     // The browser fires `invalid` when validation was asked for and refused,
     // which is the one case `:user-invalid` does not already cover.
-    if (e.type === "invalid") this.refused = true;
-    else if (e.type === "input") this.refused = false;
+    if (e.type === "invalid") {
+      this.refused = true;
+      if (this.owns) {
+        e.preventDefault();
+        const refused = e.target;
+        const form = refused.form;
+        if (!form || firstInvalid(form) === refused) {
+          (this.options.focus ?? refused).focus();
+          setModality("keyboard");
+        }
+      }
+    } else if (e.type === "input") {
+      this.refused = false;
+    }
     this.report();
   }
 
   /** Writes what is wrong to the DOM and to the mirror, and nothing else. */
   report() {
     const { control, options } = this;
-    const bad = this.refused || control.matches(":user-invalid");
-    const message = bad ? control.validationMessage : "";
+    const bad = this.refused || control.matches(":user-invalid, :has(:user-invalid)");
+    const message = bad ? invalidIn(control)?.validationMessage ?? "" : "";
     if (control.hasAttribute("data-invalid") !== bad) {
       control.toggleAttribute("data-invalid", bad);
       control.setAttribute("aria-invalid", String(bad));
@@ -89,9 +141,10 @@ class Field {
     control.removeEventListener("input", this);
     control.removeEventListener("change", this);
     control.removeEventListener("blur", this);
-    control.removeEventListener("invalid", this);
+    control.removeEventListener("invalid", this, true);
     control.removeAttribute("data-invalid");
     control.removeAttribute("aria-invalid");
+    if (this.titled && control.getAttribute("title") === "") control.removeAttribute("title");
   }
 }
 
@@ -105,12 +158,18 @@ class Field {
  * that wants its own wording calls `setCustomValidity()` on the control and
  * this reports that instead.
  *
- * @param {HTMLElement} control  the input, textarea or select
+ * Given an `error` element or a `mirror`, the message is being shown by
+ * someone, so the browser's bubble is cancelled and a refused control that is
+ * the first invalid one in its form is focused, with a ring. Given neither,
+ * the browser keeps its bubble and its focus.
+ *
+ * @param {HTMLElement} control  the input, textarea or select, or a fieldset standing for the controls inside it
  * @param {object} [options]
  * @param {Element} [options.label]  a `<label>`, or any element to be named by
  * @param {Element} [options.description]  a hint, referenced by `aria-describedby`
  * @param {Element} [options.error]  where the message goes, referenced the same way
  * @param {Record<string, any>} [options.mirror]  gains `invalid` and `message`
+ * @param {HTMLElement} [options.focus]  what to focus when the control is refused, for a control that cannot take focus itself, such as a hidden select behind a button
  * @returns {() => void}
  */
 export function field(control, options = {}) {

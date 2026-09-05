@@ -43,7 +43,9 @@ page and the kit uses yours instead, which is how you fork one piece without for
 library.
 
 Both layers build to one file each, `dist/boreui.behaviors.js` and `dist/boreui.kit.js`,
-with no dependency and nothing to configure. The same rules boreDOM lives by.
+with the stylesheet copied beside them as `dist/boreui.css`. The kit bundle imports the
+other two as siblings rather than bundling them, so a page that loads both has one modality
+tracker and one runtime, and `dist/` is a folder that works copied anywhere.
 
 ## Where it lives
 
@@ -52,16 +54,27 @@ src/                    boreDOM itself
 boreui/
   behaviors/            the lower layer. No boreDOM, no CSS, no custom elements
     index.js            the public API, the way src/index.ts is boreDOM's
-    dom.js              the questions every behavior asks about an element
-    press.js  hover.js  one file per behavior
+    dom.js              the questions every behavior asks about an element or an event
+    press.js hover.js focus.js field.js announce.js aria.js
+    long-press.js       a pointer held for a while
+    collection.js       keyboard, pointer, selection and typeahead for every list
+    overlay.js          a trigger and its panel, on the popover API and anchor positioning
+    position.js         the placement fallback, loaded only without anchor positioning
+    tooltip.js          a description on hover and on keyboard focus
   kit/                  the upper layer. Imports boreDOM and behaviors
     index.js            install(), which defines every component the page has not
     helpers.js          what a component author needs and the core stays out of
+    strings.js          the few words the platform does not say, per language
     button.js  ...      one file per component, template and logic together
   boreui.css            one file, four cascade layers
+examples/
+  behaviors/            the behaviors alone, styling a div into a button
+  kit/                  every component on one page
 tests/browser/
   kit.test.ts           the core support the kit depends on
   boreui/               one test file per behavior and per component
+scripts/
+  screenshot.mjs        a page in headless Chrome, as a PNG, light or dark, with something opened
 ```
 
 The two layers are directories rather than one folder because the dependency runs one way
@@ -106,31 +119,39 @@ copies the folder needs regardless:
 
 ## Budgets
 
-These are gates in CI, not aspirations. A pull request that crosses one does not merge.
+These are gates in the build, not aspirations: `pnpm run build` prints every size and
+exits non-zero when one crosses its budget.
 
-| artifact | gzip |
-|---|---|
-| `boreui.behaviors.min.js` | 6 KB |
-| `boreui.kit.min.js` | 8 KB |
-| `boreui.css` | 4 KB |
+| artifact | measured | budget, gzip |
+|---|---|---|
+| `boreui.behaviors.min.js` | 9.8 KB | 11 KB |
+| `boreui.kit.min.js` | 13.9 KB | 14 KB |
+| `boreui.min.css` | 4.3 KB | 5 KB |
 
-For comparison, `dist/boredom.min.js` is 3.8 KB gzip. The whole stack stays under 22 KB
-gzip with everything loaded, and a page that uses three components loads three kit modules
-instead of all of them.
+The first numbers in this file were 6, 8 and 4, set when the layer had five behaviors and
+the kit twelve components. The behaviors layer now carries `collection`, `overlay`,
+`tooltip` and `longPress`, and the kit thirty components, so the budgets moved with the
+scope and were set at the measured size rounded up, which is what a budget is for: the next
+component pays for itself or explains why it could not. For comparison, `dist/boredom.min.js`
+is 4.0 KB gzip. The whole stack is 28 KB gzip with everything loaded, and a page that uses
+three components loads three kit modules instead of all of them.
 
 ## Status
 
-Milestones 0 and 1 are done: the core support in `05-core-support.md`, and the behavior
-layer with its 45 tests.
+Milestones 0 to 5 are done, as of 2026-09-05. The core support in `05-core-support.md`,
+the behavior layer, every tier 1 component, the overlays, the collections, and the text
+entry components are written and tested: 251 browser tests, one file per behavior and per
+component, plus the kit example driven end to end. `PROGRESS.md` has the line per component
+and what each is still missing from its definition of done.
 
-Milestone 2 is under way. `boreui.css` is written, 798 lines and 3.1 KB gzip minified,
-verified in a browser rather than only read. Twelve components are done, `ui-button`,
-`ui-toggle-button`, `ui-link`, `ui-checkbox`, `ui-switch`, `ui-separator`, `ui-meter`,
-`ui-progress`, `ui-field`, `ui-text-field`, `ui-text-area` and `ui-search-field`, with 66
-tests. The `field` behavior is written, and `boreui/kit/helpers.js` holds the five helpers
-a tier 1 wrapper needs: `adoptTemplate()`, `mirrorAttributes()`, `forward()`, `reflect()`
-and `expose()`.
+The behaviors were audited against react-aria's hooks a second time after the core changed
+under them, and `02-behaviors.md` records what that found: `press` now follows a held
+pointer with `data-pressed` the way `:active` does, leaves typing alone in text fields,
+and answers a screen reader's sizeless pointer; `hover` ignores the mouse iOS pretends to
+be after a tap; the focus module keeps typing from moving rings and gained `setModality()`;
+and `field` cancels the browser's bubble once someone is showing the message, and focuses
+the first refused control with a ring.
 
-Next in milestone 2: the groups, disclosure, accordion, dialog, toolbar and breadcrumbs;
-then `ui-form`, which is the last of tier 1 and the one that ties `field` to `announce`;
-then the form example, and the build entry that makes the bundle budgets measurable.
+Milestone 6 is what is left: one documentation page per component, the theming guide, the
+benches with committed numbers, and publishing. The screen reader passes in the definition
+of done have not been made for any component and are marked as such.

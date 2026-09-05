@@ -46,15 +46,19 @@ case do not block a match. `Intl.ListFormat` for a tag group's summary.
 `Intl.RelativeTimeFormat` where a timestamp is shown. `Intl.Segmenter` for grapheme
 correct text truncation.
 
-What remains is a handful of interface strings: "Clear", "Remove", "Show suggestions",
-"Selected", "of". They live in one object, keyed by BCP 47 language subtag with English as
-the fallback, and a page overrides them with a single call:
+What remains is a handful of interface strings: "Clear", "Remove", "Breadcrumbs", "Show
+suggestions", "Increase {name}", "Select at least one option". They live in
+`boreui/kit/strings.js`, keyed by BCP 47 language subtag with English as the fallback, and
+a page overrides them with a single call:
 
 ```js
 strings.set("pt", { clear: "Limpar", remove: "Remover" });
 ```
 
-Locale comes from `document.documentElement.lang`, falling back to `navigator.language`.
+Locale comes from the nearest `lang` attribute above the element asking, then
+`document.documentElement.lang`, then `navigator.language`, so a subtree in another
+language gets its own words. A template the page wrote keeps its own labels: a component
+writes a string only where the attribute is missing.
 Direction comes from the `dir` attribute, and behaviors read it with `el.matches(":dir(rtl)")`
 rather than through a locale lookup, which keeps direction correct when a single subtree is
 flipped.
@@ -78,6 +82,23 @@ moves `document.activeElement` without firing a focus event. Anything listening 
 silently never runs and its tests pass for the wrong reason. `scripts/test-headless.mjs`
 turns this off with `Emulation.setFocusEmulationEnabled` before navigating, and any new
 driver has to do the same.
+
+Three more things the harness learned. A form that reaches submission uncancelled navigates
+the test page away, and the runner reports a closed target rather than a failure, so
+`harness.ts` cancels any submit that no listener cancelled and logs the form; a real
+navigation in a test is a bug. An attribute change reaches a component through a
+`MutationObserver`, which delivers in a microtask, and the render it causes runs in the one
+after, so a test that changes an attribute waits with `settled()`, a task boundary followed
+by `nextTick()`, and not with `nextTick()` alone. And a panel placed beside a trigger
+inside the sandbox, which sits off screen to the left, is flipped back on screen by the
+positioning fallbacks, so an overlay test puts its trigger in a fixed, visible box.
+
+The tests for a kit component that hides something check the property and never the
+computed style, which is right for the component and blind to the stylesheet: the one
+`display` rule that beat `[hidden]` was found by a screenshot, not a test. `scripts/
+screenshot.mjs` renders a page in headless Chrome as a PNG, light or dark, and runs a
+snippet first to open what is closed, and reading that picture is part of finishing a
+component.
 
 **Behavior tests** drive one behavior on a bare element and assert attributes and callbacks.
 `press` gets the full matrix: mouse, touch, pen, keyboard Space, keyboard Enter, virtual
